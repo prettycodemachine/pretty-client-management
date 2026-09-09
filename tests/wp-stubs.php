@@ -69,7 +69,9 @@ function plugin_dir_path( $f ) { return dirname( $f ) . '/'; }
 function plugin_dir_url() { return 'https://example.com/plugin/'; }
 function add_query_arg( $k, $v = null, $u = null ) { return is_array($k) ? $u : $u . '?' . $k . '=' . $v; }
 function get_role() { return null; } function get_users() { return array(); }
-function get_userdata() { return null; } function current_user_can() { return true; }
+function get_userdata( $id ) {
+	return isset( $GLOBALS['pcm_test_users'][ $id ] ) ? $GLOBALS['pcm_test_users'][ $id ] : null;
+} function current_user_can() { return true; }
 function is_admin() { return false; } function get_theme_mod() { return 0; }
 function wp_get_attachment_image_src() { return false; }
 function get_current_screen() { return null; }

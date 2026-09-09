@@ -2,10 +2,10 @@
 /**
  * Turn a contact form submission into CRM records.
  *
- * Ordering matters here. The raw payload is written first, so an enquiry
+ * Ordering matters here. The raw payload is written first, so an inquiry
  * leaves evidence even if everything after it fails; then the upsert; then the
  * mail. Nothing in the upsert is allowed to stop the notification going out —
- * a CRM problem must never look to the visitor like a failed enquiry.
+ * a CRM problem must never look to the visitor like a failed inquiry.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -37,7 +37,7 @@ function pcm_crm_client_ip() {
  * Upsert the Account, the Contact and the Activity for one submission.
  *
  * Returns the ids it created or matched. Deliberately creates no Opportunity:
- * an enquiry is not a deal, and a pipeline full of unqualified rows is worse
+ * an inquiry is not a deal, and a pipeline full of unqualified rows is worse
  * than an empty one.
  */
 function pcm_crm_intake( array $pcm_fields ) {
@@ -56,9 +56,9 @@ function pcm_crm_intake( array $pcm_fields ) {
 	) );
 
 	// Subject names the interest so the activity list reads as a log of what
-	// people are asking for, not a column of identical "Website enquiry" rows.
+	// people are asking for, not a column of identical "Website inquiry" rows.
 	$pcm_activity_id = pcm_crm_log_activity( array(
-		'subject'       => 'Web enquiry — ' . $pcm_fields['interest'],
+		'subject'       => 'Web inquiry — ' . $pcm_fields['interest'],
 		'activity_type' => 'Web Form',
 		'status'        => 'Completed',
 		'priority'      => 'Normal',
@@ -80,7 +80,7 @@ function pcm_crm_intake( array $pcm_fields ) {
  * Run the intake without letting it break the submission.
  *
  * Any failure is written to the submission row and to the error log, and then
- * swallowed: the enquiry email is what the visitor is being told succeeded.
+ * swallowed: the inquiry email is what the visitor is being told succeeded.
  */
 function pcm_crm_safe_intake( array $pcm_fields, $pcm_submission_id ) {
 	$pcm_result = array( 'account_id' => 0, 'contact_id' => 0, 'activity_id' => 0 );

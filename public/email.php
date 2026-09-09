@@ -318,7 +318,7 @@ function pcm_crm_send_notification( array $pcm_fields, $pcm_contact_id = 0 ) {
 
 	return wp_mail(
 		pcm_crm_contact_recipient(),
-		'New enquiry — ' . $pcm_fields['interest'] . ' — ' . $pcm_name,
+		'New inquiry — ' . $pcm_fields['interest'] . ' — ' . $pcm_name,
 		$pcm_message,
 		array( 'Reply-To: ' . $pcm_fields['email'] )
 	);

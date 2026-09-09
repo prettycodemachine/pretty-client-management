@@ -211,7 +211,7 @@ class PCM_CRM_Schema {
 
 		/* Form submissions -------------------------------------------------- */
 		// A local audit trail, never migrated. It is written before the intake
-		// upsert runs, so a broken upsert still leaves evidence of the enquiry.
+		// upsert runs, so a broken upsert still leaves evidence of the inquiry.
 		$pcm_tables[] = "CREATE TABLE {$pcm_submissions} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			payload longtext,

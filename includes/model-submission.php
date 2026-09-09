@@ -2,7 +2,7 @@
 /**
  * Contact form submissions — a local audit trail.
  *
- * Not a Salesforce object and never exported. It exists so an enquiry leaves
+ * Not a Salesforce object and never exported. It exists so an inquiry leaves
  * evidence even when the intake upsert or the mail fails, which is exactly the
  * case where you most want to know what someone sent.
  */

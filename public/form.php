@@ -103,7 +103,7 @@ add_shortcode( 'pcm_contact_form', 'pcm_crm_contact_form_shortcode' );
  * Validation first, then the audit row, then the CRM intake, then the mail.
  * The notification decides the success redirect; the autoresponder follows
  * best-effort, because a courtesy reply that fails must not tell the visitor
- * their enquiry did not arrive.
+ * their inquiry did not arrive.
  */
 function pcm_crm_handle_contact_form() {
 	$pcm_redirect = wp_get_referer() ? wp_get_referer() : home_url( '/contact/' );

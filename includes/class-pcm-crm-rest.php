@@ -356,7 +356,34 @@ class PCM_CRM_REST {
 PCM_CRM_REST::init();
 
 /**
- * Display name for an owner id, cached per request.
+ * A person's name, for showing as a record's owner.
+ *
+ * First and last name from the user's profile, because display_name is
+ * whatever WordPress was given at registration and is frequently the email
+ * address — which is what this site has, and an address is not a name. Falls
+ * back through display_name to the login, so an owner column is never blank.
+ */
+function pcm_crm_user_label( $pcm_user ) {
+	if ( ! $pcm_user ) {
+		return '';
+	}
+
+	$pcm_name = trim( $pcm_user->first_name . ' ' . $pcm_user->last_name );
+
+	if ( '' !== $pcm_name ) {
+		return $pcm_name;
+	}
+
+	// display_name is only worth using when it is not just the email again.
+	if ( ! empty( $pcm_user->display_name ) && ! is_email( $pcm_user->display_name ) ) {
+		return $pcm_user->display_name;
+	}
+
+	return $pcm_user->user_login;
+}
+
+/**
+ * Owner name for an id, cached per request.
  *
  * A list page resolves the same handful of owners over and over; without the
  * cache that is one get_userdata() per row.
@@ -371,8 +398,7 @@ function pcm_crm_user_name( $pcm_user_id ) {
 	}
 
 	if ( ! isset( $pcm_cache[ $pcm_user_id ] ) ) {
-		$pcm_user = get_userdata( $pcm_user_id );
-		$pcm_cache[ $pcm_user_id ] = $pcm_user ? $pcm_user->display_name : '';
+		$pcm_cache[ $pcm_user_id ] = pcm_crm_user_label( get_userdata( $pcm_user_id ) );
 	}
 
 	return $pcm_cache[ $pcm_user_id ];
@@ -380,19 +406,22 @@ function pcm_crm_user_name( $pcm_user_id ) {
 
 /**
  * Users who can own a record — everyone with the CRM capability.
+ *
+ * Full user objects rather than a field subset, since the name has to be
+ * assembled from profile meta that a 'fields' list would not return.
  */
 function pcm_crm_owner_choices() {
-	$pcm_users  = get_users( array( 'capability' => PCM_CRM_CAP, 'fields' => array( 'ID', 'display_name' ) ) );
+	$pcm_users = get_users( array( 'capability' => PCM_CRM_CAP ) );
 
 	// A site whose administrators predate the capability would come back empty
 	// and leave the owner filter unusable, so fall back to the admin role.
 	if ( ! $pcm_users ) {
-		$pcm_users = get_users( array( 'role' => 'administrator', 'fields' => array( 'ID', 'display_name' ) ) );
+		$pcm_users = get_users( array( 'role' => 'administrator' ) );
 	}
 
 	$pcm_out = array();
 	foreach ( $pcm_users as $pcm_user ) {
-		$pcm_out[] = array( 'id' => (int) $pcm_user->ID, 'name' => $pcm_user->display_name );
+		$pcm_out[] = array( 'id' => (int) $pcm_user->ID, 'name' => pcm_crm_user_label( $pcm_user ) );
 	}
 
 	return $pcm_out;

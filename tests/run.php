@@ -136,6 +136,26 @@ check( 'an empty scalar filter is skipped',
 check( 'submissions table has no is_deleted clause',
 	strpos( $where->invoke( pcm_crm_submissions(), array() ), 'is_deleted' ), false );
 
+echo "\n--- owner names ---\n";
+$user = function( $first, $last, $display, $login ) {
+	return (object) array( 'first_name' => $first, 'last_name' => $last, 'display_name' => $display, 'user_login' => $login );
+};
+
+check( 'prefers first and last name',
+	pcm_crm_user_label( $user( 'Jason', 'Jensen', 'jason@prettycodemachine.com', 'jason' ) ), 'Jason Jensen' );
+check( 'an email display name is never used',
+	pcm_crm_user_label( $user( '', '', 'jason@prettycodemachine.com', 'jasonj' ) ), 'jasonj' );
+check( 'a real display name is used when there is no full name',
+	pcm_crm_user_label( $user( '', '', 'Jason J', 'jasonj' ) ), 'Jason J' );
+check( 'a first name alone is enough',
+	pcm_crm_user_label( $user( 'Jason', '', 'jason@x.com', 'jasonj' ) ), 'Jason' );
+check( 'no user resolves to nothing rather than erroring',
+	pcm_crm_user_label( null ), '' );
+
+$GLOBALS['pcm_test_users'] = array( 4 => $user( 'Ada', 'Lovelace', 'ada@example.org', 'ada' ) );
+check( 'an owner id resolves to a name', pcm_crm_user_name( 4 ), 'Ada Lovelace' );
+check( 'an unowned record has no owner name', pcm_crm_user_name( 0 ), '' );
+
 echo "\n--- related lists endpoint ---\n";
 // A wpdb that returns plausible rows, so expand() has data to work on.
 class PCM_Related_WPDB extends FakeWPDB {

@@ -69,7 +69,7 @@ function pcm_crm_find_contact_by_email( $pcm_email ) {
 /**
  * Find a Contact by email, or create one.
  *
- * On a repeat enquiry the existing record wins: only fields that are currently
+ * On a repeat inquiry the existing record wins: only fields that are currently
  * empty are filled in. Someone who types their name differently the second
  * time, or leaves the organization blank, must not overwrite what is already
  * known about them — and account_id in particular is a link a human may have

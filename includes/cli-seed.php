@@ -487,7 +487,7 @@ class PCM_CRM_Seed_Command {
 			'Meeting'  => array( 'Discovery workshop', 'Requirements review', 'Quarterly review', 'Board presentation', 'Training session' ),
 			'Task'     => array( 'Draft scope of work', 'Prepare dashboard mockups', 'Audit their org', 'Write migration plan', 'Review sandbox config' ),
 			'Note'     => array( 'Budget cycle ends in June', 'Prefers async updates', 'Two admins on staff', 'Currently on Classic', 'Grant-funded project' ),
-			'Web Form' => array( 'Web enquiry — Salesforce Managed Support', 'Web enquiry — AI Enablement', 'Web enquiry — Custom Development' ),
+			'Web Form' => array( 'Web inquiry — Salesforce Managed Support', 'Web inquiry — AI Enablement', 'Web inquiry — Custom Development' ),
 		);
 
 		$activities = array();
@@ -504,7 +504,7 @@ class PCM_CRM_Seed_Command {
 			}
 		}
 
-		// And off contacts directly, including the web enquiries that would
+		// And off contacts directly, including the web inquiries that would
 		// have come through the contact form.
 		foreach ( $contacts as $contact ) {
 			if ( mt_rand( 1, 3 ) === 1 ) {

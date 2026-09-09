@@ -92,7 +92,7 @@ add_filter( 'pcm_crm_before_update', 'pcm_crm_sync_activity_status', 10, 3 );
  * Log an activity against a contact and a parent record.
  *
  * The one entry point used by the form intake and the UI's quick-log control,
- * so a logged call and a web enquiry are shaped identically.
+ * so a logged call and a web inquiry are shaped identically.
  */
 function pcm_crm_log_activity( array $pcm_args ) {
 	$pcm_args = wp_parse_args( $pcm_args, array(

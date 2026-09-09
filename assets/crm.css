@@ -329,6 +329,7 @@
    display:none, leaving a closed modal on screen as an empty bordered strip. */
 .pcm-crm-drawer[hidden],
 .pcm-crm-scrim[hidden],
+.pcm-crm-panel[hidden],
 .pcm-crm-field[hidden] { display: none !important; }
 
 .pcm-crm-drawer {
@@ -431,27 +432,80 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 }
 .pcm-crm-alert strong { color: var(--pcm-accent-deeper); }
 
-/* Sections and related lists ----------------------------------------------- */
-.pcm-crm-section { margin-top: 26px; }
-.pcm-crm-section:first-child { margin-top: 0; }
-.pcm-crm-section-head {
+/* Tabs ---------------------------------------------------------------------- */
+/* Sticky inside the scrolling body, so switching tabs stays possible from
+   the bottom of a long details form. The paper ground stops the fields
+   showing through as they pass underneath. */
+.pcm-crm-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--pcm-blue);
-  margin-bottom: 12px;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+  background: var(--pcm-paper);
+  border-bottom: 2px solid var(--pcm-ink);
+  margin-bottom: 20px;
 }
-.pcm-crm-section-head .count {
+.pcm-crm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border: 2px solid transparent;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: none;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--pcm-body);
+  cursor: pointer;
+  /* Nudged onto the rule so the active tab's open bottom edge meets it. */
+  margin-bottom: -2px;
+}
+.pcm-crm-tab:hover { color: var(--pcm-accent-deep); }
+.pcm-crm-tab.is-active {
+  background: var(--pcm-paper);
+  border-color: var(--pcm-ink);
+  color: var(--pcm-ink);
+  /* Covers the strip's rule beneath this tab, joining panel to tab. */
+  box-shadow: 0 2px 0 var(--pcm-paper);
+}
+.pcm-crm-tab-count {
   font-family: var(--font-body);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--pcm-body);
   background: var(--pcm-paper-tint);
   border: 1px solid var(--pcm-line);
   border-radius: 999px;
-  padding: 1px 9px;
+  padding: 1px 8px;
 }
+.pcm-crm-tab.is-active .pcm-crm-tab-count {
+  background: var(--pcm-accent-deep);
+  border-color: var(--pcm-accent-deep);
+  color: #fff;
+}
+
+/* Field groups -------------------------------------------------------------- */
+.pcm-crm-group-head {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--pcm-body);
+  margin: 26px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--pcm-line);
+}
+.pcm-crm-group-head:first-child { margin-top: 0; }
+
+/* Sections and related lists ----------------------------------------------- */
+/* min-width:0 so a wide related row scrolls inside its panel rather than
+   stretching the modal. */
+.pcm-crm-panels, .pcm-crm-panel, .pcm-crm-related { min-width: 0; }
 .pcm-crm-related-rows { display: flex; flex-direction: column; }
 .pcm-crm-related-row {
   display: grid;
@@ -503,10 +557,18 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 }
 
 /* Forms --------------------------------------------------------------------- */
+/* Two columns rather than as many as fit. Three put a street in one column
+   and the city under it in another, which is exactly the pairing an address
+   should keep. */
 .pcm-crm-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .pcm-crm-fields { grid-template-columns: minmax(0, 1fr); }
 }
 .pcm-crm-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .pcm-crm-field-wide { grid-column: 1 / -1; }

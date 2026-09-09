@@ -280,20 +280,26 @@
 			},
 			fields: function () {
 				return [
-					{ key: 'name', label: 'Account name', required: true, wide: true },
-					{ key: 'type', label: 'Type', options: options(state.boot.accountTypes, true) },
-					{ key: 'industry', label: 'Industry', options: options(state.boot.industries, true) },
-					{ key: 'website', label: 'Website', type: 'url' },
-					{ key: 'phone', label: 'Phone' },
-					{ key: 'annual_revenue', label: 'Annual revenue', type: 'number' },
-					{ key: 'number_of_employees', label: 'Employees', type: 'number' },
-					{ key: 'billing_street', label: 'Street', wide: true },
-					{ key: 'billing_city', label: 'City' },
-					{ key: 'billing_state', label: 'State' },
-					{ key: 'billing_postal_code', label: 'Postal code' },
-					{ key: 'billing_country', label: 'Country' },
-					{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-					{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
+					{ fields: [
+						{ key: 'name', label: 'Account name', required: true },
+						{ key: 'website', label: 'Website', type: 'url' },
+						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
+						{ key: 'type', label: 'Type', options: options(state.boot.accountTypes, true) },
+						{ key: 'industry', label: 'Industry', options: options(state.boot.industries, true) },
+						{ key: 'phone', label: 'Phone' },
+						{ key: 'annual_revenue', label: 'Annual revenue', type: 'number' },
+						{ key: 'number_of_employees', label: 'Employees', type: 'number' }
+					] },
+					{ title: 'Billing address', fields: [
+						{ key: 'billing_street', label: 'Street', wide: true },
+						{ key: 'billing_city', label: 'City' },
+						{ key: 'billing_state', label: 'State' },
+						{ key: 'billing_postal_code', label: 'Postal code' },
+						{ key: 'billing_country', label: 'Country' }
+					] },
+					{ title: 'Notes', fields: [
+						{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
+					] }
 				];
 			}
 		},
@@ -313,7 +319,7 @@
 					{ label: 'Email', value: row.email, href: row.email ? 'mailto:' + row.email : '' },
 					{ label: 'Mobile', value: row.mobile_phone, href: row.mobile_phone ? 'tel:' + row.mobile_phone : '' },
 					{ label: 'Phone', value: row.phone, href: row.phone ? 'tel:' + row.phone : '' },
-					{ label: 'Lead source', value: row.lead_source }
+					{ label: 'Owner', value: row._owner_name }
 				];
 			},
 			columns: [
@@ -334,25 +340,33 @@
 			},
 			fields: function () {
 				return [
-					{ key: 'first_name', label: 'First name' },
-					{ key: 'last_name', label: 'Last name', required: true },
-					{ key: 'title', label: 'Title' },
-					{ key: 'account_id', label: 'Account', lookup: 'accounts' },
-					{ key: 'email', label: 'Email', type: 'email' },
-					{ key: 'phone', label: 'Phone' },
-					{ key: 'mobile_phone', label: 'Mobile' },
-					{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) },
-					{ key: 'mailing_street', label: 'Street', wide: true },
-					{ key: 'mailing_city', label: 'City' },
-					{ key: 'mailing_state', label: 'State' },
-					{ key: 'mailing_postal_code', label: 'Postal code' },
-					{ key: 'mailing_country', label: 'Country' },
-					{ key: 'do_not_contact', label: 'Do not contact', type: 'checkbox' },
-					{ key: 'do_not_contact_reason', label: 'Reason for do not contact', wide: true,
-						showWhen: 'do_not_contact',
-						note: 'Required. Whoever revisits this later needs to know why.' },
-					{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-					{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
+					{ fields: [
+						{ key: 'first_name', label: 'First name' },
+						{ key: 'last_name', label: 'Last name', required: true },
+						{ key: 'title', label: 'Title' },
+						{ key: 'account_id', label: 'Account', lookup: 'accounts' },
+						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
+						{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) }
+					] },
+					{ title: 'Contact details', fields: [
+						{ key: 'email', label: 'Email', type: 'email' },
+						{ key: 'phone', label: 'Phone' },
+						{ key: 'mobile_phone', label: 'Mobile' },
+						{ key: 'do_not_contact', label: 'Do not contact', type: 'checkbox' },
+						{ key: 'do_not_contact_reason', label: 'Reason for do not contact', wide: true,
+							showWhen: 'do_not_contact',
+							note: 'Required. Whoever revisits this later needs to know why.' }
+					] },
+					{ title: 'Mailing address', fields: [
+						{ key: 'mailing_street', label: 'Street', wide: true },
+						{ key: 'mailing_city', label: 'City' },
+						{ key: 'mailing_state', label: 'State' },
+						{ key: 'mailing_postal_code', label: 'Postal code' },
+						{ key: 'mailing_country', label: 'Country' }
+					] },
+					{ title: 'Notes', fields: [
+						{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
+					] }
 				];
 			}
 		},
@@ -395,18 +409,25 @@
 			},
 			fields: function () {
 				return [
-					{ key: 'name', label: 'Opportunity name', required: true, wide: true },
-					{ key: 'account_id', label: 'Account', lookup: 'accounts' },
-					{ key: 'primary_contact_id', label: 'Primary contact', lookup: 'contacts' },
-					{ key: 'stage_name', label: 'Stage', options: options(state.boot.stages) },
-					{ key: 'amount', label: 'Amount', type: 'number' },
-					{ key: 'close_date', label: 'Close date', type: 'date' },
-					{ key: 'type', label: 'Type', options: options(state.boot.opportunityTypes, true) },
-					{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) },
-					{ key: 'probability', label: 'Probability %', type: 'number', note: 'Set from the stage; override if this one is different.' },
-					{ key: 'next_step', label: 'Next step', wide: true },
-					{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-					{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
+					{ fields: [
+						{ key: 'name', label: 'Opportunity name', required: true, wide: true },
+						{ key: 'account_id', label: 'Account', lookup: 'accounts' },
+						{ key: 'primary_contact_id', label: 'Primary contact', lookup: 'contacts' },
+						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
+						{ key: 'stage_name', label: 'Stage', options: options(state.boot.stages) }
+					] },
+					{ title: 'Forecast', fields: [
+						{ key: 'amount', label: 'Amount', type: 'number' },
+						{ key: 'close_date', label: 'Close date', type: 'date' },
+						{ key: 'probability', label: 'Probability %', type: 'number',
+							note: 'Set from the stage; override if this one is different.' },
+						{ key: 'type', label: 'Type', options: options(state.boot.opportunityTypes, true) },
+						{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) }
+					] },
+					{ title: 'Notes', fields: [
+						{ key: 'next_step', label: 'Next step', wide: true },
+						{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
+					] }
 				];
 			}
 		},
@@ -449,15 +470,21 @@
 			},
 			fields: function () {
 				return [
-					{ key: 'subject', label: 'Subject', required: true, wide: true },
-					{ key: 'activity_type', label: 'Type', options: options(state.boot.activityTypes) },
-					{ key: 'status', label: 'Status', options: options(state.boot.activityStatuses) },
-					{ key: 'priority', label: 'Priority', options: options(state.boot.priorities) },
-					{ key: 'due_date', label: 'Due date', type: 'date' },
-					{ key: 'who_id', label: 'Contact', lookup: 'contacts' },
-					{ key: 'what_id', label: 'Related to', lookupPair: true },
-					{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-					{ key: 'description', label: 'Details', type: 'textarea', wide: true }
+					{ fields: [
+						{ key: 'subject', label: 'Subject', required: true, wide: true },
+						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
+						{ key: 'activity_type', label: 'Type', options: options(state.boot.activityTypes) },
+						{ key: 'status', label: 'Status', options: options(state.boot.activityStatuses) },
+						{ key: 'priority', label: 'Priority', options: options(state.boot.priorities) },
+						{ key: 'due_date', label: 'Due date', type: 'date' }
+					] },
+					{ title: 'Related records', fields: [
+						{ key: 'who_id', label: 'Contact', lookup: 'contacts' },
+						{ key: 'what_id', label: 'Related to', lookupPair: true }
+					] },
+					{ title: 'Notes', fields: [
+						{ key: 'description', label: 'Details', type: 'textarea', wide: true }
+					] }
 				];
 			}
 		}
@@ -844,15 +871,24 @@
 			api('/related/' + object + '/' + id).then(function (related) {
 				renderRelated(object, record, related);
 			}).catch(function (error) {
-				// Swallowing this leaves an empty space that reads as "this
-				// record has nothing attached", which is a different and
-				// wrong statement.
-				var container = dom.drawer.querySelector('[data-role="related"]');
-				if (container) {
-					clear(container, el('div.pcm-crm-error', {
-						text: 'Could not load related records: ' + (error.message || 'request failed')
-					}));
+				// Swallowing this would leave a record showing only a Details
+				// tab, which reads as "nothing is attached to this" — a
+				// different and wrong statement.
+				var panels = dom.drawer.querySelector('[data-role="panels"]');
+
+				if (panels) {
+					panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: 'related-error' }, hidden: true }, [
+						el('div.pcm-crm-error', {
+							text: 'Could not load related records: ' + (error.message || 'request failed')
+						})
+					]));
+
+					renderTabs([
+						{ id: 'details', label: 'Details' },
+						{ id: 'related-error', label: 'Related' }
+					]);
 				}
+
 				window.console.error(error);
 			});
 		}).catch(function (error) {
@@ -874,7 +910,7 @@
 
 		clear(dom.drawer);
 
-		var head = el('div.pcm-crm-modal-head', {}, [
+		dom.drawer.appendChild(el('div.pcm-crm-modal-head', {}, [
 			el('div.pcm-crm-modal-heading', {}, [
 				el('p.pcm-crm-drawer-kicker', {
 					text: isNew ? def.label : (def.kicker ? def.kicker(record) : def.label)
@@ -887,15 +923,13 @@
 				text: '×',
 				onclick: closeDrawer
 			})
-		]);
-
-		dom.drawer.appendChild(head);
+		]));
 
 		var scroll = el('div.pcm-crm-modal-body');
 
 		// A restriction on contacting someone has to be visible before anyone
-		// reads the phone number below it, so it sits above the highlights
-		// rather than beside the checkbox that sets it.
+		// reads the phone number below it, and on every tab — so it sits above
+		// the tab strip rather than inside the details panel.
 		if (!isNew && record.do_not_contact) {
 			scroll.appendChild(el('div.pcm-crm-alert', {}, [
 				el('strong', { text: 'Do not contact.' }),
@@ -907,10 +941,105 @@
 			scroll.appendChild(highlightPanel(def.highlights(record)));
 		}
 
-		var grid = el('div.pcm-crm-fields');
+		scroll.appendChild(el('div.pcm-crm-tabs', { 'data-role': 'tabs', role: 'tablist' }));
+		scroll.appendChild(el('div.pcm-crm-panels', { 'data-role': 'panels' }, [
+			detailsPanel(object, record, values)
+		]));
 
-		def.fields().forEach(function (field) {
-			grid.appendChild(fieldControl(field, values, grid));
+		dom.drawer.appendChild(scroll);
+
+		// Details is the only tab until the related lists arrive and say what
+		// else this record has.
+		renderTabs([{ id: 'details', label: 'Details' }]);
+
+		scroll.scrollTop = 0;
+	}
+
+	/**
+	 * The tab strip.
+	 *
+	 * Tabs are rebuilt rather than patched when the related lists land, so the
+	 * counts in their labels always come from the data actually rendered.
+	 * Selection is preserved across that rebuild, which matters because the
+	 * fetch can resolve after someone has already clicked away from Details.
+	 */
+	function renderTabs(tabs, selected) {
+		var strip = dom.drawer.querySelector('[data-role="tabs"]');
+		if (!strip) { return; }
+
+		var active = selected || strip.dataset.active || 'details';
+
+		// Fall back to Details if the selected tab no longer exists.
+		if (!tabs.some(function (tab) { return tab.id === active; })) { active = 'details'; }
+
+		strip.dataset.active = active;
+		clear(strip);
+
+		tabs.forEach(function (tab) {
+			strip.appendChild(el('button.pcm-crm-tab' + (tab.id === active ? '.is-active' : ''), {
+				type: 'button',
+				role: 'tab',
+				dataset: { tab: tab.id },
+				'aria-selected': tab.id === active ? 'true' : 'false',
+				onclick: function () { selectTab(tab.id); }
+			}, [
+				tab.label,
+				tab.count === undefined ? null : el('span.pcm-crm-tab-count', { text: String(tab.count) })
+			]));
+		});
+
+		selectTab(active);
+	}
+
+	function selectTab(id) {
+		var strip = dom.drawer.querySelector('[data-role="tabs"]');
+		var panels = dom.drawer.querySelector('[data-role="panels"]');
+		if (!strip || !panels) { return; }
+
+		strip.dataset.active = id;
+
+		// Matched on the tab id both sides carry, not on position — the panels
+		// are appended in a different order than the tabs are built.
+		strip.querySelectorAll('[data-tab]').forEach(function (button) {
+			var isActive = button.dataset.tab === id;
+
+			button.classList.toggle('is-active', isActive);
+			button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+		});
+
+		panels.querySelectorAll('[data-tab]').forEach(function (panel) {
+			panel.hidden = panel.dataset.tab !== id;
+		});
+	}
+
+	/**
+	 * The details form, as a set of two-column field groups.
+	 *
+	 * Two columns rather than as many as fit: three made related fields — a
+	 * street and the city under it — land in different columns, which is
+	 * exactly the pairing a form like this should preserve.
+	 */
+	function detailsPanel(object, record, values) {
+		var def = objects[object];
+		var isNew = !record.id;
+
+		var form = el('form', { onsubmit: function (e) { e.preventDefault(); } });
+		var firstGrid = null;
+
+		def.fields().forEach(function (group) {
+			var grid = el('div.pcm-crm-fields');
+
+			if (!firstGrid) { firstGrid = grid; }
+
+			group.fields.forEach(function (field) {
+				grid.appendChild(fieldControl(field, values, grid));
+			});
+
+			if (group.title) {
+				form.appendChild(el('h4.pcm-crm-group-head', { text: group.title }));
+			}
+
+			form.appendChild(grid);
 		});
 
 		var status = el('span.pcm-crm-muted');
@@ -919,9 +1048,7 @@
 			el('button.pcm-btn.pcm-btn-primary', {
 				type: 'button',
 				text: isNew ? 'Create' : 'Save',
-				onclick: function (event) {
-					saveRecord(object, record.id, values, event.target, status);
-				}
+				onclick: function (event) { saveRecord(object, record.id, values, event.target, status); }
 			}),
 			el('button.pcm-btn.pcm-btn-quiet', { type: 'button', text: 'Cancel', onclick: closeDrawer }),
 			status
@@ -942,25 +1069,9 @@
 			}));
 		}
 
-		// Related lists come before the details form. A record is usually
-		// opened to see what is attached to it, not to edit a field, and a
-		// contact's sixteen inputs would otherwise bury them below the fold.
-		if (!isNew) {
-			scroll.appendChild(el('div', { 'data-role': 'related' }, [
-				el('p.pcm-crm-related-empty', { text: 'Loading related records…' })
-			]));
-		}
+		form.appendChild(actions);
 
-		scroll.appendChild(el('div.pcm-crm-section', {}, [
-			el('h3.pcm-crm-section-head', { text: 'Details' }),
-			el('form', { onsubmit: function (e) { e.preventDefault(); } }, [grid, actions])
-		]));
-
-		dom.drawer.appendChild(scroll);
-
-		// Reset the scroll position, or reopening a record lands wherever the
-		// previous one was left.
-		scroll.scrollTop = 0;
+		return el('div.pcm-crm-panel', { dataset: { tab: 'details' } }, [form]);
 	}
 
 	/**
@@ -1156,16 +1267,24 @@
 	}
 
 	function renderRelated(object, record, related) {
-		var container = dom.drawer.querySelector('[data-role="related"]');
-		if (!container) { return; }
+		var panels = dom.drawer.querySelector('[data-role="panels"]');
+		if (!panels) { return; }
 
-		clear(container);
+		var tabs = [{ id: 'details', label: 'Details' }];
 
-		var sections = [];
+		// Anything already added by a previous render goes, so reopening a
+		// record after a save does not stack two copies of each list.
+		panels.querySelectorAll('[data-tab]:not([data-tab="details"])').forEach(function (node) {
+			node.remove();
+		});
+
+		function addTab(id, label, rows, list) {
+			tabs.push({ id: id, label: label, count: rows.length });
+			panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: id }, hidden: true }, [list]));
+		}
 
 		if (related.contacts && related.contacts.length) {
-			sections.push(relatedList({
-				title: 'Contacts',
+			addTab('contacts', 'Contacts', related.contacts, relatedList({
 				rows: related.contacts,
 				object: 'contacts',
 				columns: function (row) {
@@ -1179,8 +1298,7 @@
 		}
 
 		if (related.opportunities && related.opportunities.length) {
-			sections.push(relatedList({
-				title: 'Opportunities',
+			addTab('opportunities', 'Opportunities', related.opportunities, relatedList({
 				rows: related.opportunities,
 				object: 'opportunities',
 				columns: function (row) {
@@ -1201,26 +1319,23 @@
 			var parents = activityParents(record);
 
 			if (parents.length) {
-				sections.push(relatedList({
-					title: 'Related to',
+				addTab('parents', 'Related to', parents, relatedList({
 					rows: parents,
 					object: '',
 					columns: function (row) {
-						return [
-							{ text: row.label, strong: true },
-							{ badge: row.kind }
-						];
+						return [{ text: row.label, strong: true }, { badge: row.kind }];
 					},
 					open: function (row) { openDrawer(row.object, row.id); }
 				}));
 			}
 		} else {
-			sections.push(relatedList({
-				title: 'Activities',
-				rows: related.activities || [],
+			var activities = related.activities || [];
+
+			// Always present, even at zero: an empty timeline is exactly when
+			// the quick-log box is most wanted.
+			addTab('activities', 'Activities', activities, relatedList({
+				rows: activities,
 				object: 'activities',
-				// The quick-log box shows even with no activities — an empty
-				// timeline is exactly when you most want to start one.
 				before: quickLog(object, record),
 				columns: function (row) {
 					return [
@@ -1233,12 +1348,7 @@
 			}));
 		}
 
-		if (!sections.length) {
-			container.appendChild(el('p.pcm-crm-related-empty', { text: 'Nothing is linked to this record yet.' }));
-			return;
-		}
-
-		sections.forEach(function (section) { container.appendChild(section); });
+		renderTabs(tabs);
 	}
 
 	/**
@@ -1280,12 +1390,7 @@
 	 * only affordance is the mouse pointer is half a control.
 	 */
 	function relatedList(config) {
-		var block = el('div.pcm-crm-section', {}, [
-			el('h3.pcm-crm-section-head', {}, [
-				config.title,
-				el('span.count', { text: String(config.rows.length) })
-			])
-		]);
+		var block = el('div.pcm-crm-related');
 
 		if (config.before) { block.appendChild(config.before); }
 
