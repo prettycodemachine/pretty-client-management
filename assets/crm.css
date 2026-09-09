@@ -558,18 +558,6 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 }
 .pcm-crm-related-row:hover .pcm-crm-cell-go,
 .pcm-crm-related-row:focus-visible .pcm-crm-cell-go { opacity: 1; color: var(--pcm-accent-deep); }
-.pcm-crm-quicklog { display: flex; gap: 8px; margin-bottom: 14px; }
-.pcm-crm-quicklog input,
-.pcm-crm-quicklog select {
-  padding: 9px 12px;
-  border: 2px solid var(--pcm-ink);
-  border-radius: 10px;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--pcm-ink);
-  background: #fff;
-  min-width: 0;
-}
 
 /* Forms --------------------------------------------------------------------- */
 /* Two columns rather than as many as fit. Three put a street in one column
@@ -721,7 +709,6 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   .pcm-crm-tabs { flex-wrap: nowrap; overflow-x: auto; }
   .pcm-crm-tab { white-space: nowrap; }
   .pcm-crm-related-row { grid-template-columns: 1fr auto; }
-  .pcm-crm-quicklog { flex-wrap: wrap; }
   .pcm-crm { margin-right: 12px; }
 }
 

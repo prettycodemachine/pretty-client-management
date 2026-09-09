@@ -679,7 +679,7 @@
 
 		clear(dom.actions, el('button.pcm-btn.pcm-btn-primary', {
 			type: 'button',
-			text: 'New ' + def.label.toLowerCase(),
+			text: 'New ' + def.label,
 			onclick: function () { openDrawer(object, 0); }
 		}));
 
@@ -935,7 +935,7 @@
 							: def.label)
 						: (def.kicker ? def.kicker(record) : def.label)
 				}),
-				el('h2', { text: isNew ? 'New ' + def.label.toLowerCase() : def.title(record) })
+				el('h2', { text: isNew ? 'New ' + def.label : def.title(record) })
 			]),
 			el('button.pcm-crm-drawer-close', {
 				type: 'button',
@@ -1335,11 +1335,11 @@
 
 		if (object === 'accounts') {
 			return [
-				{ id: 'contacts', label: 'Contacts', object: 'contacts', newLabel: 'New contact',
+				{ id: 'contacts', label: 'Contacts', object: 'contacts', newLabel: 'New Contact',
 					prefill: { account_id: record.id } },
-				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New opportunity',
+				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New Opportunity',
 					prefill: { account_id: record.id, stage_name: firstStage, close_date: closeDate } },
-				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New activity',
+				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ what_type: 'account', what_id: record.id }) }
 			];
 		}
@@ -1348,10 +1348,10 @@
 			return [
 				// The account comes from the contact, so a deal created here
 				// is attached to both the person and their organization.
-				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New opportunity',
+				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New Opportunity',
 					prefill: { account_id: record.account_id || 0, primary_contact_id: record.id,
 						stage_name: firstStage, close_date: closeDate } },
-				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New activity',
+				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ who_id: record.id,
 						what_type: record.account_id ? 'account' : '', what_id: record.account_id || 0 }) }
 			];
@@ -1359,7 +1359,7 @@
 
 		if (object === 'opportunities') {
 			return [
-				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New activity',
+				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ what_type: 'opportunity', what_id: record.id,
 						who_id: record.primary_contact_id || 0 }) }
 			];
@@ -1422,7 +1422,6 @@
 						returnTo: { object: object, id: record.id }
 					});
 				},
-				before: child.id === 'activities' ? quickLog(object, record) : null,
 				empty: 'No ' + child.label.toLowerCase() + ' yet.',
 				columns: relatedColumns(child.id)
 			}));
@@ -1514,8 +1513,6 @@
 			]));
 		}
 
-		if (config.before) { block.appendChild(config.before); }
-
 		if (!config.rows.length) {
 			block.appendChild(el('p.pcm-crm-related-empty', { text: config.empty || 'None yet.' }));
 			return block;
@@ -1552,52 +1549,6 @@
 		return block;
 	}
 
-	/**
-	 * Log a call, email or note without leaving the record.
-	 *
-	 * The single most frequent write in a CRM, so it is one field and a button
-	 * rather than a trip through a new Activity form.
-	 */
-	function quickLog(object, record) {
-		var input = el('input', { type: 'text', placeholder: 'Log a call, email or note…', style: 'flex:1' });
-		var type = el('select', { style: 'flex:0 0 130px' });
-
-		(state.boot.activityTypes || []).forEach(function (name) {
-			if (name === 'Web Form') { return; }
-			type.appendChild(el('option', { value: name, text: name, selected: name === 'Call' }));
-		});
-
-		function log() {
-			if (!input.value.trim()) { return; }
-
-			var payload = {
-				subject: input.value.trim(),
-				activity_type: type.value,
-				status: 'Completed',
-				activity_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-				who_id: object === 'contacts' ? record.id : 0,
-				what_id: object === 'contacts' ? (record.account_id || 0) : record.id,
-				what_type: object === 'contacts' ? (record.account_id ? 'account' : '') : object.replace(/s$/, '')
-			};
-
-			api('/activities', { method: 'POST', body: payload }).then(function () {
-				input.value = '';
-				api('/related/' + object + '/' + record.id).then(function (related) {
-					renderRelated(object, record, related);
-				});
-			}).catch(showError);
-		}
-
-		input.addEventListener('keydown', function (event) {
-			if (event.key === 'Enter') { event.preventDefault(); log(); }
-		});
-
-		return el('div.pcm-crm-quicklog', {}, [
-			input,
-			type,
-			el('button.pcm-btn', { type: 'button', text: 'Log', onclick: log })
-		]);
-	}
 
 	/* ---------------------------------------------------------------------
 	   Pipeline
@@ -1612,7 +1563,7 @@
 
 		clear(dom.actions, el('button.pcm-btn.pcm-btn-primary', {
 			type: 'button',
-			text: 'New opportunity',
+			text: 'New Opportunity',
 			onclick: function () { openDrawer('opportunities', 0); }
 		}));
 
