@@ -1,0 +1,519 @@
+/* ==========================================================================
+   PCM CRM — admin skin
+
+   The tokens are copied literally from the theme's style.css rather than
+   imported: the plugin has to look right whichever theme is active, and an
+   admin screen cannot reach a front-end stylesheet anyway.
+
+   The theme's contrast rule holds here too — --pcm-accent (#d56b6b) is 3.42:1
+   on paper, so it is decorative only (shadows, rules, dots). Anything carrying
+   text uses --pcm-accent-deep or darker.
+   ========================================================================== */
+.pcm-crm {
+  --pcm-accent: #d56b6b;
+  --pcm-accent-deep: #c94040;
+  --pcm-accent-deeper: #af3232;
+  --pcm-blue: #aac8e6;
+  --pcm-blue-deep: #3f6b96;
+  --pcm-ink: #2c2c2e;
+  --pcm-ink-deep: #1a1a1d;
+  --pcm-body: #46464a;
+  --pcm-paper: #ffffff;
+  --pcm-paper-tint: #f4f8fc;
+  --pcm-gray: #aaaaaa;
+  --pcm-gray-light: #e4e4e4;
+  --pcm-line: rgba(42, 42, 46, 0.12);
+  --pcm-green: #2f7d5d;
+
+  --font-display: "Baloo 2", "Trebuchet MS", sans-serif;
+  --font-body: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --radius: 14px;
+
+  font-family: var(--font-body);
+  color: var(--pcm-body);
+  /* wp-admin's own 20px right gutter plus the menu's left one leaves the wide
+     screens (pipeline, dashboard) too narrow; reclaim it. */
+  margin-right: 20px;
+}
+
+.pcm-crm *,
+.pcm-crm *::before,
+.pcm-crm *::after { box-sizing: border-box; }
+
+.pcm-crm h1, .pcm-crm h2, .pcm-crm h3, .pcm-crm h4 {
+  font-family: var(--font-display);
+  color: var(--pcm-ink);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 0.4em;
+}
+.pcm-crm h1 { font-size: 1.9rem; }
+.pcm-crm h2 { font-size: 1.3rem; }
+.pcm-crm h3 { font-size: 1.05rem; }
+
+.pcm-crm a { color: var(--pcm-blue-deep); }
+.pcm-crm a:hover { color: var(--pcm-accent-deep); }
+
+/* Header -------------------------------------------------------------------- */
+.pcm-crm-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 0 14px;
+  border-bottom: 3px solid var(--pcm-ink);
+  margin-bottom: 20px;
+}
+.pcm-crm-sub { margin: 0; color: var(--pcm-body); font-size: 0.92rem; }
+.pcm-crm-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Buttons ------------------------------------------------------------------- */
+.pcm-crm .pcm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background: var(--pcm-paper);
+  color: var(--pcm-ink);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pcm-crm .pcm-btn:hover { background: var(--pcm-paper-tint); color: var(--pcm-ink); }
+.pcm-crm .pcm-btn-primary {
+  background: var(--pcm-accent-deep);
+  border-color: var(--pcm-accent-deep);
+  color: #fff;
+}
+.pcm-crm .pcm-btn-primary:hover { background: var(--pcm-accent-deeper); border-color: var(--pcm-accent-deeper); color: #fff; }
+.pcm-crm .pcm-btn-quiet { border-color: var(--pcm-gray-light); font-weight: 600; }
+.pcm-crm .pcm-btn-danger { color: var(--pcm-accent-deep); border-color: var(--pcm-accent-deep); }
+.pcm-crm .pcm-btn-danger:hover { background: var(--pcm-accent-deep); color: #fff; }
+.pcm-crm .pcm-btn:focus-visible,
+.pcm-crm input:focus-visible,
+.pcm-crm select:focus-visible,
+.pcm-crm textarea:focus-visible {
+  outline: 2px solid var(--pcm-blue-deep);
+  outline-offset: 2px;
+}
+
+/* Cards --------------------------------------------------------------------- */
+.pcm-crm-card {
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 20px;
+  /* The theme's offset shadow, which is what makes a card read as PCM's */
+  box-shadow: 6px 6px 0 var(--pcm-blue);
+}
+.pcm-crm-card-accent { box-shadow: 6px 6px 0 var(--pcm-accent); }
+
+/* Filter bar ---------------------------------------------------------------- */
+.pcm-crm-filters {
+  position: sticky;
+  top: 32px;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--pcm-paper-tint);
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.pcm-crm-filters:empty { display: none; }
+.pcm-crm-filter { display: flex; flex-direction: column; gap: 4px; }
+.pcm-crm-filter label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pcm-ink);
+}
+.pcm-crm-filter input,
+.pcm-crm-filter select {
+  min-width: 150px;
+  padding: 7px 10px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 9px;
+  background: #fff;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--pcm-ink);
+}
+.pcm-crm-filter-search input { min-width: 240px; }
+.pcm-crm-filter-actions { margin-left: auto; display: flex; gap: 8px; align-items: flex-end; }
+.pcm-crm-filter-count {
+  font-size: 0.85rem;
+  color: var(--pcm-body);
+  padding-bottom: 9px;
+}
+.pcm-crm-filter-count strong { color: var(--pcm-ink); }
+
+/* Tables -------------------------------------------------------------------- */
+/* Wide tables scroll inside their own container — the page body must never
+   scroll sideways, which is the usual way an admin list breaks on a laptop. */
+.pcm-crm-table-wrap {
+  overflow-x: auto;
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+}
+.pcm-crm-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.pcm-crm-table th {
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--pcm-ink);
+  background: var(--pcm-paper-tint);
+  padding: 12px 14px;
+  border-bottom: 2px solid var(--pcm-ink);
+  white-space: nowrap;
+}
+.pcm-crm-table th.is-sortable { cursor: pointer; user-select: none; }
+.pcm-crm-table th.is-sortable:hover { color: var(--pcm-accent-deep); }
+.pcm-crm-table th .pcm-sort { opacity: 0.45; margin-left: 4px; }
+.pcm-crm-table th.is-sorted .pcm-sort { opacity: 1; color: var(--pcm-accent-deep); }
+.pcm-crm-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--pcm-line);
+  vertical-align: middle;
+}
+.pcm-crm-table tbody tr { cursor: pointer; }
+.pcm-crm-table tbody tr:hover { background: var(--pcm-paper-tint); }
+.pcm-crm-table tbody tr:last-child td { border-bottom: 0; }
+.pcm-crm-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pcm-crm-strong { font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-muted { color: var(--pcm-gray); }
+
+/* Badges -------------------------------------------------------------------- */
+.pcm-crm-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+  background: var(--pcm-paper-tint);
+  border: 1px solid var(--pcm-line);
+  color: var(--pcm-ink);
+}
+.pcm-crm-badge-open { background: #eaf1f9; border-color: var(--pcm-blue); color: #2d5a86; }
+.pcm-crm-badge-won { background: #e6f2ec; border-color: #9ecbb6; color: var(--pcm-green); }
+.pcm-crm-badge-lost { background: #fbeeee; border-color: #e2b0b0; color: var(--pcm-accent-deeper); }
+.pcm-crm-badge-due { background: #fbeeee; border-color: #e2b0b0; color: var(--pcm-accent-deeper); }
+
+/* Tiles --------------------------------------------------------------------- */
+.pcm-crm-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.pcm-crm-tile {
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: 5px 5px 0 var(--pcm-blue);
+}
+/* Alternating accent, the way the theme's service cards do it, so a row of
+   tiles reads as a set rather than a repeat. */
+.pcm-crm-tile:nth-child(even) { box-shadow: 5px 5px 0 var(--pcm-accent); }
+.pcm-crm-tile-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pcm-body);
+  margin: 0 0 6px;
+}
+.pcm-crm-tile-value {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--pcm-ink);
+  font-variant-numeric: tabular-nums;
+}
+.pcm-crm-tile-note { font-size: 0.8rem; color: var(--pcm-body); margin-top: 4px; }
+.pcm-crm-tile-alert .pcm-crm-tile-value { color: var(--pcm-accent-deep); }
+
+/* Charts -------------------------------------------------------------------- */
+.pcm-crm-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+}
+.pcm-crm-chart { min-width: 0; }
+.pcm-crm-chart h3 { margin-bottom: 14px; }
+.pcm-crm-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.pcm-crm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+}
+.pcm-crm-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.pcm-crm-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+/* Pipeline ------------------------------------------------------------------ */
+.pcm-crm-pipeline {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 14px;
+  align-items: flex-start;
+}
+.pcm-crm-column {
+  flex: 0 0 268px;
+  background: var(--pcm-paper-tint);
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  padding: 12px;
+  min-height: 220px;
+  transition: background 0.15s ease;
+}
+.pcm-crm-column.is-over { background: #e7f0fa; border-color: var(--pcm-blue-deep); }
+.pcm-crm-column-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid var(--pcm-ink);
+}
+.pcm-crm-column-name { font-family: var(--font-display); font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-column-total { font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--pcm-body); }
+.pcm-crm-card-deal {
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  cursor: grab;
+  box-shadow: 3px 3px 0 var(--pcm-blue);
+}
+.pcm-crm-card-deal:last-child { margin-bottom: 0; }
+.pcm-crm-card-deal:active { cursor: grabbing; }
+.pcm-crm-card-deal.is-dragging { opacity: 0.4; }
+.pcm-crm-card-deal .name { font-weight: 700; color: var(--pcm-ink); display: block; margin-bottom: 3px; }
+.pcm-crm-card-deal .meta { font-size: 0.78rem; color: var(--pcm-body); display: flex; justify-content: space-between; gap: 8px; }
+.pcm-crm-column-empty { font-size: 0.82rem; color: var(--pcm-gray); text-align: center; padding: 20px 0; }
+
+/* Drawer -------------------------------------------------------------------- */
+.pcm-crm-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 29, 0.4);
+  z-index: 100000;
+}
+.pcm-crm-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(660px, 100%);
+  background: var(--pcm-paper);
+  border-left: 3px solid var(--pcm-ink);
+  z-index: 100001;
+  overflow-y: auto;
+  padding: 22px 26px 60px;
+}
+.pcm-crm-drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--pcm-ink);
+  margin-bottom: 18px;
+}
+.pcm-crm-drawer-head h2 { margin: 0; }
+.pcm-crm-drawer-kicker {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pcm-accent-deep);
+  margin: 0 0 2px;
+}
+.pcm-crm-drawer-close {
+  border: 0;
+  background: none;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--pcm-ink);
+  padding: 0 4px;
+}
+
+/* Forms --------------------------------------------------------------------- */
+.pcm-crm-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px 18px;
+}
+.pcm-crm-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.pcm-crm-field-wide { grid-column: 1 / -1; }
+.pcm-crm-field label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--pcm-ink);
+}
+.pcm-crm-field input,
+.pcm-crm-field select,
+.pcm-crm-field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background: #fff;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--pcm-ink);
+}
+.pcm-crm-field textarea { min-height: 96px; resize: vertical; }
+.pcm-crm-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pcm-line);
+}
+.pcm-crm-form-actions .pcm-crm-delete { margin-left: auto; }
+
+/* Related lists ------------------------------------------------------------- */
+.pcm-crm-related { margin-top: 26px; }
+.pcm-crm-related h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--pcm-blue);
+  margin-bottom: 10px;
+}
+.pcm-crm-related h3 .count {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pcm-body);
+  background: var(--pcm-paper-tint);
+  border-radius: 999px;
+  padding: 1px 9px;
+}
+.pcm-crm-related-list { list-style: none; margin: 0; padding: 0; }
+.pcm-crm-related-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--pcm-line);
+  font-size: 0.9rem;
+}
+.pcm-crm-related-list li:last-child { border-bottom: 0; }
+.pcm-crm-related-list .primary { color: var(--pcm-ink); font-weight: 600; }
+.pcm-crm-related-list .secondary { color: var(--pcm-body); font-size: 0.82rem; }
+.pcm-crm-related-empty { color: var(--pcm-gray); font-size: 0.88rem; padding: 8px 0; }
+
+/* Timeline ------------------------------------------------------------------ */
+.pcm-crm-timeline { list-style: none; margin: 0; padding: 0; }
+.pcm-crm-timeline li {
+  position: relative;
+  padding: 0 0 16px 20px;
+  border-left: 2px solid var(--pcm-gray-light);
+}
+.pcm-crm-timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.pcm-crm-timeline li::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-accent);
+}
+.pcm-crm-timeline .subject { font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-timeline .when { font-size: 0.78rem; color: var(--pcm-body); }
+.pcm-crm-timeline .body { font-size: 0.88rem; margin: 4px 0 0; white-space: pre-wrap; }
+
+/* States -------------------------------------------------------------------- */
+.pcm-crm-loading, .pcm-crm-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--pcm-body);
+}
+.pcm-crm-empty h3 { color: var(--pcm-ink); }
+.pcm-crm-error {
+  border: 2px solid var(--pcm-accent-deep);
+  border-radius: var(--radius);
+  background: #fbeeee;
+  color: var(--pcm-accent-deeper);
+  padding: 14px 18px;
+  font-weight: 600;
+}
+.pcm-crm-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+  font-size: 0.88rem;
+}
+
+/* Settings screen ----------------------------------------------------------- */
+.pcm-crm-settings .form-table th { font-family: var(--font-display); color: var(--pcm-ink); }
+.pcm-crm-attachment-list { list-style: none; margin: 0 0 10px; padding: 0; }
+.pcm-crm-attachment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 9px;
+  background: var(--pcm-paper-tint);
+  margin-bottom: 7px;
+  max-width: 460px;
+}
+.pcm-crm-attachment.is-broken { border-color: var(--pcm-accent-deep); color: var(--pcm-accent-deeper); }
+.pcm-crm-attachment-name { flex: 1; font-size: 0.9rem; word-break: break-all; }
+.pcm-crm-attachment-remove {
+  color: var(--pcm-accent-deep);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Narrow screens ------------------------------------------------------------ */
+@media (max-width: 782px) {
+  .pcm-crm-filters { position: static; }
+  .pcm-crm-filter input, .pcm-crm-filter select, .pcm-crm-filter-search input { min-width: 0; width: 100%; }
+  .pcm-crm-filter { width: 100%; }
+  .pcm-crm-filter-actions { margin-left: 0; width: 100%; }
+  .pcm-crm-drawer { width: 100%; border-left: 0; }
+  .pcm-crm { margin-right: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pcm-crm * { transition: none !important; }
+}

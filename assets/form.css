@@ -1,0 +1,51 @@
+/* ==========================================================================
+   Contact form — fallback styling only.
+
+   The pcm-theme styles .contact-form itself, and the shortcode emits the same
+   markup it always did, so on the live site these rules are almost entirely
+   overridden. They exist so the form is still usable under a different theme,
+   or if the theme's stylesheet is ever trimmed.
+
+   Scoped to .contact-form-wrap and deliberately unopinionated about colour —
+   whatever the active theme sets for body text and links should win.
+   ========================================================================== */
+.contact-form-wrap { max-width: 640px; margin: 0 auto; }
+
+.contact-form .field { margin-bottom: 20px; }
+
+.contact-form .field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+
+@media (max-width: 520px) {
+  .contact-form .field-row { grid-template-columns: 1fr; }
+}
+
+.contact-form label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.contact-form input,
+.contact-form select,
+.contact-form textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid currentColor;
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+}
+
+.pcm-form-notice {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid currentColor;
+  margin-bottom: 20px;
+}
+.pcm-form-sent { background: #e6f2ec; }
+.pcm-form-error { background: #fbeeee; }
