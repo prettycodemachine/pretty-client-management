@@ -325,6 +325,12 @@
   background: rgba(26, 26, 29, 0.55);
   z-index: 100000;
 }
+/* display:flex below would otherwise beat the hidden attribute's UA-sheet
+   display:none, leaving a closed modal on screen as an empty bordered strip. */
+.pcm-crm-drawer[hidden],
+.pcm-crm-scrim[hidden],
+.pcm-crm-field[hidden] { display: none !important; }
+
 .pcm-crm-drawer {
   position: fixed;
   top: 50%;

@@ -136,6 +136,48 @@ check( 'an empty scalar filter is skipped',
 check( 'submissions table has no is_deleted clause',
 	strpos( $where->invoke( pcm_crm_submissions(), array() ), 'is_deleted' ), false );
 
+echo "\n--- related lists endpoint ---\n";
+// A wpdb that returns plausible rows, so expand() has data to work on.
+class PCM_Related_WPDB extends FakeWPDB {
+	function get_results( $q = '', $o = null ) {
+		if ( false !== strpos( $q, 'opportunities' ) ) {
+			return array( array( 'id' => 7, 'account_id' => 2, 'primary_contact_id' => 5, 'name' => 'A deal',
+				'stage_name' => 'Proposal', 'amount' => '1000', 'close_date' => '2026-06-01',
+				'is_closed' => '0', 'is_won' => '0', 'owner_id' => '1', 'is_deleted' => '0' ) );
+		}
+		if ( false !== strpos( $q, 'activities' ) ) {
+			return array( array( 'id' => 9, 'subject' => 'Intro call', 'activity_type' => 'Call',
+				'who_id' => 5, 'what_id' => 2, 'what_type' => 'account', 'owner_id' => '1', 'is_deleted' => '0' ) );
+		}
+		if ( false !== strpos( $q, 'contacts' ) ) {
+			return array( array( 'id' => 5, 'account_id' => 2, 'first_name' => 'Ada', 'last_name' => 'Lovelace',
+				'email' => 'a@b.c', 'owner_id' => '1', 'is_deleted' => '0' ) );
+		}
+		return array( array( 'id' => 2, 'name' => 'Acme', 'owner_id' => '1', 'is_deleted' => '0' ) );
+	}
+}
+$real_wpdb = $GLOBALS['wpdb'];
+$GLOBALS['wpdb'] = new PCM_Related_WPDB();
+
+$related = function( $object ) {
+	return (array) PCM_CRM_REST::related( new WP_REST_Request( array( 'object' => $object, 'id' => 5 ) ) );
+};
+
+check( 'an account exposes all three lists',
+	array_keys( $related( 'accounts' ) ), array( 'contacts', 'opportunities', 'activities' ) );
+check( 'a contact exposes opportunities and activities',
+	array_keys( $related( 'contacts' ) ), array( 'opportunities', 'activities' ) );
+check( 'an opportunity exposes activities',
+	array_keys( $related( 'opportunities' ) ), array( 'activities' ) );
+
+$rows = $related( 'contacts' );
+check( 'related opportunities carry their account name',
+	isset( $rows['opportunities'][0]['_account_name'] ), true );
+check( 'related activities carry their contact name',
+	isset( $rows['activities'][0]['_contact_name'] ), true );
+
+$GLOBALS['wpdb'] = $real_wpdb;
+
 echo "\n--- demo data guard ---\n";
 $allowed = function( $host ) {
 	$GLOBALS['pcm_test_host'] = $host;

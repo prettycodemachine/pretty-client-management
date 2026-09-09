@@ -15,6 +15,9 @@
  */
 define( 'ABSPATH', '/tmp/' );
 
+define( 'ARRAY_A', 'ARRAY_A' );
+define( 'OBJECT', 'OBJECT' );
+
 $GLOBALS['options'] = array();
 $GLOBALS['filters'] = array();
 
@@ -88,7 +91,21 @@ class WP_Error { public $msg; function __construct( $c = '', $m = '' ) { $this->
 function is_wp_error( $t ) { return $t instanceof WP_Error; }
 class WP_REST_Server { const READABLE = 'GET'; const CREATABLE = 'POST'; const DELETABLE = 'DELETE'; }
 function register_rest_route() {} function rest_ensure_response( $v ) { return $v; }
-class WP_REST_Request {}
+/**
+ * Enough of WP_REST_Request to call a controller directly: URL parameters are
+ * reached through ArrayAccess, query parameters through get_param().
+ */
+class WP_REST_Request implements ArrayAccess {
+	private $url = array();
+	private $params = array();
+	function __construct( $url = array(), $params = array() ) { $this->url = $url; $this->params = $params; }
+	function get_param( $k ) { return isset( $this->params[$k] ) ? $this->params[$k] : null; }
+	function get_json_params() { return $this->params; }
+	#[\ReturnTypeWillChange] function offsetExists( $o ) { return isset( $this->url[$o] ); }
+	#[\ReturnTypeWillChange] function offsetGet( $o ) { return isset( $this->url[$o] ) ? $this->url[$o] : null; }
+	#[\ReturnTypeWillChange] function offsetSet( $o, $v ) { $this->url[$o] = $v; }
+	#[\ReturnTypeWillChange] function offsetUnset( $o ) { unset( $this->url[$o] ); }
+}
 
 // Defined so includes/cli-seed.php loads and its production guard can be
 // tested. The command class is registered against this stub and never run.

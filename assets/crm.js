@@ -824,7 +824,7 @@
 		dom.scrim.hidden = false;
 		clear(dom.drawer, el('p.pcm-crm-loading', { text: 'Loading…' }));
 
-		var needed = [loadLookup('accounts'), loadLookup('contacts')];
+		var needed = [loadLookup('accounts'), loadLookup('contacts'), loadLookup('opportunities')];
 
 		Promise.all(needed).then(function () {
 			if (!id) { return Promise.resolve({}); }
@@ -832,13 +832,29 @@
 		}).then(function (record) {
 			renderDrawer(object, record);
 
-			// Activities are a leaf — there is no related route for them, and
-			// asking for one would be a guaranteed 404 on every open.
-			if (id && object !== 'activities') {
-				api('/related/' + object + '/' + id).then(function (related) {
-					renderRelated(object, record, related);
-				}).catch(function () { /* related lists are a nicety, not the record */ });
+			if (!id) { return; }
+
+			// Activities are a leaf: nothing hangs off one, so its section is
+			// built from the record's own parents rather than fetched.
+			if (object === 'activities') {
+				renderRelated(object, record, {});
+				return;
 			}
+
+			api('/related/' + object + '/' + id).then(function (related) {
+				renderRelated(object, record, related);
+			}).catch(function (error) {
+				// Swallowing this leaves an empty space that reads as "this
+				// record has nothing attached", which is a different and
+				// wrong statement.
+				var container = dom.drawer.querySelector('[data-role="related"]');
+				if (container) {
+					clear(container, el('div.pcm-crm-error', {
+						text: 'Could not load related records: ' + (error.message || 'request failed')
+					}));
+				}
+				window.console.error(error);
+			});
 		}).catch(function (error) {
 			clear(dom.drawer, el('div.pcm-crm-error', { text: error.message }));
 		});
@@ -926,12 +942,19 @@
 			}));
 		}
 
+		// Related lists come before the details form. A record is usually
+		// opened to see what is attached to it, not to edit a field, and a
+		// contact's sixteen inputs would otherwise bury them below the fold.
+		if (!isNew) {
+			scroll.appendChild(el('div', { 'data-role': 'related' }, [
+				el('p.pcm-crm-related-empty', { text: 'Loading related records…' })
+			]));
+		}
+
 		scroll.appendChild(el('div.pcm-crm-section', {}, [
 			el('h3.pcm-crm-section-head', { text: 'Details' }),
 			el('form', { onsubmit: function (e) { e.preventDefault(); } }, [grid, actions])
 		]));
-
-		scroll.appendChild(el('div', { 'data-role': 'related' }));
 
 		dom.drawer.appendChild(scroll);
 
@@ -1138,8 +1161,10 @@
 
 		clear(container);
 
-		if (related.contacts) {
-			container.appendChild(relatedList({
+		var sections = [];
+
+		if (related.contacts && related.contacts.length) {
+			sections.push(relatedList({
 				title: 'Contacts',
 				rows: related.contacts,
 				object: 'contacts',
@@ -1153,8 +1178,8 @@
 			}));
 		}
 
-		if (related.opportunities) {
-			container.appendChild(relatedList({
+		if (related.opportunities && related.opportunities.length) {
+			sections.push(relatedList({
 				title: 'Opportunities',
 				rows: related.opportunities,
 				object: 'opportunities',
@@ -1169,11 +1194,33 @@
 			}));
 		}
 
-		if (related.activities) {
-			container.appendChild(relatedList({
+		// An activity has no children, but it does have parents, and being
+		// able to step up to them is the same affordance in the other
+		// direction.
+		if (object === 'activities') {
+			var parents = activityParents(record);
+
+			if (parents.length) {
+				sections.push(relatedList({
+					title: 'Related to',
+					rows: parents,
+					object: '',
+					columns: function (row) {
+						return [
+							{ text: row.label, strong: true },
+							{ badge: row.kind }
+						];
+					},
+					open: function (row) { openDrawer(row.object, row.id); }
+				}));
+			}
+		} else {
+			sections.push(relatedList({
 				title: 'Activities',
-				rows: related.activities,
+				rows: related.activities || [],
 				object: 'activities',
+				// The quick-log box shows even with no activities — an empty
+				// timeline is exactly when you most want to start one.
 				before: quickLog(object, record),
 				columns: function (row) {
 					return [
@@ -1185,6 +1232,43 @@
 				}
 			}));
 		}
+
+		if (!sections.length) {
+			container.appendChild(el('p.pcm-crm-related-empty', { text: 'Nothing is linked to this record yet.' }));
+			return;
+		}
+
+		sections.forEach(function (section) { container.appendChild(section); });
+	}
+
+	/**
+	 * The records an activity hangs off: its contact, and whichever account or
+	 * opportunity it was logged against.
+	 */
+	function activityParents(record) {
+		var rows = [];
+
+		if (record.who_id) {
+			rows.push({
+				id: record.who_id,
+				object: 'contacts',
+				kind: 'Contact',
+				label: record._contact_name || lookupLabel('contacts', record.who_id) || 'Contact #' + record.who_id
+			});
+		}
+
+		if (record.what_id && record.what_type) {
+			var object = record.what_type === 'opportunity' ? 'opportunities' : 'accounts';
+
+			rows.push({
+				id: record.what_id,
+				object: object,
+				kind: record.what_type === 'opportunity' ? 'Opportunity' : 'Account',
+				label: lookupLabel(object, record.what_id) || 'Record #' + record.what_id
+			});
+		}
+
+		return rows;
 	}
 
 	/**
@@ -1210,6 +1294,8 @@
 			return block;
 		}
 
+		var open = config.open || function (row) { openDrawer(config.object, row.id); };
+
 		var list = el('div.pcm-crm-related-rows');
 
 		config.rows.forEach(function (row) {
@@ -1230,8 +1316,8 @@
 
 			list.appendChild(el('button.pcm-crm-related-row', {
 				type: 'button',
-				title: 'Open this ' + config.object.replace(/s$/, ''),
-				onclick: function () { openDrawer(config.object, row.id); }
+				title: config.object ? 'Open this ' + config.object.replace(/s$/, '') : 'Open this record',
+				onclick: function () { open(row); }
 			}, cells));
 		});
 
