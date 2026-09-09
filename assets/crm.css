@@ -490,7 +490,10 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 /* A filled band rather than a rule: the groups are what make a long form
    readable, and a hairline underline does not separate them at a glance.
    Ink on powder blue is 8.9:1, so the label carries its own weight. */
-.pcm-crm-group-head {
+/* Scoped under .pcm-crm so it outranks the heading reset above, which is
+   .pcm-crm h4 — a class alone loses to a class plus an element, and the margin
+   here would silently fall back to the reset's 0.4em. */
+.pcm-crm .pcm-crm-group-head {
   font-family: var(--font-display);
   font-size: 0.85rem;
   font-weight: 700;
@@ -500,9 +503,9 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   background: var(--pcm-blue);
   border-radius: 8px;
   padding: 10px 14px;
-  margin: 30px 0 18px;
+  margin: 38px 0 22px;
 }
-.pcm-crm-group-head:first-child { margin-top: 0; }
+.pcm-crm .pcm-crm-group-head:first-child { margin-top: 0; }
 
 /* Sections and related lists ----------------------------------------------- */
 /* min-width:0 so a wide related row scrolls inside its panel rather than
