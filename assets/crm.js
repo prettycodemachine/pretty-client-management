@@ -925,26 +925,35 @@
 			})
 		]));
 
-		var scroll = el('div.pcm-crm-modal-body');
+		// The record's fixed chrome. Everything here stays put; only the tab
+		// panel below it scrolls. Sticky positioning was doing this job and
+		// doing it badly — the scroll container's top padding sits inside the
+		// scrollport, so fields scrolled through the uncovered band above the
+		// strip and over the tab labels.
+		var top = el('div.pcm-crm-modal-top');
 
 		// A restriction on contacting someone has to be visible before anyone
-		// reads the phone number below it, and on every tab — so it sits above
-		// the tab strip rather than inside the details panel.
+		// reads the phone number below it, and on every tab — so it lives in
+		// the chrome rather than inside the details panel.
 		if (!isNew && record.do_not_contact) {
-			scroll.appendChild(el('div.pcm-crm-alert', {}, [
+			top.appendChild(el('div.pcm-crm-alert', {}, [
 				el('strong', { text: 'Do not contact.' }),
 				' ' + (record.do_not_contact_reason || 'No reason recorded.')
 			]));
 		}
 
 		if (!isNew && def.highlights) {
-			scroll.appendChild(highlightPanel(def.highlights(record)));
+			top.appendChild(highlightPanel(def.highlights(record)));
 		}
 
-		scroll.appendChild(el('div.pcm-crm-tabs', { 'data-role': 'tabs', role: 'tablist' }));
-		scroll.appendChild(el('div.pcm-crm-panels', { 'data-role': 'panels' }, [
-			detailsPanel(object, record, values)
-		]));
+		top.appendChild(el('div.pcm-crm-tabs', { 'data-role': 'tabs', role: 'tablist' }));
+		dom.drawer.appendChild(top);
+
+		var scroll = el('div.pcm-crm-modal-body', {}, [
+			el('div.pcm-crm-panels', { 'data-role': 'panels' }, [
+				detailsPanel(object, record, values)
+			])
+		]);
 
 		dom.drawer.appendChild(scroll);
 

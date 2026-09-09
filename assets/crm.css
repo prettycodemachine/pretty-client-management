@@ -338,9 +338,10 @@
   left: 50%;
   transform: translate(-50%, -50%);
   width: min(940px, calc(100vw - 48px));
-  /* The shell is a flex column so the header stays put and only the body
-     scrolls — a long related list must not push the record's name away. */
-  max-height: min(86vh, 900px);
+  /* A fixed height, not max-height: the modal must not resize when you switch
+     from a tab with two rows to one with forty. The shell is a flex column so
+     the header, highlights and tabs stay put and only the panel scrolls. */
+  height: min(86vh, 880px);
   display: flex;
   flex-direction: column;
   background: var(--pcm-paper);
@@ -362,6 +363,10 @@
 }
 .pcm-crm-modal-heading { min-width: 0; }
 .pcm-crm-modal-head h2 { margin: 0; overflow-wrap: anywhere; }
+.pcm-crm-modal-top {
+  flex: 0 0 auto;
+  padding: 18px 26px 0;
+}
 .pcm-crm-modal-body {
   flex: 1 1 auto;
   overflow-y: auto;
@@ -433,20 +438,12 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-alert strong { color: var(--pcm-accent-deeper); }
 
 /* Tabs ---------------------------------------------------------------------- */
-/* Sticky inside the scrolling body, so switching tabs stays possible from
-   the bottom of a long details form. The paper ground stops the fields
-   showing through as they pass underneath. */
 .pcm-crm-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  padding-top: 2px;
   background: var(--pcm-paper);
   border-bottom: 2px solid var(--pcm-ink);
-  margin-bottom: 20px;
 }
 .pcm-crm-tab {
   display: inline-flex;
@@ -490,15 +487,20 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 }
 
 /* Field groups -------------------------------------------------------------- */
+/* A filled band rather than a rule: the groups are what make a long form
+   readable, and a hairline underline does not separate them at a glance.
+   Ink on powder blue is 8.9:1, so the label carries its own weight. */
 .pcm-crm-group-head {
-  font-size: 0.78rem;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--pcm-body);
-  margin: 26px 0 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--pcm-line);
+  color: var(--pcm-ink);
+  background: var(--pcm-blue);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 30px 0 18px;
 }
 .pcm-crm-group-head:first-child { margin-top: 0; }
 
@@ -688,7 +690,9 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   .pcm-crm-filter-actions { margin-left: 0; width: 100%; }
   .pcm-crm-drawer {
     width: 100vw;
-    max-height: 100vh;
+    /* Full height rather than the desktop's inset card — a modal that floats
+       in the middle of a phone screen wastes most of it. */
+    height: 100vh;
     top: 0;
     left: 0;
     transform: none;
@@ -696,7 +700,13 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
     border-width: 0;
     box-shadow: none;
   }
-  .pcm-crm-modal-head, .pcm-crm-modal-body { padding-left: 16px; padding-right: 16px; }
+  .pcm-crm-modal-head,
+  .pcm-crm-modal-top,
+  .pcm-crm-modal-body { padding-left: 16px; padding-right: 16px; }
+  /* The strip scrolls sideways instead of wrapping onto a second row, which
+     would eat the panel's height on the screens with least of it. */
+  .pcm-crm-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .pcm-crm-tab { white-space: nowrap; }
   .pcm-crm-related-row { grid-template-columns: 1fr auto; }
   .pcm-crm-quicklog { flex-wrap: wrap; }
   .pcm-crm { margin-right: 12px; }
