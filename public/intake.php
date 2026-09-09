@@ -48,11 +48,15 @@ function pcm_crm_intake( array $pcm_fields ) {
 	) );
 
 	$pcm_contact_id = pcm_crm_upsert_contact( array(
-		'account_id'  => $pcm_account_id,
-		'first_name'  => $pcm_fields['first'],
-		'last_name'   => $pcm_fields['last'],
-		'email'       => $pcm_fields['email'],
-		'lead_source' => PCM_CRM_FORM_SOURCE,
+		'account_id'       => $pcm_account_id,
+		'first_name'       => $pcm_fields['first'],
+		'last_name'        => $pcm_fields['last'],
+		'email'            => $pcm_fields['email'],
+		'lead_source'      => PCM_CRM_FORM_SOURCE,
+		// Carried onto the person so an opportunity opened for them later can
+		// inherit it. Without this the answer survives only in an activity's
+		// subject line, where nothing can filter or report on it.
+		'service_interest' => $pcm_fields['interest'],
 	) );
 
 	// Subject names the interest so the activity list reads as a log of what

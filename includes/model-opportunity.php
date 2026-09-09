@@ -20,6 +20,8 @@ function pcm_crm_opportunities() {
 				'type'               => array( 'type' => 'text', 'sf' => 'Type', 'label' => 'Type', 'options' => 'pcm_crm_opportunity_types' ),
 				'lead_source'        => array( 'type' => 'text', 'sf' => 'LeadSource', 'label' => 'Lead Source', 'options' => 'pcm_crm_lead_sources' ),
 				'next_step'          => array( 'type' => 'text', 'sf' => 'NextStep', 'label' => 'Next Step' ),
+				'service_interest'   => array( 'type' => 'text', 'sf' => 'Service_Interest__c', 'label' => 'Interested In', 'options' => 'pcm_crm_interest_labels' ),
+				'closed_lost_reason' => array( 'type' => 'text', 'sf' => 'Closed_Lost_Reason__c', 'label' => 'Closed Lost Reason' ),
 				'forecast_category'  => array( 'type' => 'text', 'sf' => 'ForecastCategoryName', 'label' => 'Forecast Category' ),
 				'is_closed'          => array( 'type' => 'bool', 'sf' => 'IsClosed', 'label' => 'Closed', 'readonly' => true ),
 				'is_won'             => array( 'type' => 'bool', 'sf' => 'IsWon', 'label' => 'Won', 'readonly' => true ),
@@ -84,3 +86,64 @@ function pcm_crm_apply_stage( $pcm_row, $pcm_object, $pcm_id = 0 ) {
 }
 add_filter( 'pcm_crm_before_insert', 'pcm_crm_apply_stage', 10, 2 );
 add_filter( 'pcm_crm_before_update', 'pcm_crm_apply_stage', 10, 3 );
+
+/**
+ * Is this stage a loss?
+ *
+ * Derived from the stage's own flags rather than matched on the name, so a
+ * renamed or added losing stage still counts as one.
+ */
+function pcm_crm_stage_is_lost( $pcm_stage_name ) {
+	$pcm_stage = pcm_crm_stage( $pcm_stage_name );
+
+	return $pcm_stage && ! empty( $pcm_stage['is_closed'] ) && empty( $pcm_stage['is_won'] );
+}
+
+/**
+ * A deal cannot be lost without saying why.
+ *
+ * The one thing a pipeline is for is learning from what did not close, and a
+ * column of losses with no reasons answers nothing. Enforced on the server so
+ * the rule holds for the pipeline board's drag as well as the form — the board
+ * changes the stage with a bare PATCH and would otherwise slip past it.
+ *
+ * Validated against the merged record, so dragging a card whose reason is
+ * already recorded does not demand it again.
+ */
+function pcm_crm_validate_opportunity( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) {
+	if ( is_wp_error( $pcm_error ) || 'opportunity' !== $pcm_object ) {
+		return $pcm_error;
+	}
+
+	$pcm_existing = $pcm_id ? pcm_crm_opportunities()->get( $pcm_id ) : array();
+	$pcm_merged   = array_merge( (array) $pcm_existing, $pcm_row );
+
+	if ( empty( $pcm_merged['stage_name'] ) || ! pcm_crm_stage_is_lost( $pcm_merged['stage_name'] ) ) {
+		return $pcm_error;
+	}
+
+	if ( '' === trim( (string) ( isset( $pcm_merged['closed_lost_reason'] ) ? $pcm_merged['closed_lost_reason'] : '' ) ) ) {
+		return new WP_Error(
+			'pcm_crm_lost_reason_required',
+			__( 'Give a reason before closing this as lost — a column of losses with no reasons teaches nothing.', 'pcm-crm' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	return $pcm_error;
+}
+add_filter( 'pcm_crm_validate', 'pcm_crm_validate_opportunity', 10, 4 );
+
+/**
+ * Reopening a deal drops the reason it was lost for, so a live opportunity
+ * cannot carry an explanation for a loss that was undone.
+ */
+function pcm_crm_clear_lost_reason( $pcm_row, $pcm_object ) {
+	if ( 'opportunity' === $pcm_object && isset( $pcm_row['stage_name'] ) && ! pcm_crm_stage_is_lost( $pcm_row['stage_name'] ) ) {
+		$pcm_row['closed_lost_reason'] = '';
+	}
+
+	return $pcm_row;
+}
+add_filter( 'pcm_crm_before_insert', 'pcm_crm_clear_lost_reason', 10, 2 );
+add_filter( 'pcm_crm_before_update', 'pcm_crm_clear_lost_reason', 10, 2 );

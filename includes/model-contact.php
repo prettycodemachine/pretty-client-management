@@ -24,6 +24,10 @@ function pcm_crm_contacts() {
 				'mailing_postal_code'   => array( 'type' => 'text', 'sf' => 'MailingPostalCode', 'label' => 'Mailing Postal Code' ),
 				'mailing_country'       => array( 'type' => 'text', 'sf' => 'MailingCountry', 'label' => 'Mailing Country' ),
 				'lead_source'           => array( 'type' => 'text', 'sf' => 'LeadSource', 'label' => 'Lead Source', 'options' => 'pcm_crm_lead_sources' ),
+				// What they asked about on the contact form. Kept on the person
+				// so an opportunity opened for them later can inherit it —
+				// otherwise the answer only survives in an activity's subject.
+				'service_interest'      => array( 'type' => 'text', 'sf' => 'Service_Interest__c', 'label' => 'Interested In', 'options' => 'pcm_crm_interest_labels' ),
 				'do_not_contact'        => array( 'type' => 'bool', 'sf' => 'DoNotCall', 'label' => 'Do Not Contact' ),
 				'do_not_contact_reason' => array( 'type' => 'text', 'sf' => 'DoNotCallReason__c', 'label' => 'Do Not Contact Reason' ),
 				'description'           => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Notes' ),

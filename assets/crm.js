@@ -265,6 +265,34 @@
 		return out;
 	}
 
+	/**
+	 * The contact form's interest options, as the labels the form posts.
+	 *
+	 * bootstrap sends them keyed by slug, but the stored value is the label —
+	 * that is what the form submits and what the notification email carries —
+	 * so the dropdown offers labels on both sides.
+	 */
+	function interestLabels() {
+		var interests = (state.boot && state.boot.interests) || {};
+
+		return Object.keys(interests).map(function (slug) { return interests[slug]; });
+	}
+
+	/**
+	 * The stage definition behind a stage name.
+	 */
+	function stageByName(name) {
+		return ((state.boot && state.boot.stages) || []).filter(function (stage) {
+			return stage.name === name;
+		})[0] || null;
+	}
+
+	function stageIsLost(name) {
+		var stage = stageByName(name);
+
+		return !!(stage && Number(stage.is_closed) && !Number(stage.is_won));
+	}
+
 	function ownerOptions() {
 		return [{ value: '', label: 'Anyone' }].concat((state.boot.owners || []).map(function (owner) {
 			return { value: owner.id, label: owner.name };
@@ -372,7 +400,9 @@
 						{ key: 'title', label: 'Title' },
 						{ key: 'account_id', label: 'Account', lookup: 'accounts' },
 						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-						{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) }
+						{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) },
+						{ key: 'service_interest', label: 'Interested in',
+							options: options(interestLabels(), true) }
 					] },
 					{ title: 'Contact details', fields: [
 						{ key: 'email', label: 'Email', type: 'email' },
@@ -443,15 +473,18 @@
 						{ key: 'account_id', label: 'Account', lookup: 'accounts' },
 						{ key: 'primary_contact_id', label: 'Primary contact', lookup: 'contacts' },
 						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-						{ key: 'stage_name', label: 'Stage', options: options(state.boot.stages) }
+						{ key: 'stage_name', label: 'Stage', options: options(state.boot.stages) },
+						{ key: 'closed_lost_reason', label: 'Closed lost reason', wide: true,
+							showWhen: 'stage_name', showWhenLost: true }
 					] },
 					{ title: 'Forecast', fields: [
 						{ key: 'amount', label: 'Amount', type: 'number' },
 						{ key: 'close_date', label: 'Close date', type: 'date' },
-						{ key: 'probability', label: 'Probability %', type: 'number',
-							note: 'Set from the stage; override if this one is different.' },
+						{ key: 'probability', label: 'Probability %', type: 'number' },
 						{ key: 'type', label: 'Type', options: options(state.boot.opportunityTypes, true) },
-						{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) }
+						{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) },
+						{ key: 'service_interest', label: 'Interested in',
+							options: options(interestLabels(), true) }
 					] },
 					{ title: 'Notes', fields: [
 						{ key: 'next_step', label: 'Next step', wide: true },
@@ -1409,7 +1442,7 @@
 			if (!firstGrid) { firstGrid = grid; }
 
 			group.fields.forEach(function (field) {
-				grid.appendChild(fieldControl(field, values, grid));
+				grid.appendChild(fieldControl(field, values));
 			});
 
 			if (group.title) {
@@ -1521,7 +1554,7 @@
 		return panel;
 	}
 
-	function fieldControl(field, values, grid) {
+	function fieldControl(field, values) {
 		var id = 'pcm-crm-field-' + field.key;
 
 		if (field.lookupPair) {
@@ -1532,6 +1565,8 @@
 
 		function onInput(event) {
 			values[field.key] = event.target.value;
+			applyDerived(field.key, values);
+			applyConditionalFields(values);
 		}
 
 		// A checkbox is a control with a label beside it, not a labelled box
@@ -1543,7 +1578,7 @@
 				checked: !!Number(values[field.key]),
 				onchange: function (event) {
 					values[field.key] = event.target.checked ? 1 : 0;
-					if (grid) { applyConditionalFields(grid, values); }
+					applyConditionalFields(values);
 				}
 			});
 
@@ -1588,11 +1623,12 @@
 
 		if (field.note) { wrap.appendChild(el('span.pcm-crm-field-note', { text: field.note })); }
 
-		// Fields that only apply when another is set start hidden, and are
-		// revealed by the checkbox that makes them relevant.
+		// Fields that only apply under some other field's value start hidden,
+		// and are revealed by the control that makes them relevant.
 		if (field.showWhen) {
 			wrap.dataset.showWhen = field.showWhen;
-			wrap.hidden = !Number(values[field.showWhen]);
+			if (field.showWhenLost) { wrap.dataset.showWhenLost = '1'; }
+			wrap.hidden = !conditionMet(wrap.dataset, values);
 		}
 
 		return wrap;
@@ -1625,13 +1661,43 @@
 	/**
 	 * Show or hide the fields that depend on another field's value.
 	 *
-	 * Driven off data attributes rather than a lookup table, so adding a
-	 * conditional field is one property on its definition.
+	 * Searches the whole modal rather than one grid, because a dependency can
+	 * cross a group boundary — probability sits under Forecast and the stage
+	 * that sets it does not.
 	 */
-	function applyConditionalFields(grid, values) {
-		grid.querySelectorAll('[data-show-when]').forEach(function (node) {
-			node.hidden = !Number(values[node.dataset.showWhen]);
+	function applyConditionalFields(values) {
+		if (!dom.drawer) { return; }
+
+		dom.drawer.querySelectorAll('[data-show-when]').forEach(function (node) {
+			node.hidden = !conditionMet(node.dataset, values);
 		});
+	}
+
+	function conditionMet(data, values) {
+		// A losing stage is identified by its flags, not its name, so a
+		// renamed or added losing stage still reveals the reason field.
+		if (data.showWhenLost) { return stageIsLost(values[data.showWhen]); }
+
+		return !!Number(values[data.showWhen]);
+	}
+
+	/**
+	 * Values another field decides.
+	 *
+	 * The server derives probability from the stage on save either way; doing
+	 * it here as well is what makes the form show the number it is about to
+	 * store, rather than the previous stage's until someone saves and reopens.
+	 */
+	function applyDerived(key, values) {
+		if (key !== 'stage_name' || !dom.drawer) { return; }
+
+		var stage = stageByName(values.stage_name);
+		if (!stage) { return; }
+
+		values.probability = Number(stage.probability);
+
+		var input = dom.drawer.querySelector('#pcm-crm-field-probability');
+		if (input) { input.value = values.probability; }
 	}
 
 	function relatedToControl(field, values) {
@@ -1760,8 +1826,12 @@
 			return [
 				// The account comes from the contact, so a deal created here
 				// is attached to both the person and their organization.
+				// service_interest rides along from the person: it is what they
+				// asked about on the contact form, and a deal opened for them
+				// is almost always about that.
 				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New Opportunity',
 					prefill: { account_id: record.account_id || 0, primary_contact_id: record.id,
+						service_interest: record.service_interest || '',
 						stage_name: firstStage, close_date: closeDate } },
 				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ who_id: record.id,
@@ -2025,13 +2095,28 @@
 			var id = event.dataTransfer.getData('text/plain');
 			if (!id) { return; }
 
+			var body = { stage_name: column.stage };
+
+			// The server refuses a loss with no reason, and a card that snaps
+			// back with an error underneath the board is a poor way to learn
+			// that — so the reason is asked for before the move is attempted.
+			if (stageIsLost(column.stage)) {
+				var existing = (column.items || []).filter(function (item) { return String(item.id) === String(id); })[0];
+				var reason = window.prompt('Why was this lost?', (existing && existing.closed_lost_reason) || '');
+
+				// Cancelled, or left blank: the deal stays where it was rather
+				// than moving without the reason that move requires.
+				if (reason === null || !reason.trim()) { return; }
+
+				body.closed_lost_reason = reason.trim();
+			}
+
 			// The board is reloaded rather than patched: moving a card changes
 			// two column totals and the deal's probability, and re-fetching is
 			// both simpler and guaranteed to match what was stored.
-			api('/opportunities/' + id, {
-				method: 'PUT',
-				body: { stage_name: column.stage }
-			}).then(loadPipeline).catch(showError);
+			api('/opportunities/' + id, { method: 'PUT', body: body })
+				.then(loadPipeline)
+				.catch(showError);
 		});
 
 		return node;
@@ -2071,10 +2156,14 @@
 	   --------------------------------------------------------------------- */
 
 	function renderDashboard() {
+		// Scoped to opportunities, which is what most of this screen counts.
+		// A filter on a column another object does not have is dropped by that
+		// object's model, so the account and contact tiles answer only the
+		// filters that apply to them.
 		renderFilters([
 			{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
 			{ key: 'created_date', label: 'Created', range: 'date' }
-		], loadDashboard);
+		], loadDashboard, [], 'opportunities');
 
 		loadDashboard();
 	}

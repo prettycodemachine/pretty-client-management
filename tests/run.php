@@ -50,6 +50,47 @@ check( 'sets probability', $row['probability'], 100 );
 check( 'sets forecast category', $row['forecast_category'], 'Closed' );
 check( 'leaves other objects alone', pcm_crm_apply_stage( array( 'stage_name' => 'Closed Won' ), 'contact' ), array( 'stage_name' => 'Closed Won' ) );
 
+echo "\n--- closed lost needs a reason ---\n";
+check( 'Closed Lost is recognised as a loss', pcm_crm_stage_is_lost( 'Closed Lost' ), true );
+check( 'Closed Won is not', pcm_crm_stage_is_lost( 'Closed Won' ), false );
+check( 'an open stage is not', pcm_crm_stage_is_lost( 'Proposal' ), false );
+check( 'an unknown stage is not', pcm_crm_stage_is_lost( 'Nonsense' ), false );
+
+check( 'losing without a reason is refused',
+	is_wp_error( pcm_crm_validate_opportunity( null, 'opportunity', array( 'stage_name' => 'Closed Lost' ), 0 ) ), true );
+check( 'whitespace is not a reason',
+	is_wp_error( pcm_crm_validate_opportunity( null, 'opportunity', array( 'stage_name' => 'Closed Lost', 'closed_lost_reason' => '  ' ), 0 ) ), true );
+check( 'losing with a reason is allowed',
+	is_wp_error( pcm_crm_validate_opportunity( null, 'opportunity', array( 'stage_name' => 'Closed Lost', 'closed_lost_reason' => 'Budget pulled.' ), 0 ) ), false );
+check( 'winning needs no reason',
+	is_wp_error( pcm_crm_validate_opportunity( null, 'opportunity', array( 'stage_name' => 'Closed Won' ), 0 ) ), false );
+check( 'an open stage needs no reason',
+	is_wp_error( pcm_crm_validate_opportunity( null, 'opportunity', array( 'stage_name' => 'Proposal' ), 0 ) ), false );
+check( 'other objects are not subject to the rule',
+	is_wp_error( pcm_crm_validate_opportunity( null, 'contact', array( 'stage_name' => 'Closed Lost' ), 0 ) ), false );
+
+check( 'reopening a deal drops the reason',
+	pcm_crm_clear_lost_reason( array( 'stage_name' => 'Proposal', 'closed_lost_reason' => 'stale' ), 'opportunity' )['closed_lost_reason'], '' );
+check( 'the reason survives while the deal is lost',
+	pcm_crm_clear_lost_reason( array( 'stage_name' => 'Closed Lost', 'closed_lost_reason' => 'Budget pulled.' ), 'opportunity' )['closed_lost_reason'], 'Budget pulled.' );
+check( 'winning also drops it',
+	pcm_crm_clear_lost_reason( array( 'stage_name' => 'Closed Won', 'closed_lost_reason' => 'stale' ), 'opportunity' )['closed_lost_reason'], '' );
+
+echo "\n--- probability follows the stage ---\n";
+foreach ( array( 'Qualification' => 10, 'Discovery' => 25, 'Proposal' => 50, 'Negotiation' => 75, 'Closed Won' => 100, 'Closed Lost' => 0 ) as $name => $expected ) {
+	check( $name . ' carries ' . $expected . '%',
+		pcm_crm_apply_stage( array( 'stage_name' => $name ), 'opportunity' )['probability'], $expected );
+}
+check( 'a posted probability cannot override the stage on a new record',
+	pcm_crm_apply_stage( array( 'stage_name' => 'Proposal', 'probability' => 99 ), 'opportunity' )['probability'], 50 );
+
+echo "\n--- service interest ---\n";
+check( 'contacts store what was asked about', pcm_crm_contacts()->has_field( 'service_interest' ), true );
+check( 'opportunities do too', pcm_crm_opportunities()->has_field( 'service_interest' ), true );
+check( 'the picklist is the labels the form posts',
+	pcm_crm_interest_labels(), array_values( pcm_crm_interest_options() ) );
+check( 'and includes the catch-all', in_array( 'Something else', pcm_crm_interest_labels(), true ), true );
+
 echo "\n--- activity status sync ---\n";
 check( 'Completed implies is_completed',
 	pcm_crm_sync_activity_status( array( 'status' => 'Completed' ), 'activity' )['is_completed'], 1 );

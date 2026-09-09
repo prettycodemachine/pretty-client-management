@@ -374,6 +374,7 @@ class PCM_CRM_Seed_Command {
 					'phone'       => sprintf( '(802) %03d-%04d', mt_rand( 200, 899 ), mt_rand( 1000, 9999 ) ),
 					'mobile_phone' => mt_rand( 0, 1 ) ? sprintf( '(802) %03d-%04d', mt_rand( 200, 899 ), mt_rand( 1000, 9999 ) ) : '',
 					'lead_source' => $this->pick( $sources ),
+					'service_interest' => $this->pick( pcm_crm_interest_labels() ),
 					'do_not_contact' => $dnc ? 1 : 0,
 					'do_not_contact_reason' => $dnc ? $this->pick( array(
 						'Asked to be removed from all mailings.',
@@ -448,11 +449,23 @@ class PCM_CRM_Seed_Command {
 			// anything.
 			$close_offset = $is_closed ? -mt_rand( 5, 360 ) : mt_rand( 3, 180 );
 
+			// A losing stage needs its reason or the model refuses the write —
+			// the same rule the board and the form enforce.
+			$lost_reason = pcm_crm_stage_is_lost( $stage_name ) ? $this->pick( array(
+				'Went with an in-house hire.',
+				'Budget pulled for the fiscal year.',
+				'Chose a lower-cost implementation partner.',
+				'Project postponed indefinitely.',
+				'No response after the proposal.',
+			) ) : '';
+
 			$id = pcm_crm_opportunities()->insert( array(
 				'account_id'         => $account_id,
 				'primary_contact_id' => $contact ? $contact['id'] : 0,
 				'name'               => $name,
 				'stage_name'         => $stage_name,
+				'closed_lost_reason' => $lost_reason,
+				'service_interest'   => $this->pick( pcm_crm_interest_labels() ),
 				'amount'             => mt_rand( 3, 90 ) * 500,
 				'close_date'         => $this->days( $close_offset, 'Y-m-d' ),
 				'type'               => $this->pick( $types ),
@@ -466,6 +479,7 @@ class PCM_CRM_Seed_Command {
 			) );
 
 			if ( is_wp_error( $id ) ) {
+				WP_CLI::warning( 'Opportunity failed: ' . $id->get_error_message() );
 				continue;
 			}
 

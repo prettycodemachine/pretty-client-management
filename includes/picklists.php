@@ -139,3 +139,14 @@ function pcm_crm_interest_options() {
 
 	return apply_filters( 'pcm_crm_interest_options', $pcm_options );
 }
+
+/**
+ * The interest options as bare labels.
+ *
+ * The form posts a label rather than a slug — that value goes straight into the
+ * notification email — so the CRM stores and filters on the same thing, and the
+ * two cannot disagree about what someone asked for.
+ */
+function pcm_crm_interest_labels() {
+	return array_values( pcm_crm_interest_options() );
+}

@@ -59,6 +59,13 @@ const contact = childTypes('contacts', { id: 7, account_id: 42 });
 check('a contact offers opportunities and activities', contact.map(c => c.id), ['opportunities', 'activities']);
 check('a deal created from a contact carries both the person and their account',
 	[byId(contact, 'opportunities').prefill.primary_contact_id, byId(contact, 'opportunities').prefill.account_id], [7, 42]);
+
+// What they asked about on the contact form travels onto the deal.
+const interested = childTypes('contacts', { id: 7, account_id: 42, service_interest: 'AI Enablement' });
+check('a deal inherits what the contact asked about',
+	byId(interested, 'opportunities').prefill.service_interest, 'AI Enablement');
+check('a contact with no recorded interest leaves it blank',
+	byId(contact, 'opportunities').prefill.service_interest, '');
 check('an activity created from a contact is linked to the person',
 	byId(contact, 'activities').prefill.who_id, 7);
 check('and to their account', 

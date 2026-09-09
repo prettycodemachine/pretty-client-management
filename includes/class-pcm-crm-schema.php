@@ -17,7 +17,7 @@ class PCM_CRM_Schema {
 	 * differs, so an rsync deploy (which never fires the activation hook)
 	 * still picks the change up on the next page load.
 	 */
-	const VERSION = '1.2.0';
+	const VERSION = '1.3.0';
 
 	const OPTION = 'pcm_crm_db_version';
 
@@ -126,6 +126,7 @@ class PCM_CRM_Schema {
 			mailing_postal_code varchar(20) NOT NULL DEFAULT '',
 			mailing_country varchar(80) NOT NULL DEFAULT '',
 			lead_source varchar(80) NOT NULL DEFAULT '',
+			service_interest varchar(120) NOT NULL DEFAULT '',
 			do_not_contact tinyint(1) NOT NULL DEFAULT 0,
 			do_not_contact_reason varchar(255) NOT NULL DEFAULT '',
 			description longtext,
@@ -157,6 +158,8 @@ class PCM_CRM_Schema {
 			type varchar(80) NOT NULL DEFAULT '',
 			lead_source varchar(80) NOT NULL DEFAULT '',
 			next_step varchar(255) NOT NULL DEFAULT '',
+			service_interest varchar(120) NOT NULL DEFAULT '',
+			closed_lost_reason varchar(255) NOT NULL DEFAULT '',
 			forecast_category varchar(40) NOT NULL DEFAULT '',
 			is_closed tinyint(1) NOT NULL DEFAULT 0,
 			is_won tinyint(1) NOT NULL DEFAULT 0,
