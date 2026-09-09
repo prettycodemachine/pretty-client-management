@@ -268,6 +268,16 @@ class PCM_CRM_REST {
 			if ( isset( $pcm_item['owner_id'] ) ) {
 				$pcm_items[ $pcm_i ]['_owner_name'] = pcm_crm_user_name( $pcm_item['owner_id'] );
 			}
+
+			// For the System Information panel. Resolved here rather than in
+			// the browser because only the server can see the user table.
+			if ( isset( $pcm_item['created_by_id'] ) ) {
+				$pcm_items[ $pcm_i ]['_created_by_name'] = pcm_crm_user_name( $pcm_item['created_by_id'] );
+			}
+
+			if ( isset( $pcm_item['last_modified_by_id'] ) ) {
+				$pcm_items[ $pcm_i ]['_modified_by_name'] = pcm_crm_user_name( $pcm_item['last_modified_by_id'] );
+			}
 		}
 
 		return $pcm_items;

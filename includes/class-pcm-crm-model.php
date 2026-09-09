@@ -429,10 +429,11 @@ class PCM_CRM_Model {
 		// Salesforce-shaped objects and the plain submissions log, which has
 		// no ownership or soft-delete columns.
 		$pcm_stamps = array(
-			'created_date'       => $pcm_now,
-			'last_modified_date' => $pcm_now,
-			'created_by_id'      => get_current_user_id(),
-			'is_deleted'         => 0,
+			'created_date'        => $pcm_now,
+			'last_modified_date'  => $pcm_now,
+			'created_by_id'       => get_current_user_id(),
+			'last_modified_by_id' => get_current_user_id(),
+			'is_deleted'          => 0,
 		);
 
 		foreach ( $pcm_stamps as $pcm_key => $pcm_value ) {
@@ -483,6 +484,10 @@ class PCM_CRM_Model {
 
 		if ( $this->has_field( 'last_modified_date' ) ) {
 			$pcm_row['last_modified_date'] = current_time( 'mysql' );
+		}
+
+		if ( $this->has_field( 'last_modified_by_id' ) ) {
+			$pcm_row['last_modified_by_id'] = get_current_user_id();
 		}
 
 		$pcm_row = apply_filters( 'pcm_crm_before_update', $pcm_row, $this->object, $pcm_id );
@@ -558,6 +563,7 @@ class PCM_CRM_Model {
 			'owner_id'           => array( 'type' => 'id',   'sf' => 'OwnerId' ),
 			'created_by_id'      => array( 'type' => 'id',   'sf' => 'CreatedById', 'readonly' => true ),
 			'created_date'       => array( 'type' => 'datetime', 'sf' => 'CreatedDate', 'readonly' => true ),
+			'last_modified_by_id' => array( 'type' => 'id', 'sf' => 'LastModifiedById', 'readonly' => true ),
 			'last_modified_date' => array( 'type' => 'datetime', 'sf' => 'LastModifiedDate', 'readonly' => true ),
 			'is_deleted'         => array( 'type' => 'bool', 'sf' => 'IsDeleted', 'readonly' => true ),
 		);

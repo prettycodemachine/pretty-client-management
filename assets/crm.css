@@ -150,6 +150,7 @@
 .pcm-crm-filter input,
 .pcm-crm-filter select {
   min-width: 150px;
+  max-width: 100%;
   height: var(--pcm-control);
   padding: 0 10px;
   line-height: normal;
@@ -389,6 +390,22 @@
   color: var(--pcm-accent-deep);
   margin: 0 0 3px;
 }
+/* The parent record above the name. A button rather than an anchor — it opens
+   a modal, it does not navigate — but it has to read as a link, since it is
+   the only route from a contact to its account. */
+.pcm-crm-kicker-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.pcm-crm-kicker-link:hover { color: var(--pcm-ink); }
+
 .pcm-crm-drawer-close {
   border: 0;
   background: none;
@@ -594,6 +611,9 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-field select,
 .pcm-crm-field textarea {
   width: 100%;
+  /* wp-admin caps select at 25rem, which left every dropdown 34px short of the
+     input beside it in the same column. */
+  max-width: 100%;
   padding: 9px 12px;
   border: 2px solid var(--pcm-ink);
   border-radius: 10px;
@@ -632,6 +652,15 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   appearance: none;
 }
 .pcm-crm-field-note { font-size: 0.76rem; color: var(--pcm-body); }
+
+/* Read-only stamps: shown as text, not as a disabled input, which would look
+   editable-but-broken rather than simply not editable. */
+.pcm-crm-field-static { gap: 3px; }
+.pcm-crm-static-value {
+  font-size: 0.92rem;
+  color: var(--pcm-ink);
+  padding: 2px 0;
+}
 
 /* A checkbox is a box next to its label, not a label above a stretched
    control — laid out like the text fields around it, it collapses to a line. */

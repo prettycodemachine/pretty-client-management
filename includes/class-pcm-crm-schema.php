@@ -17,7 +17,7 @@ class PCM_CRM_Schema {
 	 * differs, so an rsync deploy (which never fires the activation hook)
 	 * still picks the change up on the next page load.
 	 */
-	const VERSION = '1.1.0';
+	const VERSION = '1.2.0';
 
 	const OPTION = 'pcm_crm_db_version';
 
@@ -97,6 +97,7 @@ class PCM_CRM_Schema {
 			description longtext,
 			owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
@@ -130,6 +131,7 @@ class PCM_CRM_Schema {
 			description longtext,
 			owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
@@ -161,6 +163,7 @@ class PCM_CRM_Schema {
 			description longtext,
 			owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
@@ -196,6 +199,7 @@ class PCM_CRM_Schema {
 			is_completed tinyint(1) NOT NULL DEFAULT 0,
 			owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,

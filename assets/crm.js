@@ -86,6 +86,28 @@
 		return months[Number(parts[1]) - 1] + ' ' + Number(parts[2]) + ', ' + parts[0];
 	}
 
+	/**
+	 * A date with its time, for the audit stamps — "modified today" is not
+	 * much use without knowing whether that was before or after your own edit.
+	 */
+	function formatDateTime(value) {
+		if (!value || String(value).indexOf('0000') === 0) { return '—'; }
+
+		var parts = String(value).split(' ');
+		var date = formatDate(parts[0]);
+
+		if (parts.length < 2) { return date; }
+
+		var clock = parts[1].split(':');
+		var hour = Number(clock[0]);
+		var suffix = hour >= 12 ? 'pm' : 'am';
+
+		hour = hour % 12;
+		if (hour === 0) { hour = 12; }
+
+		return date + ' at ' + hour + ':' + clock[1] + ' ' + suffix;
+	}
+
 	function today() {
 		var now = new Date();
 		return now.getFullYear() + '-' +
@@ -313,6 +335,9 @@
 			// The account is what gives a person context, so it sits above
 			// the name the way Salesforce puts the parent record there.
 			kicker: function (row) { return row._account_name || 'No account'; },
+			kickerLink: function (row) {
+				return row.account_id ? { object: 'accounts', id: row.account_id } : null;
+			},
 			highlights: function (row) {
 				return [
 					{ label: 'Title', value: row.title },
@@ -376,6 +401,9 @@
 			plural: 'Opportunities',
 			title: function (row) { return row.name; },
 			kicker: function (row) { return row._account_name || 'No account'; },
+			kickerLink: function (row) {
+				return row.account_id ? { object: 'accounts', id: row.account_id } : null;
+			},
 			highlights: function (row) {
 				return [
 					{ label: 'Stage', value: row.stage_name },
@@ -925,16 +953,7 @@
 
 		dom.drawer.appendChild(el('div.pcm-crm-modal-head', {}, [
 			el('div.pcm-crm-modal-heading', {}, [
-				el('p.pcm-crm-drawer-kicker', {
-					// A new child names the parent it will be attached to, so
-					// the link the prefill made is visible before saving
-					// rather than something to take on trust.
-					text: isNew
-						? (options.returnTo
-							? def.label + ' for ' + (lookupLabel(options.returnTo.object, options.returnTo.id) || 'this record')
-							: def.label)
-						: (def.kicker ? def.kicker(record) : def.label)
-				}),
+				kicker(def, record, isNew, options),
 				el('h2', { text: isNew ? 'New ' + def.label : def.title(record) })
 			]),
 			el('button.pcm-crm-drawer-close', {
@@ -1107,9 +1126,51 @@
 			}));
 		}
 
+		// Last group, and read-only: these are stamps the database writes, so
+		// showing them as inputs would invite edits that the model discards.
+		if (!isNew) {
+			form.appendChild(el('h4.pcm-crm-group-head', { text: 'System Information' }));
+			form.appendChild(systemInfo(record));
+		}
+
 		form.appendChild(actions);
 
 		return el('div.pcm-crm-panel', { dataset: { tab: 'details' } }, [form]);
+	}
+
+	/**
+	 * The line above the record's name: the parent it belongs to.
+	 *
+	 * Rendered as a button when it points at a record, because for a contact
+	 * this is the only route to its account — the account is not otherwise
+	 * reachable from the person without going back to the Accounts list.
+	 */
+	function kicker(def, record, isNew, options) {
+		// A new child names the parent it will be attached to, so the link the
+		// prefill made is visible before saving rather than taken on trust.
+		if (isNew) {
+			return el('p.pcm-crm-drawer-kicker', {
+				text: options.returnTo
+					? def.label + ' for ' + (lookupLabel(options.returnTo.object, options.returnTo.id) || 'this record')
+					: def.label
+			});
+		}
+
+		var label = def.kicker ? def.kicker(record) : def.label;
+		var link = def.kickerLink ? def.kickerLink(record) : null;
+
+		if (!link) {
+			return el('p.pcm-crm-drawer-kicker', { text: label });
+		}
+
+		return el('p.pcm-crm-drawer-kicker', {}, [
+			el('button.pcm-crm-kicker-link', {
+				type: 'button',
+				text: label,
+				title: 'Open this ' + link.object.replace(/s$/, ''),
+				onclick: function () { openDrawer(link.object, link.id); }
+			})
+		]);
 	}
 
 	/**
@@ -1208,6 +1269,30 @@
 		}
 
 		return wrap;
+	}
+
+	/**
+	 * Created and last-modified stamps.
+	 *
+	 * A record that looks wrong is usually a record someone changed, so who
+	 * touched it last is the first thing worth knowing. Seeded and imported
+	 * rows have no user behind them, which reads as "—" rather than a blank
+	 * that looks like a rendering failure.
+	 */
+	function systemInfo(record) {
+		var rows = [
+			{ label: 'Created date', value: formatDateTime(record.created_date) },
+			{ label: 'Created by', value: record._created_by_name || '—' },
+			{ label: 'Last modified date', value: formatDateTime(record.last_modified_date) },
+			{ label: 'Last modified by', value: record._modified_by_name || '—' }
+		];
+
+		return el('div.pcm-crm-fields', {}, rows.map(function (row) {
+			return el('div.pcm-crm-field.pcm-crm-field-static', {}, [
+				el('label', { text: row.label }),
+				el('span.pcm-crm-static-value', { text: row.value })
+			]);
+		}));
 	}
 
 	/**

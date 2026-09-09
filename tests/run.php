@@ -136,6 +136,17 @@ check( 'an empty scalar filter is skipped',
 check( 'submissions table has no is_deleted clause',
 	strpos( $where->invoke( pcm_crm_submissions(), array() ), 'is_deleted' ), false );
 
+echo "\n--- system information ---\n";
+foreach ( array( 'accounts', 'contacts', 'opportunities', 'activities' ) as $slug ) {
+	$model = PCM_CRM_REST::model( $slug );
+	check( $slug . ' record who last changed it', $model->has_field( 'last_modified_by_id' ), true );
+	check( $slug . ' maps it for Salesforce', $model->salesforce_map()['last_modified_by_id'], 'LastModifiedById' );
+	check( $slug . ' will not let it be written from a request',
+		isset( $model->sanitize( array( 'last_modified_by_id' => 99 ) )['last_modified_by_id'] ), false );
+}
+check( 'the submissions log has no modified-by column',
+	pcm_crm_submissions()->has_field( 'last_modified_by_id' ), false );
+
 echo "\n--- owner names ---\n";
 $user = function( $first, $last, $display, $login ) {
 	return (object) array( 'first_name' => $first, 'last_name' => $last, 'display_name' => $display, 'user_login' => $login );
