@@ -28,6 +28,12 @@
   --font-display: "Baloo 2", "Trebuchet MS", sans-serif;
   --font-body: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --radius: 14px;
+  /* wp-admin's forms.css gives input and select different heights and
+     line-heights. Overriding padding alone does not reconcile them — a select
+     kept sitting taller than the search box beside it — so both are pinned to
+     an explicit height instead. */
+  --pcm-control: 38px;
+  --pcm-control-lg: 44px;
 
   font-family: var(--font-body);
   color: var(--pcm-body);
@@ -144,10 +150,12 @@
 .pcm-crm-filter input,
 .pcm-crm-filter select {
   min-width: 150px;
-  padding: 7px 10px;
+  height: var(--pcm-control);
+  padding: 0 10px;
+  line-height: normal;
   border: 2px solid var(--pcm-ink);
   border-radius: 9px;
-  background: #fff;
+  background-color: #fff;
   font-family: var(--font-body);
   font-size: 0.9rem;
   color: var(--pcm-ink);
@@ -589,12 +597,40 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   padding: 9px 12px;
   border: 2px solid var(--pcm-ink);
   border-radius: 10px;
-  background: #fff;
+  background-color: #fff;
   font-family: var(--font-body);
   font-size: 0.92rem;
   color: var(--pcm-ink);
 }
-.pcm-crm-field textarea { min-height: 96px; resize: vertical; }
+/* The checkbox is excluded — it sets its own 18px box, and a 44px one would
+   be a very large tick. */
+.pcm-crm-field input:not([type="checkbox"]),
+.pcm-crm-field select {
+  height: var(--pcm-control-lg);
+  padding: 0 12px;
+  line-height: normal;
+}
+.pcm-crm-field textarea { min-height: 96px; height: auto; resize: vertical; }
+
+/* Setting our own background removed wp-admin's arrow image, leaving selects
+   looking like plain text boxes. This is the same chevron in --pcm-ink,
+   inline so it needs no asset and cannot 404. */
+.pcm-crm-filter select,
+.pcm-crm-field select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232c2c2e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 11px;
+  padding-right: 32px;
+}
+
+/* Safari styles a search field on its own terms and ignores the height. */
+.pcm-crm-filter input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
 .pcm-crm-field-note { font-size: 0.76rem; color: var(--pcm-body); }
 
 /* A checkbox is a box next to its label, not a label above a stretched
