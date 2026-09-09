@@ -452,7 +452,6 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   gap: 7px;
   padding: 9px 16px;
   border: 2px solid transparent;
-  border-bottom: 0;
   border-radius: 10px 10px 0 0;
   background: none;
   font-family: var(--font-display);
@@ -460,16 +459,19 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   font-weight: 600;
   color: var(--pcm-body);
   cursor: pointer;
-  /* Nudged onto the rule so the active tab's open bottom edge meets it. */
+  /* Pulled down by its own border width so the tab's bottom edge lands exactly
+     on the strip's rule rather than beside it. */
   margin-bottom: -2px;
 }
 .pcm-crm-tab:hover { color: var(--pcm-accent-deep); }
+
+/* The active tab is a closed box, not an open-bottomed folder tab. The open
+   shape left a gap in the strip's rule, and the panel scrolls underneath —
+   so content showed through the gap and ran into the tab label. */
 .pcm-crm-tab.is-active {
-  background: var(--pcm-paper);
+  background: var(--pcm-gray-light);
   border-color: var(--pcm-ink);
   color: var(--pcm-ink);
-  /* Covers the strip's rule beneath this tab, joining panel to tab. */
-  box-shadow: 0 2px 0 var(--pcm-paper);
 }
 .pcm-crm-tab-count {
   font-family: var(--font-body);
