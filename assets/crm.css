@@ -94,6 +94,7 @@
 }
 .pcm-crm .pcm-btn-primary:hover { background: var(--pcm-accent-deeper); border-color: var(--pcm-accent-deeper); color: #fff; }
 .pcm-crm .pcm-btn-quiet { border-color: var(--pcm-gray-light); font-weight: 600; }
+.pcm-crm .pcm-btn-sm { padding: 6px 12px; font-size: 0.82rem; }
 .pcm-crm .pcm-btn-danger { color: var(--pcm-accent-deep); border-color: var(--pcm-accent-deep); }
 .pcm-crm .pcm-btn-danger:hover { background: var(--pcm-accent-deep); color: #fff; }
 .pcm-crm .pcm-btn:focus-visible,
@@ -511,6 +512,13 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 /* min-width:0 so a wide related row scrolls inside its panel rather than
    stretching the modal. */
 .pcm-crm-panels, .pcm-crm-panel, .pcm-crm-related { min-width: 0; }
+/* The New button sits above its list, right-aligned, so the rows below start
+   flush at the left the way a table does. */
+.pcm-crm-related-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
 .pcm-crm-related-rows { display: flex; flex-direction: column; }
 .pcm-crm-related-row {
   display: grid;

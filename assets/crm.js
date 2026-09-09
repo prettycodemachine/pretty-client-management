@@ -843,7 +843,18 @@
 	   Drawer
 	   --------------------------------------------------------------------- */
 
-	function openDrawer(object, id) {
+	/**
+	 * Open a record.
+	 *
+	 * options.prefill seeds a new record's fields — used when creating a child
+	 * from its parent, so the link is already made before the form is shown.
+	 * options.returnTo names the record to reopen afterwards, so creating a
+	 * contact from an account lands you back on the account with the new row
+	 * in its list, rather than on nothing.
+	 */
+	function openDrawer(object, id, options) {
+		options = options || {};
+
 		state.recordId = id;
 		writeHash();
 
@@ -854,10 +865,10 @@
 		var needed = [loadLookup('accounts'), loadLookup('contacts'), loadLookup('opportunities')];
 
 		Promise.all(needed).then(function () {
-			if (!id) { return Promise.resolve({}); }
+			if (!id) { return Promise.resolve(options.prefill || {}); }
 			return api('/' + object + '/' + id);
 		}).then(function (record) {
-			renderDrawer(object, record);
+			renderDrawer(object, record, options);
 
 			if (!id) { return; }
 
@@ -903,7 +914,9 @@
 		writeHash();
 	}
 
-	function renderDrawer(object, record) {
+	function renderDrawer(object, record, options) {
+		options = options || {};
+
 		var def = objects[object];
 		var isNew = !record.id;
 		var values = Object.assign({}, record);
@@ -913,7 +926,14 @@
 		dom.drawer.appendChild(el('div.pcm-crm-modal-head', {}, [
 			el('div.pcm-crm-modal-heading', {}, [
 				el('p.pcm-crm-drawer-kicker', {
-					text: isNew ? def.label : (def.kicker ? def.kicker(record) : def.label)
+					// A new child names the parent it will be attached to, so
+					// the link the prefill made is visible before saving
+					// rather than something to take on trust.
+					text: isNew
+						? (options.returnTo
+							? def.label + ' for ' + (lookupLabel(options.returnTo.object, options.returnTo.id) || 'this record')
+							: def.label)
+						: (def.kicker ? def.kicker(record) : def.label)
 				}),
 				el('h2', { text: isNew ? 'New ' + def.label.toLowerCase() : def.title(record) })
 			]),
@@ -951,7 +971,7 @@
 
 		var scroll = el('div.pcm-crm-modal-body', {}, [
 			el('div.pcm-crm-panels', { 'data-role': 'panels' }, [
-				detailsPanel(object, record, values)
+				detailsPanel(object, record, values, options)
 			])
 		]);
 
@@ -1028,7 +1048,9 @@
 	 * street and the city under it — land in different columns, which is
 	 * exactly the pairing a form like this should preserve.
 	 */
-	function detailsPanel(object, record, values) {
+	function detailsPanel(object, record, values, options) {
+		options = options || {};
+
 		var def = objects[object];
 		var isNew = !record.id;
 
@@ -1057,9 +1079,16 @@
 			el('button.pcm-btn.pcm-btn-primary', {
 				type: 'button',
 				text: isNew ? 'Create' : 'Save',
-				onclick: function (event) { saveRecord(object, record.id, values, event.target, status); }
+				onclick: function (event) { saveRecord(object, record.id, values, event.target, status, options.returnTo); }
 			}),
-			el('button.pcm-btn.pcm-btn-quiet', { type: 'button', text: 'Cancel', onclick: closeDrawer }),
+			el('button.pcm-btn.pcm-btn-quiet', {
+				type: 'button',
+				text: 'Cancel',
+				onclick: function () {
+					if (options.returnTo) { openDrawer(options.returnTo.object, options.returnTo.id); }
+					else { closeDrawer(); }
+				}
+			}),
 			status
 		]);
 
@@ -1246,7 +1275,7 @@
 		return wrap;
 	}
 
-	function saveRecord(object, id, values, button, status) {
+	function saveRecord(object, id, values, button, status, returnTo) {
 		button.disabled = true;
 		status.textContent = 'Saving…';
 
@@ -1262,10 +1291,14 @@
 			// or the next record cannot be linked to it without a reload.
 			lookups = {};
 
-			if (!id) {
-				closeDrawer();
-			} else {
+			if (id) {
 				renderDrawer(object, record);
+			} else if (returnTo) {
+				// Back to the parent it was created from, so the new row is
+				// visible in the list it was created out of.
+				openDrawer(returnTo.object, returnTo.id);
+			} else {
+				closeDrawer();
 			}
 
 			refreshView();
@@ -1275,14 +1308,74 @@
 		});
 	}
 
+	/**
+	 * What each object can have hanging off it, and how a new child is linked
+	 * back to the parent it was created from.
+	 *
+	 * The prefill is the whole point of creating from a related list: the link
+	 * is made before the form is shown, rather than left to whoever remembers
+	 * to set it afterwards.
+	 */
+	function childTypes(object, record) {
+		var soon = new Date();
+		soon.setDate(soon.getDate() + 30);
+		var closeDate = soon.toISOString().slice(0, 10);
+
+		var openStages = (state.boot.stages || []).filter(function (stage) { return !stage.is_closed; });
+		var firstStage = openStages.length ? openStages[0].name : '';
+
+		function activity(prefill) {
+			return Object.assign({
+				activity_type: 'Call',
+				status: 'Not Started',
+				priority: 'Normal',
+				activity_date: new Date().toISOString().slice(0, 19).replace('T', ' ')
+			}, prefill);
+		}
+
+		if (object === 'accounts') {
+			return [
+				{ id: 'contacts', label: 'Contacts', object: 'contacts', newLabel: 'New contact',
+					prefill: { account_id: record.id } },
+				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New opportunity',
+					prefill: { account_id: record.id, stage_name: firstStage, close_date: closeDate } },
+				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New activity',
+					prefill: activity({ what_type: 'account', what_id: record.id }) }
+			];
+		}
+
+		if (object === 'contacts') {
+			return [
+				// The account comes from the contact, so a deal created here
+				// is attached to both the person and their organization.
+				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New opportunity',
+					prefill: { account_id: record.account_id || 0, primary_contact_id: record.id,
+						stage_name: firstStage, close_date: closeDate } },
+				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New activity',
+					prefill: activity({ who_id: record.id,
+						what_type: record.account_id ? 'account' : '', what_id: record.account_id || 0 }) }
+			];
+		}
+
+		if (object === 'opportunities') {
+			return [
+				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New activity',
+					prefill: activity({ what_type: 'opportunity', what_id: record.id,
+						who_id: record.primary_contact_id || 0 }) }
+			];
+		}
+
+		return [];
+	}
+
 	function renderRelated(object, record, related) {
 		var panels = dom.drawer.querySelector('[data-role="panels"]');
 		if (!panels) { return; }
 
 		var tabs = [{ id: 'details', label: 'Details' }];
 
-		// Anything already added by a previous render goes, so reopening a
-		// record after a save does not stack two copies of each list.
+		// Anything added by a previous render goes, so reopening a record
+		// after a save does not stack two copies of each list.
 		panels.querySelectorAll('[data-tab]:not([data-tab="details"])').forEach(function (node) {
 			node.remove();
 		});
@@ -1290,35 +1383,6 @@
 		function addTab(id, label, rows, list) {
 			tabs.push({ id: id, label: label, count: rows.length });
 			panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: id }, hidden: true }, [list]));
-		}
-
-		if (related.contacts && related.contacts.length) {
-			addTab('contacts', 'Contacts', related.contacts, relatedList({
-				rows: related.contacts,
-				object: 'contacts',
-				columns: function (row) {
-					return [
-						{ text: objects.contacts.title(row), strong: true },
-						{ text: row.title || '—' },
-						{ text: row.email || '—' }
-					];
-				}
-			}));
-		}
-
-		if (related.opportunities && related.opportunities.length) {
-			addTab('opportunities', 'Opportunities', related.opportunities, relatedList({
-				rows: related.opportunities,
-				object: 'opportunities',
-				columns: function (row) {
-					return [
-						{ text: row.name, strong: true },
-						{ badge: row.stage_name, tone: row.is_won ? 'won' : (row.is_closed ? 'lost' : 'open') },
-						{ text: formatDate(row.close_date) },
-						{ text: money(row.amount), num: true }
-					];
-				}
-			}));
 		}
 
 		// An activity has no children, but it does have parents, and being
@@ -1337,27 +1401,66 @@
 					open: function (row) { openDrawer(row.object, row.id); }
 				}));
 			}
-		} else {
-			var activities = related.activities || [];
 
-			// Always present, even at zero: an empty timeline is exactly when
-			// the quick-log box is most wanted.
-			addTab('activities', 'Activities', activities, relatedList({
-				rows: activities,
-				object: 'activities',
-				before: quickLog(object, record),
-				columns: function (row) {
-					return [
-						{ text: row.subject || row.activity_type, strong: true },
-						{ badge: row.activity_type },
-						{ text: row.status || '—' },
-						{ text: formatDate(row.activity_date) }
-					];
-				}
-			}));
+			renderTabs(tabs);
+			return;
 		}
 
+		// Every applicable list gets a tab, empty or not: an empty one is
+		// where you go to create the first child, so hiding it would hide the
+		// only route to making one.
+		childTypes(object, record).forEach(function (child) {
+			var rows = related[child.id] || [];
+
+			addTab(child.id, child.label, rows, relatedList({
+				rows: rows,
+				object: child.object,
+				newLabel: child.newLabel,
+				onNew: function () {
+					openDrawer(child.object, 0, {
+						prefill: child.prefill,
+						returnTo: { object: object, id: record.id }
+					});
+				},
+				before: child.id === 'activities' ? quickLog(object, record) : null,
+				empty: 'No ' + child.label.toLowerCase() + ' yet.',
+				columns: relatedColumns(child.id)
+			}));
+		});
+
 		renderTabs(tabs);
+	}
+
+	function relatedColumns(kind) {
+		if (kind === 'contacts') {
+			return function (row) {
+				return [
+					{ text: objects.contacts.title(row), strong: true },
+					{ text: row.title || '—' },
+					{ text: row.email || '—' }
+				];
+			};
+		}
+
+		if (kind === 'opportunities') {
+			return function (row) {
+				return [
+					{ text: row.name, strong: true },
+					{ badge: row.stage_name, tone: row.is_won ? 'won' : (row.is_closed ? 'lost' : 'open') },
+					{ text: formatDate(row.close_date) },
+					{ text: money(row.amount), num: true }
+				];
+			};
+		}
+
+		return function (row) {
+			return [
+				{ text: row.subject || row.activity_type, strong: true },
+				{ badge: row.activity_type },
+				{ text: row.status || '—' },
+				{ text: formatDate(row.activity_date) }
+			];
+		};
 	}
 
 	/**
@@ -1401,10 +1504,20 @@
 	function relatedList(config) {
 		var block = el('div.pcm-crm-related');
 
+		if (config.onNew) {
+			block.appendChild(el('div.pcm-crm-related-toolbar', {}, [
+				el('button.pcm-btn.pcm-btn-primary.pcm-btn-sm', {
+					type: 'button',
+					text: config.newLabel || 'New',
+					onclick: config.onNew
+				})
+			]));
+		}
+
 		if (config.before) { block.appendChild(config.before); }
 
 		if (!config.rows.length) {
-			block.appendChild(el('p.pcm-crm-related-empty', { text: 'None yet.' }));
+			block.appendChild(el('p.pcm-crm-related-empty', { text: config.empty || 'None yet.' }));
 			return block;
 		}
 
