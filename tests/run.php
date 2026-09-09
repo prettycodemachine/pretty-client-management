@@ -209,6 +209,81 @@ check( 'related activities carry their contact name',
 
 $GLOBALS['wpdb'] = $real_wpdb;
 
+echo "\n--- filter operators ---\n";
+$opps_where = new ReflectionMethod( 'PCM_CRM_Model', 'where' );
+$w = function( $args, $model = null ) use ( $opps_where ) {
+	return $opps_where->invoke( $model ? $model : pcm_crm_opportunities(), $args );
+};
+$f = function( $filters ) use ( $w ) { return $w( array( 'filters' => $filters ) ); };
+
+check( 'contains becomes a LIKE with wildcards',
+	strpos( $f( array( 'name' => array( 'op' => 'contains', 'value' => 'Rescue' ) ) ), "LIKE '%Rescue%'" ) !== false, true );
+check( 'starts anchors at the front',
+	strpos( $f( array( 'name' => array( 'op' => 'starts', 'value' => 'Green' ) ) ), "LIKE 'Green%'" ) !== false, true );
+// The pattern is built as '%100\%%', so the user's own % is escaped and
+// cannot act as a wildcard — which is exactly that the bare '100%' is absent.
+check( 'a wildcard typed by a user cannot act as one',
+	strpos( $f( array( 'name' => array( 'op' => 'contains', 'value' => '100%' ) ) ), '100%' ), false );
+check( 'not-contains negates the LIKE',
+	strpos( $f( array( 'name' => array( 'op' => 'notcontains', 'value' => 'x' ) ) ), 'NOT LIKE' ) !== false, true );
+check( 'greater-than compares',
+	strpos( $f( array( 'amount' => array( 'op' => 'gt', 'value' => '5000' ) ) ), 'amount > ' ) !== false, true );
+check( 'between emits both bounds',
+	substr_count( $f( array( 'amount' => array( 'op' => 'between', 'min' => '1', 'max' => '9' ) ) ), 'amount' ), 2 );
+check( 'empty covers NULL and the zero value',
+	strpos( $f( array( 'amount' => array( 'op' => 'empty' ) ) ), 'IS NULL OR amount = 0' ) !== false, true );
+check( 'empty on text compares to the empty string',
+	strpos( $f( array( 'name' => array( 'op' => 'empty' ) ) ), "name = ''" ) !== false, true );
+check( 'not-empty negates it',
+	strpos( $f( array( 'name' => array( 'op' => 'notempty' ) ) ), 'NOT (' ) !== false, true );
+check( 'an unknown operator is dropped rather than guessed at',
+	strpos( $f( array( 'name' => array( 'op' => 'sql_injection', 'value' => 'x' ) ) ), 'name' ), false );
+check( 'an operator with no value is not yet a filter',
+	strpos( $f( array( 'name' => array( 'op' => 'eq', 'value' => '' ) ) ), 'name' ), false );
+
+echo "\n--- filtering through a parent ---\n";
+check( 'an account field becomes a subquery',
+	strpos( $f( array( 'account.industry' => 'Nonprofit' ) ), 'account_id IN (SELECT id FROM' ) !== false, true );
+check( 'the parent contributes its own conditions',
+	strpos( $f( array( 'account.industry' => 'Nonprofit' ) ), "industry = 'Nonprofit'" ) !== false, true );
+check( 'the parent still excludes its deleted rows',
+	substr_count( $f( array( 'account.industry' => 'Nonprofit' ) ), 'is_deleted = 0' ), 2 );
+check( 'several parent conditions share one subquery',
+	substr_count( $f( array( 'account.industry' => 'Nonprofit', 'account.type' => 'Customer' ) ), 'SELECT id FROM' ), 1 );
+check( 'an unknown parent prefix is ignored',
+	strpos( $f( array( 'nonsense.field' => 'x' ) ), 'SELECT' ), false );
+check( 'an unknown field on a known parent does not become "every account"',
+	strpos( $f( array( 'account.nonsense' => 'x' ) ), 'SELECT' ), false );
+check( 'nor does a known parent field left blank',
+	strpos( $f( array( 'account.industry' => '' ) ), 'SELECT' ), false );
+check( 'opportunities can also filter through their contact',
+	strpos( $f( array( 'contact.last_name' => 'Okafor' ) ), 'primary_contact_id IN (SELECT' ) !== false, true );
+check( 'accounts have no parent to filter through', count( pcm_crm_accounts()->related() ), 0 );
+
+echo "\n--- filter schema ---\n";
+$schema = (array) PCM_CRM_REST::schema( new WP_REST_Request() );
+check( 'every object is described', array_keys( $schema ),
+	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
+check( 'the submissions log is not offered', isset( $schema['submissions'] ), false );
+
+$opp_fields = wp_list_pluck( $schema['opportunities']['fields'], 'key' );
+check( 'opportunity fields include the picklists', in_array( 'stage_name', $opp_fields, true ), true );
+check( 'and the audit stamps', in_array( 'created_date', $opp_fields, true ), true );
+check( 'internal columns are withheld', in_array( 'sf_id', $opp_fields, true ), false );
+check( 'so is the delete flag', in_array( 'is_deleted', $opp_fields, true ), false );
+check( 'accounts do not leak their matching key',
+	in_array( 'name_key', wp_list_pluck( $schema['accounts']['fields'], 'key' ), true ), false );
+
+$related = $schema['opportunities']['related'];
+check( 'an opportunity offers two parents to filter through', count( $related ), 2 );
+check( 'the parent is named for the UI', $related[0]['label'], 'Account' );
+check( 'its fields are prefixed', strpos( $related[0]['fields'][0]['key'], 'account.' ), 0 );
+
+$stage = null;
+foreach ( $schema['opportunities']['fields'] as $field ) { if ( 'stage_name' === $field['key'] ) { $stage = $field; } }
+check( 'a picklist field carries its options', count( $stage['options'] ), 6 );
+check( 'options are value/label pairs', $stage['options'][0]['value'], 'Qualification' );
+
 echo "\n--- demo data guard ---\n";
 $allowed = function( $host ) {
 	$GLOBALS['pcm_test_host'] = $host;

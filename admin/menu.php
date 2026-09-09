@@ -122,7 +122,7 @@ function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '' ) {
 }
 
 function pcm_crm_render_dashboard() {
-	pcm_crm_screen( 'dashboard', __( 'CRM Dashboard', 'pcm-crm' ), __( 'Everything below responds to the filters.', 'pcm-crm' ) );
+	pcm_crm_screen( 'dashboard', __( 'CRM Dashboard', 'pcm-crm' ) );
 }
 
 function pcm_crm_render_accounts() {

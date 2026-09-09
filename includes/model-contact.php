@@ -10,23 +10,23 @@ function pcm_crm_contacts() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'account_id'          => array( 'type' => 'id',   'sf' => 'AccountId' ),
-				'salutation'          => array( 'type' => 'text', 'sf' => 'Salutation' ),
-				'first_name'          => array( 'type' => 'text', 'sf' => 'FirstName' ),
-				'last_name'           => array( 'type' => 'text', 'sf' => 'LastName' ),
-				'title'               => array( 'type' => 'text', 'sf' => 'Title' ),
-				'email'               => array( 'type' => 'email', 'sf' => 'Email' ),
-				'phone'               => array( 'type' => 'text', 'sf' => 'Phone' ),
-				'mobile_phone'        => array( 'type' => 'text', 'sf' => 'MobilePhone' ),
-				'mailing_street'      => array( 'type' => 'text', 'sf' => 'MailingStreet' ),
-				'mailing_city'        => array( 'type' => 'text', 'sf' => 'MailingCity' ),
-				'mailing_state'       => array( 'type' => 'text', 'sf' => 'MailingState' ),
-				'mailing_postal_code' => array( 'type' => 'text', 'sf' => 'MailingPostalCode' ),
-				'mailing_country'     => array( 'type' => 'text', 'sf' => 'MailingCountry' ),
-				'lead_source'         => array( 'type' => 'text', 'sf' => 'LeadSource' ),
-				'do_not_contact'      => array( 'type' => 'bool', 'sf' => 'DoNotCall' ),
-				'do_not_contact_reason' => array( 'type' => 'text', 'sf' => 'DoNotCallReason__c' ),
-				'description'         => array( 'type' => 'longtext', 'sf' => 'Description' ),
+				'account_id'            => array( 'type' => 'id',   'sf' => 'AccountId', 'label' => 'Account' ),
+				'salutation'            => array( 'type' => 'text', 'sf' => 'Salutation', 'label' => 'Salutation' ),
+				'first_name'            => array( 'type' => 'text', 'sf' => 'FirstName', 'label' => 'First Name' ),
+				'last_name'             => array( 'type' => 'text', 'sf' => 'LastName', 'label' => 'Last Name' ),
+				'title'                 => array( 'type' => 'text', 'sf' => 'Title', 'label' => 'Title' ),
+				'email'                 => array( 'type' => 'email', 'sf' => 'Email', 'label' => 'Email' ),
+				'phone'                 => array( 'type' => 'text', 'sf' => 'Phone', 'label' => 'Phone' ),
+				'mobile_phone'          => array( 'type' => 'text', 'sf' => 'MobilePhone', 'label' => 'Mobile' ),
+				'mailing_street'        => array( 'type' => 'text', 'sf' => 'MailingStreet', 'label' => 'Mailing Street' ),
+				'mailing_city'          => array( 'type' => 'text', 'sf' => 'MailingCity', 'label' => 'Mailing City' ),
+				'mailing_state'         => array( 'type' => 'text', 'sf' => 'MailingState', 'label' => 'Mailing State' ),
+				'mailing_postal_code'   => array( 'type' => 'text', 'sf' => 'MailingPostalCode', 'label' => 'Mailing Postal Code' ),
+				'mailing_country'       => array( 'type' => 'text', 'sf' => 'MailingCountry', 'label' => 'Mailing Country' ),
+				'lead_source'           => array( 'type' => 'text', 'sf' => 'LeadSource', 'label' => 'Lead Source', 'options' => 'pcm_crm_lead_sources' ),
+				'do_not_contact'        => array( 'type' => 'bool', 'sf' => 'DoNotCall', 'label' => 'Do Not Contact' ),
+				'do_not_contact_reason' => array( 'type' => 'text', 'sf' => 'DoNotCallReason__c', 'label' => 'Do Not Contact Reason' ),
+				'description'           => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Notes' ),
 			),
 			PCM_CRM_Model::system_fields()
 		);
@@ -35,7 +35,10 @@ function pcm_crm_contacts() {
 			'contact',
 			PCM_CRM_Schema::contacts(),
 			$pcm_fields,
-			array( 'first_name', 'last_name', 'email', 'title', 'phone', 'description' )
+			array( 'first_name', 'last_name', 'email', 'title', 'phone', 'description' ),
+			array(
+				'account' => array( 'column' => 'account_id', 'model' => 'pcm_crm_accounts', 'label' => 'Account' ),
+			)
 		);
 	}
 

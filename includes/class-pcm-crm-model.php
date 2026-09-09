@@ -24,11 +24,24 @@ class PCM_CRM_Model {
 	/** Columns a free-text search looks in. */
 	protected $searchable;
 
-	public function __construct( $pcm_object, $pcm_table, array $pcm_fields, array $pcm_searchable = array() ) {
+	/**
+	 * Parent objects this one can be filtered through, keyed by the prefix a
+	 * filter uses: 'account.industry' filters opportunities by their account's
+	 * industry. Each entry names the local foreign key and a callable
+	 * returning the parent's model.
+	 */
+	protected $related;
+
+	public function __construct( $pcm_object, $pcm_table, array $pcm_fields, array $pcm_searchable = array(), array $pcm_related = array() ) {
 		$this->object     = $pcm_object;
 		$this->table      = $pcm_table;
 		$this->fields     = $pcm_fields;
 		$this->searchable = $pcm_searchable;
+		$this->related    = $pcm_related;
+	}
+
+	public function related() {
+		return $this->related;
 	}
 
 	public function object()     { return $this->object; }
@@ -271,39 +284,39 @@ class PCM_CRM_Model {
 
 		$pcm_filters = isset( $pcm_args['filters'] ) && is_array( $pcm_args['filters'] ) ? $pcm_args['filters'] : array();
 
+		// A key of the form 'account.industry' filters through a parent
+		// object. Those are collected per prefix and resolved together, so one
+		// subquery covers every condition on that parent rather than one each.
+		$pcm_through = array();
+
 		foreach ( $pcm_filters as $pcm_col => $pcm_value ) {
+			if ( false !== strpos( $pcm_col, '.' ) ) {
+				list( $pcm_prefix, $pcm_field ) = explode( '.', $pcm_col, 2 );
+
+				if ( isset( $this->related[ $pcm_prefix ] ) ) {
+					$pcm_through[ $pcm_prefix ][ $pcm_field ] = $pcm_value;
+				}
+
+				continue;
+			}
+
 			if ( ! $this->has_field( $pcm_col ) ) {
 				continue;
 			}
 
-			$pcm_type = $this->fields[ $pcm_col ]['type'];
+			$pcm_clause = $this->clause( $pcm_col, $pcm_value, $this->fields[ $pcm_col ]['type'] );
 
-			// A range arrives as array( 'min' => ..., 'max' => ... ); either
-			// bound may be absent, which is an open-ended range, not an error.
-			if ( is_array( $pcm_value ) && ( isset( $pcm_value['min'] ) || isset( $pcm_value['max'] ) ) ) {
-				if ( isset( $pcm_value['min'] ) && '' !== $pcm_value['min'] ) {
-					$pcm_where[] = $wpdb->prepare( "{$pcm_col} >= %s", $this->sanitize_value( $pcm_value['min'], $pcm_type ) );
-				}
-				if ( isset( $pcm_value['max'] ) && '' !== $pcm_value['max'] ) {
-					$pcm_where[] = $wpdb->prepare( "{$pcm_col} <= %s", $this->sanitize_value( $pcm_value['max'], $pcm_type ) );
-				}
-				continue;
+			if ( '' !== $pcm_clause ) {
+				$pcm_where[] = $pcm_clause;
 			}
+		}
 
-			if ( is_array( $pcm_value ) ) {
-				$pcm_set = array();
-				foreach ( $pcm_value as $pcm_one ) {
-					$pcm_set[] = $wpdb->prepare( '%s', $this->sanitize_value( $pcm_one, $pcm_type ) );
-				}
-				$pcm_where[] = $pcm_set ? "{$pcm_col} IN (" . implode( ',', $pcm_set ) . ')' : '1 = 0';
-				continue;
+		foreach ( $pcm_through as $pcm_prefix => $pcm_parent_filters ) {
+			$pcm_clause = $this->related_clause( $pcm_prefix, $pcm_parent_filters );
+
+			if ( '' !== $pcm_clause ) {
+				$pcm_where[] = $pcm_clause;
 			}
-
-			if ( '' === $pcm_value || null === $pcm_value ) {
-				continue;
-			}
-
-			$pcm_where[] = $wpdb->prepare( "{$pcm_col} = %s", $this->sanitize_value( $pcm_value, $pcm_type ) );
 		}
 
 		if ( ! empty( $pcm_args['where_raw'] ) ) {
@@ -312,6 +325,166 @@ class PCM_CRM_Model {
 		}
 
 		return $pcm_where ? 'WHERE ' . implode( ' AND ', $pcm_where ) : '';
+	}
+
+	/**
+	 * One filter's SQL.
+	 *
+	 * Four shapes are accepted, because they arrived in that order and the
+	 * earlier ones are still what the dashboard and pipeline send:
+	 *   'Proposal'                       equals
+	 *   array( 'a', 'b' )                IN
+	 *   array( 'min' => x, 'max' => y )  range, either bound optional
+	 *   array( 'op' => 'contains', 'value' => x )
+	 *
+	 * Column names are interpolated, never prepared — a placeholder cannot
+	 * stand in for an identifier — so callers must have checked the column
+	 * against the field map first, which where() does.
+	 */
+	protected function clause( $pcm_col, $pcm_value, $pcm_type ) {
+		global $wpdb;
+
+		if ( is_array( $pcm_value ) && isset( $pcm_value['op'] ) ) {
+			return $this->operator_clause( $pcm_col, $pcm_value, $pcm_type );
+		}
+
+		// A range: either bound may be absent, which is an open-ended range
+		// rather than an error.
+		if ( is_array( $pcm_value ) && ( isset( $pcm_value['min'] ) || isset( $pcm_value['max'] ) ) ) {
+			$pcm_parts = array();
+
+			if ( isset( $pcm_value['min'] ) && '' !== $pcm_value['min'] ) {
+				$pcm_parts[] = $wpdb->prepare( "{$pcm_col} >= %s", $this->sanitize_value( $pcm_value['min'], $pcm_type ) );
+			}
+			if ( isset( $pcm_value['max'] ) && '' !== $pcm_value['max'] ) {
+				$pcm_parts[] = $wpdb->prepare( "{$pcm_col} <= %s", $this->sanitize_value( $pcm_value['max'], $pcm_type ) );
+			}
+
+			return $pcm_parts ? '(' . implode( ' AND ', $pcm_parts ) . ')' : '';
+		}
+
+		if ( is_array( $pcm_value ) ) {
+			$pcm_set = array();
+
+			foreach ( $pcm_value as $pcm_one ) {
+				$pcm_set[] = $wpdb->prepare( '%s', $this->sanitize_value( $pcm_one, $pcm_type ) );
+			}
+
+			// An empty set matches nothing. Dropping the clause instead would
+			// quietly turn "none of these" into "everything".
+			return $pcm_set ? "{$pcm_col} IN (" . implode( ',', $pcm_set ) . ')' : '1 = 0';
+		}
+
+		if ( '' === $pcm_value || null === $pcm_value ) {
+			return '';
+		}
+
+		return $wpdb->prepare( "{$pcm_col} = %s", $this->sanitize_value( $pcm_value, $pcm_type ) );
+	}
+
+	/**
+	 * The operator forms the filter builder sends.
+	 */
+	protected function operator_clause( $pcm_col, array $pcm_filter, $pcm_type ) {
+		global $wpdb;
+
+		$pcm_op  = (string) $pcm_filter['op'];
+		$pcm_raw = isset( $pcm_filter['value'] ) ? $pcm_filter['value'] : '';
+
+		// Emptiness is the one test that needs no value, and the only one
+		// where a blank input is meaningful rather than an unfinished filter.
+		if ( 'empty' === $pcm_op || 'notempty' === $pcm_op ) {
+			$pcm_blank = in_array( $pcm_type, array( 'int', 'id', 'decimal', 'bool' ), true ) ? '0' : "''";
+			$pcm_test  = "({$pcm_col} IS NULL OR {$pcm_col} = {$pcm_blank})";
+
+			return 'empty' === $pcm_op ? $pcm_test : "NOT {$pcm_test}";
+		}
+
+		if ( 'between' === $pcm_op ) {
+			return $this->clause( $pcm_col, array(
+				'min' => isset( $pcm_filter['min'] ) ? $pcm_filter['min'] : '',
+				'max' => isset( $pcm_filter['max'] ) ? $pcm_filter['max'] : '',
+			), $pcm_type );
+		}
+
+		if ( 'in' === $pcm_op ) {
+			return $this->clause( $pcm_col, (array) $pcm_raw, $pcm_type );
+		}
+
+		if ( '' === $pcm_raw || null === $pcm_raw ) {
+			return '';
+		}
+
+		// LIKE takes the raw string with its wildcards escaped; everything
+		// else goes through the column's own sanitiser first.
+		if ( in_array( $pcm_op, array( 'contains', 'notcontains', 'starts', 'ends' ), true ) ) {
+			$pcm_like = $wpdb->esc_like( (string) $pcm_raw );
+
+			$pcm_patterns = array(
+				'contains'    => '%' . $pcm_like . '%',
+				'notcontains' => '%' . $pcm_like . '%',
+				'starts'      => $pcm_like . '%',
+				'ends'        => '%' . $pcm_like,
+			);
+
+			$pcm_not = 'notcontains' === $pcm_op ? 'NOT ' : '';
+
+			return $wpdb->prepare( "{$pcm_col} {$pcm_not}LIKE %s", $pcm_patterns[ $pcm_op ] );
+		}
+
+		$pcm_operators = array(
+			'eq'  => '=',
+			'ne'  => '!=',
+			'gt'  => '>',
+			'gte' => '>=',
+			'lt'  => '<',
+			'lte' => '<=',
+		);
+
+		if ( ! isset( $pcm_operators[ $pcm_op ] ) ) {
+			return '';
+		}
+
+		return $wpdb->prepare(
+			"{$pcm_col} {$pcm_operators[ $pcm_op ]} %s",
+			$this->sanitize_value( $pcm_raw, $pcm_type )
+		);
+	}
+
+	/**
+	 * Filter through a parent object.
+	 *
+	 * A subquery rather than a join, so the parent's own rules — its soft
+	 * delete, its column whitelist, its operators — come from its model
+	 * unchanged, and so a page of opportunities does not multiply rows.
+	 */
+	protected function related_clause( $pcm_prefix, array $pcm_filters ) {
+		if ( ! isset( $this->related[ $pcm_prefix ] ) || ! $pcm_filters ) {
+			return '';
+		}
+
+		$pcm_link  = $this->related[ $pcm_prefix ];
+		$pcm_model = call_user_func( $pcm_link['model'] );
+
+		if ( ! $pcm_model instanceof self || ! $this->has_field( $pcm_link['column'] ) ) {
+			return '';
+		}
+
+		$pcm_where = $pcm_model->where( array( 'filters' => $pcm_filters ) );
+
+		// Compared against the parent's unfiltered clause rather than merely
+		// checked for emptiness: an unknown column, or one with a blank value,
+		// still leaves the parent's own "is_deleted = 0" behind, and that would
+		// turn the subquery into "IN (every parent row)" — a filter that
+		// silently matches everything instead of narrowing anything.
+		if ( $pcm_where === $pcm_model->where( array() ) ) {
+			return '';
+		}
+
+		$pcm_column = $pcm_link['column'];
+		$pcm_table  = $pcm_model->table();
+
+		return "{$pcm_column} IN (SELECT id FROM {$pcm_table} {$pcm_where})";
 	}
 
 	public function find( array $pcm_args = array() ) {
@@ -559,13 +732,16 @@ class PCM_CRM_Model {
 	 */
 	public static function system_fields() {
 		return array(
-			'sf_id'              => array( 'type' => 'text', 'sf' => 'Id' ),
-			'owner_id'           => array( 'type' => 'id',   'sf' => 'OwnerId' ),
-			'created_by_id'      => array( 'type' => 'id',   'sf' => 'CreatedById', 'readonly' => true ),
-			'created_date'       => array( 'type' => 'datetime', 'sf' => 'CreatedDate', 'readonly' => true ),
-			'last_modified_by_id' => array( 'type' => 'id', 'sf' => 'LastModifiedById', 'readonly' => true ),
-			'last_modified_date' => array( 'type' => 'datetime', 'sf' => 'LastModifiedDate', 'readonly' => true ),
-			'is_deleted'         => array( 'type' => 'bool', 'sf' => 'IsDeleted', 'readonly' => true ),
+			// 'internal' keeps a column out of the filter builder: sf_id is
+			// blank until a migration fills it, and is_deleted is the query's
+			// own business rather than something to filter on by hand.
+			'sf_id'               => array( 'type' => 'text', 'sf' => 'Id', 'internal' => true ),
+			'owner_id'            => array( 'type' => 'id', 'sf' => 'OwnerId', 'label' => 'Owner', 'options' => 'pcm_crm_owner_options' ),
+			'created_by_id'       => array( 'type' => 'id', 'sf' => 'CreatedById', 'label' => 'Created By', 'options' => 'pcm_crm_owner_options', 'readonly' => true ),
+			'created_date'        => array( 'type' => 'datetime', 'sf' => 'CreatedDate', 'label' => 'Created Date', 'readonly' => true ),
+			'last_modified_by_id' => array( 'type' => 'id', 'sf' => 'LastModifiedById', 'label' => 'Last Modified By', 'options' => 'pcm_crm_owner_options', 'readonly' => true ),
+			'last_modified_date'  => array( 'type' => 'datetime', 'sf' => 'LastModifiedDate', 'label' => 'Last Modified Date', 'readonly' => true ),
+			'is_deleted'          => array( 'type' => 'bool', 'sf' => 'IsDeleted', 'readonly' => true, 'internal' => true ),
 		);
 	}
 }

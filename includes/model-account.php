@@ -10,23 +10,23 @@ function pcm_crm_accounts() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'name'                => array( 'type' => 'text', 'sf' => 'Name' ),
+				'name'                => array( 'type' => 'text', 'sf' => 'Name', 'label' => 'Account Name' ),
 				// Normalised copy of name, maintained by pcm_crm_account_key().
 				// The form intake matches on it, so "The Smith Trust" and
 				// "the smith trust." do not become two accounts.
-				'name_key'            => array( 'type' => 'text', 'readonly' => true ),
-				'type'                => array( 'type' => 'text', 'sf' => 'Type' ),
-				'industry'            => array( 'type' => 'text', 'sf' => 'Industry' ),
-				'website'             => array( 'type' => 'url',  'sf' => 'Website' ),
-				'phone'               => array( 'type' => 'text', 'sf' => 'Phone' ),
-				'billing_street'      => array( 'type' => 'text', 'sf' => 'BillingStreet' ),
-				'billing_city'        => array( 'type' => 'text', 'sf' => 'BillingCity' ),
-				'billing_state'       => array( 'type' => 'text', 'sf' => 'BillingState' ),
-				'billing_postal_code' => array( 'type' => 'text', 'sf' => 'BillingPostalCode' ),
-				'billing_country'     => array( 'type' => 'text', 'sf' => 'BillingCountry' ),
-				'annual_revenue'      => array( 'type' => 'decimal', 'sf' => 'AnnualRevenue' ),
-				'number_of_employees' => array( 'type' => 'int',  'sf' => 'NumberOfEmployees' ),
-				'description'         => array( 'type' => 'longtext', 'sf' => 'Description' ),
+				'name_key'            => array( 'type' => 'text', 'readonly' => true, 'internal' => true ),
+				'type'                => array( 'type' => 'text', 'sf' => 'Type', 'label' => 'Type', 'options' => 'pcm_crm_account_types' ),
+				'industry'            => array( 'type' => 'text', 'sf' => 'Industry', 'label' => 'Industry', 'options' => 'pcm_crm_industries' ),
+				'website'             => array( 'type' => 'url',  'sf' => 'Website', 'label' => 'Website' ),
+				'phone'               => array( 'type' => 'text', 'sf' => 'Phone', 'label' => 'Phone' ),
+				'billing_street'      => array( 'type' => 'text', 'sf' => 'BillingStreet', 'label' => 'Billing Street' ),
+				'billing_city'        => array( 'type' => 'text', 'sf' => 'BillingCity', 'label' => 'Billing City' ),
+				'billing_state'       => array( 'type' => 'text', 'sf' => 'BillingState', 'label' => 'Billing State' ),
+				'billing_postal_code' => array( 'type' => 'text', 'sf' => 'BillingPostalCode', 'label' => 'Billing Postal Code' ),
+				'billing_country'     => array( 'type' => 'text', 'sf' => 'BillingCountry', 'label' => 'Billing Country' ),
+				'annual_revenue'      => array( 'type' => 'decimal', 'sf' => 'AnnualRevenue', 'label' => 'Annual Revenue' ),
+				'number_of_employees' => array( 'type' => 'int',  'sf' => 'NumberOfEmployees', 'label' => 'Employees' ),
+				'description'         => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Notes' ),
 			),
 			PCM_CRM_Model::system_fields()
 		);

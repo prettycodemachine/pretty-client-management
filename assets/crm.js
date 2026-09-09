@@ -186,6 +186,7 @@
 	var state = {
 		view: '',
 		boot: null,
+		schema: null,
 		query: { search: '', filters: {}, orderby: '', order: 'DESC', page: 1, per_page: 25 },
 		recordId: 0,
 		creating: null
@@ -552,7 +553,7 @@
 	   Filter bar
 	   --------------------------------------------------------------------- */
 
-	function renderFilters(definition, onChange, extra) {
+	function renderFilters(definition, onChange, extra, object) {
 		var bar = dom.filters;
 		clear(bar);
 
@@ -590,7 +591,8 @@
 					state.query.search = '';
 					state.query.filters = {};
 					state.query.page = 1;
-					onChange();
+					// render() rebuilds the bar and reloads on its own; calling
+					// onChange as well fetches the same rows twice.
 					render();
 				}
 			})
@@ -598,6 +600,331 @@
 
 		(extra || []).forEach(function (node) { actions.appendChild(node); });
 		bar.appendChild(actions);
+
+		// The builder sits on its own row below the fixed controls: its chips
+		// wrap unpredictably, and mixed in among the dropdowns they would push
+		// those around as filters come and go.
+		if (object && state.schema && state.schema[object]) {
+			bar.appendChild(builderRow(object, onChange));
+		}
+	}
+
+	/* ---------------------------------------------------------------------
+	   Filter builder
+
+	   The fixed filter bar covers the handful of fields worth a permanent
+	   control. This covers the rest: any field on the object, and any field
+	   on a parent it can be reached through.
+	   --------------------------------------------------------------------- */
+
+	/**
+	 * Every field that can be filtered, flattened, each carrying the name of
+	 * the object it came from.
+	 *
+	 * That name is what makes a cross-object filter legible: "Industry" on an
+	 * opportunity list is meaningless until it says Account beside it.
+	 */
+	function filterableFields(object) {
+		var schema = state.schema && state.schema[object];
+		if (!schema) { return []; }
+
+		var groups = [{ label: objects[object].label, fields: schema.fields }];
+
+		(schema.related || []).forEach(function (related) {
+			groups.push({ label: related.label, fields: related.fields, isRelated: true });
+		});
+
+		var flat = [];
+
+		groups.forEach(function (group) {
+			group.fields.forEach(function (field) {
+				flat.push(Object.assign({}, field, { group: group.label, isRelated: !!group.isRelated }));
+			});
+		});
+
+		return flat;
+	}
+
+	function findField(object, key) {
+		return filterableFields(object).filter(function (field) { return field.key === key; })[0] || null;
+	}
+
+	/**
+	 * The operators that make sense for a field's type.
+	 *
+	 * A picklist gets "is / is not", not "contains" — offering a substring
+	 * match against a fixed set of values invites filters that look right and
+	 * return nothing.
+	 */
+	function operatorsFor(field) {
+		if (!field) { return []; }
+
+		if (field.options) {
+			return [
+				{ value: 'eq', label: 'is' },
+				{ value: 'ne', label: 'is not' },
+				{ value: 'empty', label: 'is blank' },
+				{ value: 'notempty', label: 'is not blank' }
+			];
+		}
+
+		if (field.type === 'bool') {
+			return [{ value: 'eq', label: 'is' }];
+		}
+
+		if (field.type === 'date' || field.type === 'datetime') {
+			return [
+				{ value: 'eq', label: 'on' },
+				{ value: 'gte', label: 'on or after' },
+				{ value: 'lte', label: 'on or before' },
+				{ value: 'between', label: 'between' },
+				{ value: 'empty', label: 'is blank' }
+			];
+		}
+
+		if (field.type === 'int' || field.type === 'decimal' || field.type === 'id') {
+			return [
+				{ value: 'eq', label: '=' },
+				{ value: 'ne', label: '≠' },
+				{ value: 'gt', label: '>' },
+				{ value: 'lt', label: '<' },
+				{ value: 'between', label: 'between' },
+				{ value: 'empty', label: 'is blank' }
+			];
+		}
+
+		return [
+			{ value: 'contains', label: 'contains' },
+			{ value: 'notcontains', label: 'does not contain' },
+			{ value: 'eq', label: 'is' },
+			{ value: 'starts', label: 'starts with' },
+			{ value: 'empty', label: 'is blank' },
+			{ value: 'notempty', label: 'is not blank' }
+		];
+	}
+
+	function operatorLabel(field, op) {
+		var match = operatorsFor(field).filter(function (o) { return o.value === op; })[0];
+		return match ? match.label : op;
+	}
+
+	function valueLabel(field, filter) {
+		if (filter.op === 'empty' || filter.op === 'notempty') { return ''; }
+		if (filter.op === 'between') { return (filter.min || '…') + ' – ' + (filter.max || '…'); }
+
+		if (field && field.options) {
+			var match = field.options.filter(function (o) { return String(o.value) === String(filter.value); })[0];
+			if (match) { return match.label; }
+		}
+
+		if (field && field.type === 'bool') { return Number(filter.value) ? 'Yes' : 'No'; }
+
+		return String(filter.value === undefined ? '' : filter.value);
+	}
+
+	/**
+	 * The built filters as chips, plus the control that adds one.
+	 */
+	function builderRow(object, onChange) {
+		var row = el('div.pcm-crm-builder');
+		var built = builtFilters(object);
+
+		built.forEach(function (entry) {
+			var field = findField(object, entry.key);
+
+			row.appendChild(el('span.pcm-crm-chip' + (field && field.isRelated ? '.is-related' : ''), {}, [
+				// The object name rides on every chip, so a filter on a
+				// parent's field never reads as one of this object's own.
+				el('span.pcm-crm-chip-object', { text: field ? field.group : '?' }),
+				el('span.pcm-crm-chip-field', { text: field ? field.label : entry.key }),
+				el('span.pcm-crm-chip-op', { text: operatorLabel(field, entry.filter.op) }),
+				el('span.pcm-crm-chip-value', { text: valueLabel(field, entry.filter) }),
+				el('button.pcm-crm-chip-remove', {
+					type: 'button',
+					'aria-label': 'Remove this filter',
+					text: '×',
+					onclick: function () {
+						delete state.query.filters[entry.key];
+						state.query.page = 1;
+						render();
+					}
+				})
+			]));
+		});
+
+		row.appendChild(el('button.pcm-btn.pcm-btn-quiet.pcm-btn-sm', {
+			type: 'button',
+			text: built.length ? '+ Add another filter' : '+ Add filter',
+			onclick: function (event) { openBuilder(object, onChange, event.target); }
+		}));
+
+		return row;
+	}
+
+	/**
+	 * Filters that came from the builder rather than from a fixed control.
+	 *
+	 * The fixed bar owns a few keys; showing those as chips as well would give
+	 * one filter two places to be removed from.
+	 */
+	function builtFilters(object) {
+		var fixed = (objects[object].filters ? objects[object].filters() : []).map(function (f) { return f.key; });
+		var out = [];
+
+		Object.keys(state.query.filters).forEach(function (key) {
+			if (fixed.indexOf(key) !== -1) { return; }
+
+			var value = state.query.filters[key];
+
+			out.push({
+				key: key,
+				filter: (value && typeof value === 'object' && value.op) ? value : { op: 'eq', value: value }
+			});
+		});
+
+		return out;
+	}
+
+	/**
+	 * The add-a-filter panel: field, then operator, then value.
+	 */
+	function openBuilder(object, onChange, anchor) {
+		var existing = dom.root.querySelector('.pcm-crm-builder-panel');
+		if (existing) { existing.remove(); }
+
+		var fields = filterableFields(object);
+		var draft = { key: fields.length ? fields[0].key : '', op: '', value: '', min: '', max: '' };
+
+		var panel = el('div.pcm-crm-builder-panel');
+		var fieldSelect = el('select');
+
+		// Grouped by object, which is the whole point — an <optgroup> per
+		// table says where each field comes from without a legend.
+		var groups = {};
+		fields.forEach(function (field) {
+			if (!groups[field.group]) {
+				groups[field.group] = el('optgroup', { label: field.group });
+				fieldSelect.appendChild(groups[field.group]);
+			}
+			groups[field.group].appendChild(el('option', { value: field.key, text: field.label }));
+		});
+
+		var opSelect = el('select');
+		var valueWrap = el('div.pcm-crm-builder-value');
+
+		function refresh() {
+			var field = findField(object, draft.key);
+			var ops = operatorsFor(field);
+
+			if (!ops.filter(function (o) { return o.value === draft.op; }).length) {
+				draft.op = ops.length ? ops[0].value : 'eq';
+			}
+
+			clear(opSelect);
+			ops.forEach(function (op) {
+				opSelect.appendChild(el('option', { value: op.value, text: op.label, selected: op.value === draft.op }));
+			});
+
+			clear(valueWrap);
+			valueWrap.appendChild(valueControl(field, draft));
+		}
+
+		fieldSelect.addEventListener('change', function (event) {
+			draft.key = event.target.value;
+			draft.value = '';
+			draft.min = '';
+			draft.max = '';
+			refresh();
+		});
+
+		opSelect.addEventListener('change', function (event) {
+			draft.op = event.target.value;
+			refresh();
+		});
+
+		refresh();
+
+		panel.appendChild(el('div.pcm-crm-builder-fields', {}, [fieldSelect, opSelect, valueWrap]));
+		panel.appendChild(el('div.pcm-crm-builder-actions', {}, [
+			el('button.pcm-btn.pcm-btn-primary.pcm-btn-sm', {
+				type: 'button',
+				text: 'Apply',
+				onclick: function () {
+					var filter = { op: draft.op };
+
+					if (draft.op === 'between') {
+						filter.min = draft.min;
+						filter.max = draft.max;
+					} else if (draft.op !== 'empty' && draft.op !== 'notempty') {
+						if (draft.value === '' || draft.value === undefined) { return; }
+						filter.value = draft.value;
+					}
+
+					state.query.filters[draft.key] = filter;
+					state.query.page = 1;
+					panel.remove();
+					render();
+				}
+			}),
+			el('button.pcm-btn.pcm-btn-quiet.pcm-btn-sm', {
+				type: 'button',
+				text: 'Cancel',
+				onclick: function () { panel.remove(); }
+			})
+		]));
+
+		anchor.parentNode.insertBefore(panel, anchor.nextSibling);
+		fieldSelect.focus();
+	}
+
+	function valueControl(field, draft) {
+		if (draft.op === 'empty' || draft.op === 'notempty') {
+			return el('span.pcm-crm-muted', { text: 'No value needed' });
+		}
+
+		if (draft.op === 'between') {
+			var type = (field && (field.type === 'date' || field.type === 'datetime')) ? 'date' : 'number';
+
+			return el('span', { style: 'display:flex;gap:6px' }, [
+				el('input', { type: type, 'aria-label': 'From', value: draft.min,
+					onchange: function (e) { draft.min = e.target.value; } }),
+				el('input', { type: type, 'aria-label': 'To', value: draft.max,
+					onchange: function (e) { draft.max = e.target.value; } })
+			]);
+		}
+
+		if (field && field.options) {
+			var select = el('select', { onchange: function (e) { draft.value = e.target.value; } });
+
+			select.appendChild(el('option', { value: '', text: 'Choose…' }));
+			field.options.forEach(function (option) {
+				select.appendChild(el('option', { value: option.value, text: option.label, selected: String(draft.value) === String(option.value) }));
+			});
+
+			return select;
+		}
+
+		if (field && field.type === 'bool') {
+			var toggle = el('select', { onchange: function (e) { draft.value = e.target.value; } });
+
+			[{ value: '1', label: 'Yes' }, { value: '0', label: 'No' }].forEach(function (option) {
+				toggle.appendChild(el('option', { value: option.value, text: option.label, selected: String(draft.value) === option.value }));
+			});
+
+			draft.value = draft.value === '' ? '1' : draft.value;
+			return toggle;
+		}
+
+		var inputType = 'text';
+		if (field && (field.type === 'date' || field.type === 'datetime')) { inputType = 'date'; }
+		if (field && (field.type === 'int' || field.type === 'decimal')) { inputType = 'number'; }
+
+		return el('input', {
+			type: inputType,
+			value: draft.value,
+			placeholder: 'Value',
+			oninput: function (e) { draft.value = e.target.value; }
+		});
 	}
 
 	function selectFilter(filter, onChange) {
@@ -703,7 +1030,7 @@
 				href: exportUrl(object),
 				text: 'Export CSV'
 			})
-		]);
+		], object);
 
 		clear(dom.actions, el('button.pcm-btn.pcm-btn-primary', {
 			type: 'button',
@@ -1644,7 +1971,7 @@
 			// The board is already organised by stage, and a status filter on
 			// a board of stages would just empty columns.
 			return filter.key !== 'stage_name' && filter.key !== 'is_closed';
-		}), loadPipeline);
+		}), loadPipeline, [], 'opportunities');
 
 		clear(dom.actions, el('button.pcm-btn.pcm-btn-primary', {
 			type: 'button',
@@ -1861,7 +2188,7 @@
 
 			renderFilters(objects[report.object].filters(), loadReport, [
 				el('a.pcm-btn.pcm-btn-quiet', { href: exportUrl(report.object), text: 'Export CSV' })
-			]);
+			], report.object);
 
 			// The object and grouping choices belong with the filters they act
 			// on, so they are prepended into the same bar rather than sitting
@@ -1992,9 +2319,10 @@
 			if (event.key === 'Escape' && !dom.drawer.hidden) { closeDrawer(); }
 		});
 
-		api('/bootstrap').then(function (boot) {
-			state.boot = boot;
-			cfg.currency = boot.currency || '$';
+		Promise.all([api('/bootstrap'), api('/schema')]).then(function (results) {
+			state.boot = results[0];
+			state.schema = results[1];
+			cfg.currency = state.boot.currency || '$';
 			render();
 		}).catch(showError);
 	}

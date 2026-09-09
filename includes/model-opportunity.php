@@ -10,20 +10,20 @@ function pcm_crm_opportunities() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'account_id'         => array( 'type' => 'id',   'sf' => 'AccountId' ),
-				'primary_contact_id' => array( 'type' => 'id',   'sf' => 'ContactId' ),
-				'name'               => array( 'type' => 'text', 'sf' => 'Name' ),
-				'stage_name'         => array( 'type' => 'text', 'sf' => 'StageName' ),
-				'amount'             => array( 'type' => 'decimal', 'sf' => 'Amount' ),
-				'probability'        => array( 'type' => 'int',  'sf' => 'Probability' ),
-				'close_date'         => array( 'type' => 'date', 'sf' => 'CloseDate' ),
-				'type'               => array( 'type' => 'text', 'sf' => 'Type' ),
-				'lead_source'        => array( 'type' => 'text', 'sf' => 'LeadSource' ),
-				'next_step'          => array( 'type' => 'text', 'sf' => 'NextStep' ),
-				'forecast_category'  => array( 'type' => 'text', 'sf' => 'ForecastCategoryName' ),
-				'is_closed'          => array( 'type' => 'bool', 'sf' => 'IsClosed', 'readonly' => true ),
-				'is_won'             => array( 'type' => 'bool', 'sf' => 'IsWon', 'readonly' => true ),
-				'description'        => array( 'type' => 'longtext', 'sf' => 'Description' ),
+				'account_id'         => array( 'type' => 'id',   'sf' => 'AccountId', 'label' => 'Account' ),
+				'primary_contact_id' => array( 'type' => 'id',   'sf' => 'ContactId', 'label' => 'Primary Contact' ),
+				'name'               => array( 'type' => 'text', 'sf' => 'Name', 'label' => 'Opportunity Name' ),
+				'stage_name'         => array( 'type' => 'text', 'sf' => 'StageName', 'label' => 'Stage', 'options' => 'pcm_crm_stage_names' ),
+				'amount'             => array( 'type' => 'decimal', 'sf' => 'Amount', 'label' => 'Amount' ),
+				'probability'        => array( 'type' => 'int',  'sf' => 'Probability', 'label' => 'Probability' ),
+				'close_date'         => array( 'type' => 'date', 'sf' => 'CloseDate', 'label' => 'Close Date' ),
+				'type'               => array( 'type' => 'text', 'sf' => 'Type', 'label' => 'Type', 'options' => 'pcm_crm_opportunity_types' ),
+				'lead_source'        => array( 'type' => 'text', 'sf' => 'LeadSource', 'label' => 'Lead Source', 'options' => 'pcm_crm_lead_sources' ),
+				'next_step'          => array( 'type' => 'text', 'sf' => 'NextStep', 'label' => 'Next Step' ),
+				'forecast_category'  => array( 'type' => 'text', 'sf' => 'ForecastCategoryName', 'label' => 'Forecast Category' ),
+				'is_closed'          => array( 'type' => 'bool', 'sf' => 'IsClosed', 'label' => 'Closed', 'readonly' => true ),
+				'is_won'             => array( 'type' => 'bool', 'sf' => 'IsWon', 'label' => 'Won', 'readonly' => true ),
+				'description'        => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Notes' ),
 			),
 			PCM_CRM_Model::system_fields()
 		);
@@ -32,7 +32,11 @@ function pcm_crm_opportunities() {
 			'opportunity',
 			PCM_CRM_Schema::opportunities(),
 			$pcm_fields,
-			array( 'name', 'next_step', 'description' )
+			array( 'name', 'next_step', 'description' ),
+			array(
+				'account' => array( 'column' => 'account_id', 'model' => 'pcm_crm_accounts', 'label' => 'Account' ),
+				'contact' => array( 'column' => 'primary_contact_id', 'model' => 'pcm_crm_contacts', 'label' => 'Primary Contact' ),
+			)
 		);
 	}
 

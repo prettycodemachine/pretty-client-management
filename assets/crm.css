@@ -170,6 +170,88 @@
 }
 .pcm-crm-filter-count strong { color: var(--pcm-ink); }
 
+/* Filter builder ------------------------------------------------------------ */
+/* Its own row, full width below the fixed controls: chips wrap unpredictably,
+   and mixed in among the dropdowns they would shove those around as filters
+   come and go. */
+.pcm-crm-builder {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  margin-top: 2px;
+  border-top: 1px solid var(--pcm-line);
+}
+.pcm-crm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 5px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 999px;
+  background: var(--pcm-paper);
+  font-size: 0.82rem;
+  color: var(--pcm-ink);
+}
+/* The object a field came from, on the chip itself — a filter on a parent's
+   field must never read as one of this object's own. */
+.pcm-crm-chip-object {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pcm-blue);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.pcm-crm-chip.is-related .pcm-crm-chip-object { background: var(--pcm-accent); }
+.pcm-crm-chip-field { font-weight: 700; }
+.pcm-crm-chip-op { color: var(--pcm-body); font-style: italic; }
+.pcm-crm-chip-value { font-weight: 600; }
+.pcm-crm-chip-remove {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--pcm-accent-deep);
+  cursor: pointer;
+}
+.pcm-crm-chip-remove:hover { color: var(--pcm-accent-deeper); }
+
+.pcm-crm-builder-panel {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 14px 16px;
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  box-shadow: 5px 5px 0 var(--pcm-blue);
+}
+.pcm-crm-builder-fields { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pcm-crm-builder-value { display: flex; }
+.pcm-crm-builder-panel select,
+.pcm-crm-builder-panel input {
+  height: var(--pcm-control);
+  max-width: 100%;
+  padding: 0 10px;
+  line-height: normal;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 9px;
+  background-color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--pcm-ink);
+}
+.pcm-crm-builder-actions { display: flex; gap: 8px; }
+
 /* Tables -------------------------------------------------------------------- */
 /* Wide tables scroll inside their own container — the page body must never
    scroll sideways, which is the usual way an admin list breaks on a laptop. */
@@ -636,7 +718,8 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
    looking like plain text boxes. This is the same chevron in --pcm-ink,
    inline so it needs no asset and cannot 404. */
 .pcm-crm-filter select,
-.pcm-crm-field select {
+.pcm-crm-field select,
+.pcm-crm-builder-panel select {
   -webkit-appearance: none;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232c2c2e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");

@@ -81,6 +81,15 @@ class PCM_CRM_REST {
 			'permission_callback' => array( __CLASS__, 'permission' ),
 		) );
 
+		// The filter builder's vocabulary: what can be filtered, on what, with
+		// which operators. Served rather than duplicated in JS so the field
+		// map stays the single source of truth for it.
+		register_rest_route( self::NS, '/schema', array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => array( __CLASS__, 'schema' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
 		register_rest_route( self::NS, '/dashboard', array(
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => array( __CLASS__, 'dashboard' ),
@@ -344,6 +353,89 @@ class PCM_CRM_REST {
 		) );
 	}
 
+	/**
+	 * Filterable fields for every object, plus the parents each can be
+	 * filtered through.
+	 *
+	 * Grouped by object so the UI can say which table a field comes from,
+	 * which is the whole point of letting one object filter on another's.
+	 */
+	public static function schema( WP_REST_Request $pcm_request ) {
+		$pcm_out = array();
+
+		foreach ( self::models() as $pcm_slug => $pcm_model ) {
+			if ( 'submissions' === $pcm_slug ) {
+				continue;
+			}
+
+			$pcm_related = array();
+
+			foreach ( $pcm_model->related() as $pcm_prefix => $pcm_link ) {
+				$pcm_parent = call_user_func( $pcm_link['model'] );
+
+				$pcm_related[] = array(
+					'prefix' => $pcm_prefix,
+					'label'  => $pcm_link['label'],
+					'fields' => self::field_list( $pcm_parent, $pcm_prefix . '.' ),
+				);
+			}
+
+			$pcm_out[ $pcm_slug ] = array(
+				'label'   => $pcm_model->object(),
+				'fields'  => self::field_list( $pcm_model, '' ),
+				'related' => $pcm_related,
+			);
+		}
+
+		return rest_ensure_response( $pcm_out );
+	}
+
+	/**
+	 * One object's filterable fields, keys optionally prefixed so a parent's
+	 * field arrives as 'account.industry'.
+	 */
+	protected static function field_list( PCM_CRM_Model $pcm_model, $pcm_prefix ) {
+		$pcm_fields = array();
+
+		foreach ( $pcm_model->fields() as $pcm_key => $pcm_def ) {
+			if ( ! empty( $pcm_def['internal'] ) || empty( $pcm_def['label'] ) ) {
+				continue;
+			}
+
+			$pcm_field = array(
+				'key'   => $pcm_prefix . $pcm_key,
+				'label' => $pcm_def['label'],
+				'type'  => $pcm_def['type'],
+			);
+
+			if ( ! empty( $pcm_def['options'] ) && is_callable( $pcm_def['options'] ) ) {
+				$pcm_field['options'] = self::normalize_options( call_user_func( $pcm_def['options'] ) );
+			}
+
+			$pcm_fields[] = $pcm_field;
+		}
+
+		return $pcm_fields;
+	}
+
+	/**
+	 * Picklists come back either as a list of labels or as id/name pairs;
+	 * the UI wants one shape.
+	 */
+	protected static function normalize_options( $pcm_options ) {
+		$pcm_out = array();
+
+		foreach ( (array) $pcm_options as $pcm_option ) {
+			if ( is_array( $pcm_option ) && isset( $pcm_option['value'] ) ) {
+				$pcm_out[] = $pcm_option;
+			} else {
+				$pcm_out[] = array( 'value' => (string) $pcm_option, 'label' => (string) $pcm_option );
+			}
+		}
+
+		return $pcm_out;
+	}
+
 	public static function dashboard( WP_REST_Request $pcm_request ) {
 		return rest_ensure_response( pcm_crm_dashboard_data( self::query_args( $pcm_request ) ) );
 	}
@@ -432,6 +524,19 @@ function pcm_crm_owner_choices() {
 	$pcm_out = array();
 	foreach ( $pcm_users as $pcm_user ) {
 		$pcm_out[] = array( 'id' => (int) $pcm_user->ID, 'name' => pcm_crm_user_label( $pcm_user ) );
+	}
+
+	return $pcm_out;
+}
+
+/**
+ * Owners as value/label pairs, for a picklist on an owner column.
+ */
+function pcm_crm_owner_options() {
+	$pcm_out = array();
+
+	foreach ( pcm_crm_owner_choices() as $pcm_owner ) {
+		$pcm_out[] = array( 'value' => (string) $pcm_owner['id'], 'label' => $pcm_owner['name'] );
 	}
 
 	return $pcm_out;

@@ -14,17 +14,17 @@ function pcm_crm_activities() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'subject'       => array( 'type' => 'text', 'sf' => 'Subject' ),
-				'activity_type' => array( 'type' => 'text', 'sf' => 'Type' ),
-				'status'        => array( 'type' => 'text', 'sf' => 'Status' ),
-				'priority'      => array( 'type' => 'text', 'sf' => 'Priority' ),
-				'activity_date' => array( 'type' => 'datetime', 'sf' => 'ActivityDate' ),
-				'due_date'      => array( 'type' => 'date', 'sf' => 'ReminderDateTime' ),
-				'who_id'        => array( 'type' => 'id',   'sf' => 'WhoId' ),
-				'what_id'       => array( 'type' => 'id',   'sf' => 'WhatId' ),
-				'what_type'     => array( 'type' => 'text' ),
-				'description'   => array( 'type' => 'longtext', 'sf' => 'Description' ),
-				'is_completed'  => array( 'type' => 'bool', 'sf' => 'IsClosed' ),
+				'subject'       => array( 'type' => 'text', 'sf' => 'Subject', 'label' => 'Subject' ),
+				'activity_type' => array( 'type' => 'text', 'sf' => 'Type', 'label' => 'Type', 'options' => 'pcm_crm_activity_types' ),
+				'status'        => array( 'type' => 'text', 'sf' => 'Status', 'label' => 'Status', 'options' => 'pcm_crm_activity_statuses' ),
+				'priority'      => array( 'type' => 'text', 'sf' => 'Priority', 'label' => 'Priority', 'options' => 'pcm_crm_priorities' ),
+				'activity_date' => array( 'type' => 'datetime', 'sf' => 'ActivityDate', 'label' => 'Logged Date' ),
+				'due_date'      => array( 'type' => 'date', 'sf' => 'ReminderDateTime', 'label' => 'Due Date' ),
+				'who_id'        => array( 'type' => 'id',   'sf' => 'WhoId', 'label' => 'Contact' ),
+				'what_id'       => array( 'type' => 'id',   'sf' => 'WhatId', 'label' => 'Related Record' ),
+				'what_type'     => array( 'type' => 'text', 'label' => 'Related To' ),
+				'description'   => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Details' ),
+				'is_completed'  => array( 'type' => 'bool', 'sf' => 'IsClosed', 'label' => 'Completed' ),
 			),
 			PCM_CRM_Model::system_fields()
 		);
@@ -33,7 +33,10 @@ function pcm_crm_activities() {
 			'activity',
 			PCM_CRM_Schema::activities(),
 			$pcm_fields,
-			array( 'subject', 'description', 'activity_type' )
+			array( 'subject', 'description', 'activity_type' ),
+			array(
+				'contact' => array( 'column' => 'who_id', 'model' => 'pcm_crm_contacts', 'label' => 'Contact' ),
+			)
 		);
 	}
 
