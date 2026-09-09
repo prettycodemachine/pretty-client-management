@@ -24,19 +24,40 @@ function pcm_crm_autoresponder_default_subject() {
 
 /**
  * The shipped reply copy. Only used until the settings screen is saved once.
+ *
+ * Written the way the editor stores it — blank lines between paragraphs, no
+ * <p> tags — because that is what comes back out of wp_editor once anyone
+ * saves the screen. pcm_crm_format_body() adds the markup at send time, so the
+ * shipped copy and an edited one travel exactly the same path.
  */
 function pcm_crm_autoresponder_default_body() {
 	$pcm_site = esc_url( set_url_scheme( home_url( '/' ), 'https' ) );
 
 	return
-		"<p>Dear {{FIRST NAME}},</p>\n\n" .
-		"<p>Thank you for your interest in working with Pretty Code Machine!</p>\n\n" .
-		"<p>We&rsquo;ve attached a copy of our pricing sheet for your convenience.</p>\n\n" .
-		"<p>We look forward to being in touch within one business day.</p>\n\n" .
-		"<p>Talk soon,<br />\nJason</p>\n\n" .
-		"<p>Jason Jensen<br />\n" .
-		'Founder, <a href="' . $pcm_site . '">Pretty Code Machine</a><br />' . "\n" .
-		'<a href="https://calendly.com/jason-eric-jensen">Schedule a Meeting</a></p>';
+		"Dear {{FIRST NAME}},\n\n" .
+		"Thank you for your interest in working with Pretty Code Machine!\n\n" .
+		"We&rsquo;ve attached a copy of our pricing sheet for your convenience.\n\n" .
+		"We look forward to being in touch within one business day.\n\n" .
+		"Talk soon,\nJason\n\n" .
+		"<strong>Jason Jensen</strong>\n" .
+		'Founder, <a href="' . $pcm_site . '">Pretty Code Machine</a>' . "\n" .
+		'<a href="https://calendly.com/jason-eric-jensen">Schedule a Meeting</a>';
+}
+
+/**
+ * Turn the stored template into email HTML.
+ *
+ * wp_editor hands back what the Text tab shows: paragraphs separated by blank
+ * lines, with no <p> tags — WordPress adds those at render time for post
+ * content, and an email that skips that step collapses into one run-on block,
+ * because HTML does not care about newlines.
+ *
+ * wpautop() is the same function core uses on the_content, so what the visual
+ * editor previews is what arrives. Its second argument defaults to true, which
+ * is what turns the single newline in a signature into a <br>.
+ */
+function pcm_crm_format_body( $pcm_body ) {
+	return wpautop( $pcm_body );
 }
 
 function pcm_crm_autoresponder_subject() {
@@ -264,7 +285,7 @@ function pcm_crm_send_autoresponder( array $pcm_fields ) {
 	}
 
 	$pcm_subject = pcm_crm_fill_tokens( pcm_crm_autoresponder_subject(), $pcm_fields );
-	$pcm_html    = pcm_crm_email_wrapper( pcm_crm_fill_tokens( pcm_crm_autoresponder_body(), $pcm_fields ) );
+	$pcm_html    = pcm_crm_email_wrapper( pcm_crm_format_body( pcm_crm_fill_tokens( pcm_crm_autoresponder_body(), $pcm_fields ) ) );
 	$pcm_from    = pcm_crm_contact_recipient();
 	$pcm_headers = array(
 		'From: Pretty Code Machine <' . $pcm_from . '>',

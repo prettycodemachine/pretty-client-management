@@ -24,6 +24,17 @@ check( 'escapes injected markup',
 	pcm_crm_fill_tokens( '{{ORGANIZATION}}', array( 'first' => '', 'last' => '', 'org' => '<script>x</script>', 'email' => '', 'interest' => '' ) ),
 	'&lt;script&gt;x&lt;/script&gt;' );
 
+echo "\n--- email body formatting ---\n";
+$formatted = pcm_crm_format_body( "Dear Ada,\n\nThanks for getting in touch.\n\nTalk soon,\nJason" );
+check( 'blank lines become paragraphs', substr_count( $formatted, '<p>' ), 3 );
+check( 'a single newline becomes a break', strpos( $formatted, 'Talk soon,<br />' ) !== false, true );
+check( 'no stray paragraph from trailing blank lines',
+	substr_count( pcm_crm_format_body( "One\n\nTwo\n\n\n" ), '<p>' ), 2 );
+check( 'the shipped default has no pre-tagged paragraphs',
+	strpos( pcm_crm_autoresponder_default_body(), '<p>' ), false );
+check( 'the shipped default still carries its links',
+	substr_count( pcm_crm_autoresponder_default_body(), '<a href=' ), 2 );
+
 echo "\n--- picklists ---\n";
 $stage = pcm_crm_stage( 'Closed Won' );
 check( 'Closed Won is closed', (int) $stage['is_closed'], 1 );

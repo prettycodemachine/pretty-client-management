@@ -44,6 +44,23 @@ function home_url( $p = '/' ) { return 'https://example.com' . $p; }
 function admin_url( $p = '' ) { return 'https://example.com/wp-admin/' . $p; }
 function set_url_scheme( $u, $s ) { return preg_replace( '#^https?://#', $s . '://', $u ); }
 function wp_json_encode( $v ) { return json_encode( $v ); }
+
+/**
+ * A deliberately simplified wpautop: blank lines become paragraphs, single
+ * newlines become breaks. Core's does more (it leaves existing block-level
+ * elements alone), but this covers the contract the email body relies on.
+ */
+function wpautop( $pee, $br = true ) {
+	$blocks = preg_split( '/\n\s*\n/', trim( $pee ) );
+	$out = '';
+	foreach ( $blocks as $block ) {
+		$block = trim( $block );
+		if ( '' === $block ) { continue; }
+		if ( $br ) { $block = str_replace( "\n", "<br />\n", $block ); }
+		$out .= '<p>' . $block . "</p>\n";
+	}
+	return $out;
+}
 function get_attached_file() { return ''; } function wp_kses_post( $s ) { return $s; }
 function plugin_dir_path( $f ) { return dirname( $f ) . '/'; }
 function plugin_dir_url() { return 'https://example.com/plugin/'; }
