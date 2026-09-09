@@ -27,6 +27,15 @@ define( 'PCM_CRM_URL', plugin_dir_url( __FILE__ ) );
  */
 define( 'PCM_CRM_CAP', 'pcm_crm_manage' );
 
+/**
+ * The lead source stamped on contacts created by the site's contact form.
+ *
+ * A constant rather than a literal because the intake writes it and the
+ * picklist offers it, and the two silently diverging would leave form
+ * contacts unfindable by the filter that exists to find them.
+ */
+define( 'PCM_CRM_FORM_SOURCE', 'Contact Form' );
+
 require_once PCM_CRM_DIR . 'includes/capabilities.php';
 require_once PCM_CRM_DIR . 'includes/picklists.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-schema.php';

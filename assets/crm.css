@@ -315,51 +315,185 @@
 .pcm-crm-card-deal .meta { font-size: 0.78rem; color: var(--pcm-body); display: flex; justify-content: space-between; gap: 8px; }
 .pcm-crm-column-empty { font-size: 0.82rem; color: var(--pcm-gray); text-align: center; padding: 20px 0; }
 
-/* Drawer -------------------------------------------------------------------- */
+/* Record modal ------------------------------------------------------------- */
+/* Centred rather than a right-hand drawer: the record is the thing being
+   worked on, so it takes the middle of the screen and the list behind it
+   recedes. */
 .pcm-crm-scrim {
   position: fixed;
   inset: 0;
-  background: rgba(26, 26, 29, 0.4);
+  background: rgba(26, 26, 29, 0.55);
   z-index: 100000;
 }
 .pcm-crm-drawer {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(660px, 100%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(940px, calc(100vw - 48px));
+  /* The shell is a flex column so the header stays put and only the body
+     scrolls — a long related list must not push the record's name away. */
+  max-height: min(86vh, 900px);
+  display: flex;
+  flex-direction: column;
   background: var(--pcm-paper);
-  border-left: 3px solid var(--pcm-ink);
+  border: 3px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  box-shadow: 10px 10px 0 var(--pcm-blue);
   z-index: 100001;
-  overflow-y: auto;
-  padding: 22px 26px 60px;
+  overflow: hidden;
 }
-.pcm-crm-drawer-head {
+.pcm-crm-modal-head {
+  flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--pcm-ink);
-  margin-bottom: 18px;
+  padding: 20px 26px 16px;
+  border-bottom: 3px solid var(--pcm-ink);
+  background: var(--pcm-paper-tint);
 }
-.pcm-crm-drawer-head h2 { margin: 0; }
+.pcm-crm-modal-heading { min-width: 0; }
+.pcm-crm-modal-head h2 { margin: 0; overflow-wrap: anywhere; }
+.pcm-crm-modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 20px 26px 32px;
+}
 .pcm-crm-drawer-kicker {
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--pcm-accent-deep);
-  margin: 0 0 2px;
+  margin: 0 0 3px;
 }
 .pcm-crm-drawer-close {
   border: 0;
   background: none;
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   line-height: 1;
   cursor: pointer;
   color: var(--pcm-ink);
   padding: 0 4px;
+}
+.pcm-crm-drawer-close:hover { color: var(--pcm-accent-deep); }
+
+/* Highlights panel --------------------------------------------------------- */
+/* The few fields worth reading before deciding whether to read the record. */
+.pcm-crm-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 20px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+  background: var(--pcm-paper-tint);
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+}
+.pcm-crm-highlight { min-width: 0; }
+.pcm-crm-highlight-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pcm-body);
+  margin-bottom: 2px;
+}
+.pcm-crm-highlight-value {
+  display: block;
+  font-weight: 600;
+  color: var(--pcm-ink);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+a.pcm-crm-highlight-value { color: var(--pcm-blue-deep); }
+a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
+
+/* Do-not-contact warning --------------------------------------------------- */
+.pcm-crm-alert {
+  display: block;
+  padding: 13px 16px;
+  margin-bottom: 18px;
+  border: 2px solid var(--pcm-accent-deep);
+  border-left-width: 8px;
+  border-radius: 10px;
+  background: #fbeeee;
+  color: var(--pcm-accent-deeper);
+  font-size: 0.92rem;
+}
+.pcm-crm-alert strong { color: var(--pcm-accent-deeper); }
+
+/* Sections and related lists ----------------------------------------------- */
+.pcm-crm-section { margin-top: 26px; }
+.pcm-crm-section:first-child { margin-top: 0; }
+.pcm-crm-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--pcm-blue);
+  margin-bottom: 12px;
+}
+.pcm-crm-section-head .count {
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--pcm-body);
+  background: var(--pcm-paper-tint);
+  border: 1px solid var(--pcm-line);
+  border-radius: 999px;
+  padding: 1px 9px;
+}
+.pcm-crm-related-rows { display: flex; flex-direction: column; }
+.pcm-crm-related-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(auto-fit, minmax(0, 1fr)) 18px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--pcm-line);
+  background: none;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--pcm-body);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.pcm-crm-related-row:last-child { border-bottom: 0; }
+.pcm-crm-related-row:hover,
+.pcm-crm-related-row:focus-visible {
+  background: var(--pcm-paper-tint);
+  /* The inset rule is the hover affordance — it reads as "this row is a
+     link" without shifting anything, which a border would. */
+  box-shadow: inset 3px 0 0 var(--pcm-accent-deep);
+}
+.pcm-crm-cell { min-width: 0; overflow-wrap: anywhere; }
+.pcm-crm-cell-primary { font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-cell-go {
+  color: var(--pcm-gray);
+  font-size: 1.15rem;
+  text-align: right;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.pcm-crm-related-row:hover .pcm-crm-cell-go,
+.pcm-crm-related-row:focus-visible .pcm-crm-cell-go { opacity: 1; color: var(--pcm-accent-deep); }
+.pcm-crm-quicklog { display: flex; gap: 8px; margin-bottom: 14px; }
+.pcm-crm-quicklog input,
+.pcm-crm-quicklog select {
+  padding: 9px 12px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--pcm-ink);
+  background: #fff;
+  min-width: 0;
 }
 
 /* Forms --------------------------------------------------------------------- */
@@ -390,6 +524,34 @@
   color: var(--pcm-ink);
 }
 .pcm-crm-field textarea { min-height: 96px; resize: vertical; }
+.pcm-crm-field-note { font-size: 0.76rem; color: var(--pcm-body); }
+
+/* A checkbox is a box next to its label, not a label above a stretched
+   control — laid out like the text fields around it, it collapses to a line. */
+.pcm-crm-field-check { justify-content: flex-end; }
+.pcm-crm-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--pcm-ink);
+}
+.pcm-crm-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  margin: 0;
+  accent-color: var(--pcm-accent-deep);
+  cursor: pointer;
+}
 .pcm-crm-form-actions {
   display: flex;
   gap: 10px;
@@ -400,61 +562,7 @@
 }
 .pcm-crm-form-actions .pcm-crm-delete { margin-left: auto; }
 
-/* Related lists ------------------------------------------------------------- */
-.pcm-crm-related { margin-top: 26px; }
-.pcm-crm-related h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--pcm-blue);
-  margin-bottom: 10px;
-}
-.pcm-crm-related h3 .count {
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--pcm-body);
-  background: var(--pcm-paper-tint);
-  border-radius: 999px;
-  padding: 1px 9px;
-}
-.pcm-crm-related-list { list-style: none; margin: 0; padding: 0; }
-.pcm-crm-related-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 9px 2px;
-  border-bottom: 1px solid var(--pcm-line);
-  font-size: 0.9rem;
-}
-.pcm-crm-related-list li:last-child { border-bottom: 0; }
-.pcm-crm-related-list .primary { color: var(--pcm-ink); font-weight: 600; }
-.pcm-crm-related-list .secondary { color: var(--pcm-body); font-size: 0.82rem; }
 .pcm-crm-related-empty { color: var(--pcm-gray); font-size: 0.88rem; padding: 8px 0; }
-
-/* Timeline ------------------------------------------------------------------ */
-.pcm-crm-timeline { list-style: none; margin: 0; padding: 0; }
-.pcm-crm-timeline li {
-  position: relative;
-  padding: 0 0 16px 20px;
-  border-left: 2px solid var(--pcm-gray-light);
-}
-.pcm-crm-timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
-.pcm-crm-timeline li::before {
-  content: "";
-  position: absolute;
-  left: -7px;
-  top: 4px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--pcm-paper);
-  border: 2px solid var(--pcm-accent);
-}
-.pcm-crm-timeline .subject { font-weight: 700; color: var(--pcm-ink); }
-.pcm-crm-timeline .when { font-size: 0.78rem; color: var(--pcm-body); }
-.pcm-crm-timeline .body { font-size: 0.88rem; margin: 4px 0 0; white-space: pre-wrap; }
 
 /* States -------------------------------------------------------------------- */
 .pcm-crm-loading, .pcm-crm-empty {
@@ -510,7 +618,19 @@
   .pcm-crm-filter input, .pcm-crm-filter select, .pcm-crm-filter-search input { min-width: 0; width: 100%; }
   .pcm-crm-filter { width: 100%; }
   .pcm-crm-filter-actions { margin-left: 0; width: 100%; }
-  .pcm-crm-drawer { width: 100%; border-left: 0; }
+  .pcm-crm-drawer {
+    width: 100vw;
+    max-height: 100vh;
+    top: 0;
+    left: 0;
+    transform: none;
+    border-radius: 0;
+    border-width: 0;
+    box-shadow: none;
+  }
+  .pcm-crm-modal-head, .pcm-crm-modal-body { padding-left: 16px; padding-right: 16px; }
+  .pcm-crm-related-row { grid-template-columns: 1fr auto; }
+  .pcm-crm-quicklog { flex-wrap: wrap; }
   .pcm-crm { margin-right: 12px; }
 }
 

@@ -332,7 +332,13 @@ class PCM_CRM_Seed_Command {
 			'Program Manager', 'Chief of Staff', 'Database Administrator', 'Finance Director',
 			'Marketing Lead', 'Volunteer Coordinator', 'Board Chair', 'Office Manager',
 		);
-		$sources = pcm_crm_lead_sources();
+		// Weighted rather than uniform: Contact Form is what the site's own
+		// intake stamps, so it should dominate the way it does in reality.
+		$sources = array_merge(
+			array_fill( 0, 5, PCM_CRM_FORM_SOURCE ),
+			array_fill( 0, 3, 'Referral' ),
+			array( 'Web', 'Partner', 'Event', 'Outbound', 'Other' )
+		);
 
 		$contacts = array();
 		$used     = array();
@@ -355,6 +361,10 @@ class PCM_CRM_Seed_Command {
 				}
 				$used[ $email ] = true;
 
+				// A flagged contact must carry a reason or the model refuses
+				// the write — the same rule the UI enforces.
+				$dnc = mt_rand( 1, 12 ) === 1;
+
 				$id = pcm_crm_contacts()->insert( array(
 					'account_id'  => $account_id,
 					'first_name'  => $fn,
@@ -364,11 +374,19 @@ class PCM_CRM_Seed_Command {
 					'phone'       => sprintf( '(802) %03d-%04d', mt_rand( 200, 899 ), mt_rand( 1000, 9999 ) ),
 					'mobile_phone' => mt_rand( 0, 1 ) ? sprintf( '(802) %03d-%04d', mt_rand( 200, 899 ), mt_rand( 1000, 9999 ) ) : '',
 					'lead_source' => $this->pick( $sources ),
-					'do_not_contact' => mt_rand( 1, 12 ) === 1 ? 1 : 0,
+					'do_not_contact' => $dnc ? 1 : 0,
+					'do_not_contact_reason' => $dnc ? $this->pick( array(
+						'Asked to be removed from all mailings.',
+						'Left the organization — bounced twice.',
+						'Requested contact through their director only.',
+						'Unsubscribed after the 2025 newsletter.',
+						'Legal hold — route through counsel.',
+					) ) : '',
 					'owner_id'    => $this->pick( $owners ),
 				) );
 
 				if ( is_wp_error( $id ) ) {
+					WP_CLI::warning( 'Contact failed: ' . $id->get_error_message() );
 					continue;
 				}
 

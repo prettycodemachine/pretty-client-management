@@ -76,6 +76,36 @@ check( 'drops readonly fields', isset( $clean['is_won'] ), false );
 check( 'empty amount stays null', $opps->sanitize( array( 'amount' => '' ) )['amount'], null );
 check( 'bad date becomes null', $opps->sanitize( array( 'close_date' => 'soon' ) )['close_date'], null );
 
+echo "\n--- do not contact ---\n";
+$contacts = pcm_crm_contacts();
+check( 'the reason field exists', $contacts->has_field( 'do_not_contact_reason' ), true );
+
+$blocked = pcm_crm_validate_contact( null, 'contact', array( 'do_not_contact' => 1, 'do_not_contact_reason' => '' ), 0 );
+check( 'flagging without a reason is refused', is_wp_error( $blocked ), true );
+
+$blank = pcm_crm_validate_contact( null, 'contact', array( 'do_not_contact' => 1, 'do_not_contact_reason' => '   ' ), 0 );
+check( 'whitespace is not a reason', is_wp_error( $blank ), true );
+
+$allowed = pcm_crm_validate_contact( null, 'contact', array( 'do_not_contact' => 1, 'do_not_contact_reason' => 'Asked to be removed' ), 0 );
+check( 'flagging with a reason is allowed', is_wp_error( $allowed ), false );
+
+$off = pcm_crm_validate_contact( null, 'contact', array( 'do_not_contact' => 0 ), 0 );
+check( 'an unflagged contact needs no reason', is_wp_error( $off ), false );
+
+check( 'other objects are not subject to the rule',
+	is_wp_error( pcm_crm_validate_contact( null, 'account', array( 'do_not_contact' => 1 ), 0 ) ), false );
+
+check( 'clearing the flag clears the reason',
+	pcm_crm_clear_dnc_reason( array( 'do_not_contact' => 0, 'do_not_contact_reason' => 'stale' ), 'contact' )['do_not_contact_reason'], '' );
+check( 'the reason survives while the flag stands',
+	pcm_crm_clear_dnc_reason( array( 'do_not_contact' => 1, 'do_not_contact_reason' => 'Asked to be removed' ), 'contact' )['do_not_contact_reason'],
+	'Asked to be removed' );
+
+echo "\n--- contact form lead source ---\n";
+check( 'Contact Form is an offered source', in_array( PCM_CRM_FORM_SOURCE, pcm_crm_lead_sources(), true ), true );
+check( 'it is distinct from Web', PCM_CRM_FORM_SOURCE === 'Web', false );
+check( 'Web is still offered', in_array( 'Web', pcm_crm_lead_sources(), true ), true );
+
 echo "\n--- salesforce field map ---\n";
 $map = $opps->salesforce_map();
 check( 'stage maps to StageName', $map['stage_name'], 'StageName' );

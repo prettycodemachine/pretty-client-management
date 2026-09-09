@@ -447,6 +447,12 @@ class PCM_CRM_Model {
 
 		$pcm_row = apply_filters( 'pcm_crm_before_insert', $pcm_row, $this->object );
 
+		$pcm_invalid = apply_filters( 'pcm_crm_validate', null, $this->object, $pcm_row, 0 );
+
+		if ( is_wp_error( $pcm_invalid ) ) {
+			return $pcm_invalid;
+		}
+
 		$pcm_ok = $wpdb->insert( $this->table, $pcm_row, $this->formats( $pcm_row ) );
 
 		if ( ! $pcm_ok ) {
@@ -480,6 +486,14 @@ class PCM_CRM_Model {
 		}
 
 		$pcm_row = apply_filters( 'pcm_crm_before_update', $pcm_row, $this->object, $pcm_id );
+
+		// Validation runs after the before_ filters, so a rule sees the row as
+		// it will actually be written rather than as it was posted.
+		$pcm_invalid = apply_filters( 'pcm_crm_validate', null, $this->object, $pcm_row, $pcm_id );
+
+		if ( is_wp_error( $pcm_invalid ) ) {
+			return $pcm_invalid;
+		}
 
 		$pcm_ok = $wpdb->update( $this->table, $pcm_row, array( 'id' => $pcm_id ), $this->formats( $pcm_row ), array( '%d' ) );
 

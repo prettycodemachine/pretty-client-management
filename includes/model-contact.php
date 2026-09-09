@@ -25,6 +25,7 @@ function pcm_crm_contacts() {
 				'mailing_country'     => array( 'type' => 'text', 'sf' => 'MailingCountry' ),
 				'lead_source'         => array( 'type' => 'text', 'sf' => 'LeadSource' ),
 				'do_not_contact'      => array( 'type' => 'bool', 'sf' => 'DoNotCall' ),
+				'do_not_contact_reason' => array( 'type' => 'text', 'sf' => 'DoNotCallReason__c' ),
 				'description'         => array( 'type' => 'longtext', 'sf' => 'Description' ),
 			),
 			PCM_CRM_Model::system_fields()
@@ -105,3 +106,50 @@ function pcm_crm_upsert_contact( array $pcm_input ) {
 
 	return $pcm_id;
 }
+
+/**
+ * A Do Not Contact flag is not valid without a reason.
+ *
+ * Enforced on the server rather than only in the form, because the flag is the
+ * one field here with a consequence outside the CRM — someone eventually has
+ * to decide whether it still applies, and a bare checkbox with no note is
+ * unanswerable. Validated on the merged record, not on what was posted, so
+ * ticking the box in isolation still has to account for an existing reason.
+ */
+function pcm_crm_validate_contact( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) {
+	if ( is_wp_error( $pcm_error ) || 'contact' !== $pcm_object ) {
+		return $pcm_error;
+	}
+
+	$pcm_existing = $pcm_id ? pcm_crm_contacts()->get( $pcm_id ) : array();
+	$pcm_merged   = array_merge( (array) $pcm_existing, $pcm_row );
+
+	if ( empty( $pcm_merged['do_not_contact'] ) ) {
+		return $pcm_error;
+	}
+
+	if ( '' === trim( (string) ( isset( $pcm_merged['do_not_contact_reason'] ) ? $pcm_merged['do_not_contact_reason'] : '' ) ) ) {
+		return new WP_Error(
+			'pcm_crm_dnc_reason_required',
+			__( 'Give a reason for Do Not Contact — someone will need to know why before undoing it.', 'pcm-crm' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	return $pcm_error;
+}
+add_filter( 'pcm_crm_validate', 'pcm_crm_validate_contact', 10, 4 );
+
+/**
+ * Clearing the flag clears the reason with it, so a record cannot keep an
+ * explanation for a restriction it no longer carries.
+ */
+function pcm_crm_clear_dnc_reason( $pcm_row, $pcm_object ) {
+	if ( 'contact' === $pcm_object && isset( $pcm_row['do_not_contact'] ) && ! $pcm_row['do_not_contact'] ) {
+		$pcm_row['do_not_contact_reason'] = '';
+	}
+
+	return $pcm_row;
+}
+add_filter( 'pcm_crm_before_insert', 'pcm_crm_clear_dnc_reason', 10, 2 );
+add_filter( 'pcm_crm_before_update', 'pcm_crm_clear_dnc_reason', 10, 2 );

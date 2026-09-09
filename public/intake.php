@@ -52,7 +52,7 @@ function pcm_crm_intake( array $pcm_fields ) {
 		'first_name'  => $pcm_fields['first'],
 		'last_name'   => $pcm_fields['last'],
 		'email'       => $pcm_fields['email'],
-		'lead_source' => 'Web',
+		'lead_source' => PCM_CRM_FORM_SOURCE,
 	) );
 
 	// Subject names the interest so the activity list reads as a log of what

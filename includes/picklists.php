@@ -89,10 +89,15 @@ function pcm_crm_opportunity_types() {
 
 /**
  * Salesforce's LeadSource, plus the values PCM actually sees.
+ *
+ * 'Contact Form' is distinct from 'Web' on purpose: it means the site's own
+ * form specifically, and is set automatically by the intake, so filtering on
+ * it answers "who came in through the website" without depending on whoever
+ * typed the record having picked the same value by hand.
  */
 function pcm_crm_lead_sources() {
 	return apply_filters( 'pcm_crm_lead_sources', array(
-		'Web', 'Referral', 'Partner', 'Event', 'Outbound', 'Other',
+		PCM_CRM_FORM_SOURCE, 'Web', 'Referral', 'Partner', 'Event', 'Outbound', 'Other',
 	) );
 }
 

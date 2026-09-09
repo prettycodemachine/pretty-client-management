@@ -253,6 +253,16 @@
 			label: 'Account',
 			plural: 'Accounts',
 			title: function (row) { return row.name; },
+			kicker: function (row) { return row.type || 'Account'; },
+			highlights: function (row) {
+				return [
+					{ label: 'Industry', value: row.industry },
+					{ label: 'Phone', value: row.phone, href: row.phone ? 'tel:' + row.phone : '' },
+					{ label: 'Website', value: row.website, href: row.website },
+					{ label: 'Location', value: [row.billing_city, row.billing_state].filter(Boolean).join(', ') },
+					{ label: 'Owner', value: row._owner_name }
+				];
+			},
 			columns: [
 				{ key: 'name', label: 'Name', strong: true },
 				{ key: 'type', label: 'Type', badge: true },
@@ -294,6 +304,18 @@
 			title: function (row) {
 				return ((row.first_name || '') + ' ' + (row.last_name || '')).trim() || row.email || 'Contact';
 			},
+			// The account is what gives a person context, so it sits above
+			// the name the way Salesforce puts the parent record there.
+			kicker: function (row) { return row._account_name || 'No account'; },
+			highlights: function (row) {
+				return [
+					{ label: 'Title', value: row.title },
+					{ label: 'Email', value: row.email, href: row.email ? 'mailto:' + row.email : '' },
+					{ label: 'Mobile', value: row.mobile_phone, href: row.mobile_phone ? 'tel:' + row.mobile_phone : '' },
+					{ label: 'Phone', value: row.phone, href: row.phone ? 'tel:' + row.phone : '' },
+					{ label: 'Lead source', value: row.lead_source }
+				];
+			},
 			columns: [
 				{ key: 'last_name', label: 'Name', strong: true, render: function (row) { return objects.contacts.title(row); } },
 				{ key: 'title', label: 'Title' },
@@ -326,6 +348,9 @@
 					{ key: 'mailing_postal_code', label: 'Postal code' },
 					{ key: 'mailing_country', label: 'Country' },
 					{ key: 'do_not_contact', label: 'Do not contact', type: 'checkbox' },
+					{ key: 'do_not_contact_reason', label: 'Reason for do not contact', wide: true,
+						showWhen: 'do_not_contact',
+						note: 'Required. Whoever revisits this later needs to know why.' },
 					{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
 					{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
 				];
@@ -336,6 +361,16 @@
 			label: 'Opportunity',
 			plural: 'Opportunities',
 			title: function (row) { return row.name; },
+			kicker: function (row) { return row._account_name || 'No account'; },
+			highlights: function (row) {
+				return [
+					{ label: 'Stage', value: row.stage_name },
+					{ label: 'Amount', value: money(row.amount) },
+					{ label: 'Close date', value: formatDate(row.close_date) },
+					{ label: 'Probability', value: row.probability + '%' },
+					{ label: 'Owner', value: row._owner_name }
+				];
+			},
 			columns: [
 				{ key: 'name', label: 'Name', strong: true },
 				{ key: '_account_name', label: 'Account' },
@@ -380,6 +415,16 @@
 			label: 'Activity',
 			plural: 'Activities',
 			title: function (row) { return row.subject || 'Activity'; },
+			kicker: function (row) { return row.activity_type || 'Activity'; },
+			highlights: function (row) {
+				return [
+					{ label: 'Status', value: row.status },
+					{ label: 'Contact', value: row._contact_name },
+					{ label: 'Due', value: formatDate(row.due_date) },
+					{ label: 'Logged', value: formatDate(row.activity_date) },
+					{ label: 'Owner', value: row._owner_name }
+				];
+			},
 			columns: [
 				{ key: 'subject', label: 'Subject', strong: true },
 				{ key: 'activity_type', label: 'Type', badge: true },
@@ -813,9 +858,11 @@
 
 		clear(dom.drawer);
 
-		dom.drawer.appendChild(el('div.pcm-crm-drawer-head', {}, [
-			el('div', {}, [
-				el('p.pcm-crm-drawer-kicker', { text: def.label }),
+		var head = el('div.pcm-crm-modal-head', {}, [
+			el('div.pcm-crm-modal-heading', {}, [
+				el('p.pcm-crm-drawer-kicker', {
+					text: isNew ? def.label : (def.kicker ? def.kicker(record) : def.label)
+				}),
 				el('h2', { text: isNew ? 'New ' + def.label.toLowerCase() : def.title(record) })
 			]),
 			el('button.pcm-crm-drawer-close', {
@@ -824,12 +871,30 @@
 				text: '×',
 				onclick: closeDrawer
 			})
-		]));
+		]);
+
+		dom.drawer.appendChild(head);
+
+		var scroll = el('div.pcm-crm-modal-body');
+
+		// A restriction on contacting someone has to be visible before anyone
+		// reads the phone number below it, so it sits above the highlights
+		// rather than beside the checkbox that sets it.
+		if (!isNew && record.do_not_contact) {
+			scroll.appendChild(el('div.pcm-crm-alert', {}, [
+				el('strong', { text: 'Do not contact.' }),
+				' ' + (record.do_not_contact_reason || 'No reason recorded.')
+			]));
+		}
+
+		if (!isNew && def.highlights) {
+			scroll.appendChild(highlightPanel(def.highlights(record)));
+		}
 
 		var grid = el('div.pcm-crm-fields');
 
 		def.fields().forEach(function (field) {
-			grid.appendChild(fieldControl(field, values));
+			grid.appendChild(fieldControl(field, values, grid));
 		});
 
 		var status = el('span.pcm-crm-muted');
@@ -861,24 +926,76 @@
 			}));
 		}
 
-		dom.drawer.appendChild(el('form', { onsubmit: function (e) { e.preventDefault(); } }, [grid, actions]));
-		dom.drawer.appendChild(el('div', { 'data-role': 'related' }));
+		scroll.appendChild(el('div.pcm-crm-section', {}, [
+			el('h3.pcm-crm-section-head', { text: 'Details' }),
+			el('form', { onsubmit: function (e) { e.preventDefault(); } }, [grid, actions])
+		]));
+
+		scroll.appendChild(el('div', { 'data-role': 'related' }));
+
+		dom.drawer.appendChild(scroll);
+
+		// Reset the scroll position, or reopening a record lands wherever the
+		// previous one was left.
+		scroll.scrollTop = 0;
 	}
 
-	function fieldControl(field, values) {
-		var wrap = el('div.pcm-crm-field' + (field.wide ? '.pcm-crm-field-wide' : ''));
-		var id = 'pcm-crm-field-' + field.key;
-		var control;
+	/**
+	 * The Salesforce-style highlights strip: the handful of fields you need
+	 * before deciding whether to read the rest of the record.
+	 */
+	function highlightPanel(items) {
+		var panel = el('div.pcm-crm-highlights');
 
-		function onInput(event) {
-			values[field.key] = field.type === 'checkbox' ? (event.target.checked ? 1 : 0) : event.target.value;
-		}
+		items.forEach(function (item) {
+			if (!item.value || item.value === '—') { return; }
+
+			panel.appendChild(el('div.pcm-crm-highlight', {}, [
+				el('span.pcm-crm-highlight-label', { text: item.label }),
+				item.href
+					? el('a.pcm-crm-highlight-value', { href: item.href, text: item.value })
+					: el('span.pcm-crm-highlight-value', { text: item.value })
+			]));
+		});
+
+		return panel;
+	}
+
+	function fieldControl(field, values, grid) {
+		var id = 'pcm-crm-field-' + field.key;
 
 		if (field.lookupPair) {
 			// what_id is polymorphic: the object it points at has to be chosen
 			// alongside the record, so the two controls move together.
 			return relatedToControl(field, values);
 		}
+
+		function onInput(event) {
+			values[field.key] = event.target.value;
+		}
+
+		// A checkbox is a control with a label beside it, not a labelled box
+		// in a column — laid out like the text fields it collapses to a line.
+		if (field.type === 'checkbox') {
+			var box = el('input', {
+				id: id,
+				type: 'checkbox',
+				checked: !!Number(values[field.key]),
+				onchange: function (event) {
+					values[field.key] = event.target.checked ? 1 : 0;
+					if (grid) { applyConditionalFields(grid, values); }
+				}
+			});
+
+			return el('div.pcm-crm-field.pcm-crm-field-check', { dataset: { field: field.key } }, [
+				el('label.pcm-crm-check', { for: id }, [box, el('span', { text: field.label })])
+			]);
+		}
+
+		var wrap = el('div.pcm-crm-field' + (field.wide ? '.pcm-crm-field-wide' : ''), {
+			dataset: { field: field.key }
+		});
+		var control;
 
 		if (field.options || field.lookup) {
 			control = el('select', { id: id, onchange: onInput });
@@ -896,11 +1013,6 @@
 			});
 		} else if (field.type === 'textarea') {
 			control = el('textarea', { id: id, oninput: onInput, text: values[field.key] || '' });
-		} else if (field.type === 'checkbox') {
-			control = el('input', {
-				id: id, type: 'checkbox', checked: !!values[field.key], onchange: onInput,
-				style: 'width:auto'
-			});
 		} else {
 			control = el('input', {
 				id: id,
@@ -914,9 +1026,28 @@
 		wrap.appendChild(el('label', { for: id, text: field.label + (field.required ? ' *' : '') }));
 		wrap.appendChild(control);
 
-		if (field.note) { wrap.appendChild(el('span.pcm-crm-muted', { text: field.note, style: 'font-size:0.76rem' })); }
+		if (field.note) { wrap.appendChild(el('span.pcm-crm-field-note', { text: field.note })); }
+
+		// Fields that only apply when another is set start hidden, and are
+		// revealed by the checkbox that makes them relevant.
+		if (field.showWhen) {
+			wrap.dataset.showWhen = field.showWhen;
+			wrap.hidden = !Number(values[field.showWhen]);
+		}
 
 		return wrap;
+	}
+
+	/**
+	 * Show or hide the fields that depend on another field's value.
+	 *
+	 * Driven off data attributes rather than a lookup table, so adding a
+	 * conditional field is one property on its definition.
+	 */
+	function applyConditionalFields(grid, values) {
+		grid.querySelectorAll('[data-show-when]').forEach(function (node) {
+			node.hidden = !Number(values[node.dataset.showWhen]);
+		});
 	}
 
 	function relatedToControl(field, values) {
@@ -1008,53 +1139,100 @@
 		clear(container);
 
 		if (related.contacts) {
-			container.appendChild(relatedBlock('Contacts', related.contacts, function (row) {
-				return {
-					primary: objects.contacts.title(row),
-					secondary: [row.title, row.email].filter(Boolean).join(' · '),
-					onclick: function () { openDrawer('contacts', row.id); }
-				};
+			container.appendChild(relatedList({
+				title: 'Contacts',
+				rows: related.contacts,
+				object: 'contacts',
+				columns: function (row) {
+					return [
+						{ text: objects.contacts.title(row), strong: true },
+						{ text: row.title || '—' },
+						{ text: row.email || '—' }
+					];
+				}
 			}));
 		}
 
 		if (related.opportunities) {
-			container.appendChild(relatedBlock('Opportunities', related.opportunities, function (row) {
-				return {
-					primary: row.name,
-					secondary: row.stage_name + ' · closes ' + formatDate(row.close_date),
-					trailing: money(row.amount),
-					onclick: function () { openDrawer('opportunities', row.id); }
-				};
+			container.appendChild(relatedList({
+				title: 'Opportunities',
+				rows: related.opportunities,
+				object: 'opportunities',
+				columns: function (row) {
+					return [
+						{ text: row.name, strong: true },
+						{ badge: row.stage_name, tone: row.is_won ? 'won' : (row.is_closed ? 'lost' : 'open') },
+						{ text: formatDate(row.close_date) },
+						{ text: money(row.amount), num: true }
+					];
+				}
 			}));
 		}
 
 		if (related.activities) {
-			container.appendChild(activityBlock(object, record, related.activities));
+			container.appendChild(relatedList({
+				title: 'Activities',
+				rows: related.activities,
+				object: 'activities',
+				before: quickLog(object, record),
+				columns: function (row) {
+					return [
+						{ text: row.subject || row.activity_type, strong: true },
+						{ badge: row.activity_type },
+						{ text: row.status || '—' },
+						{ text: formatDate(row.activity_date) }
+					];
+				}
+			}));
 		}
 	}
 
-	function relatedBlock(title, rows, mapper) {
-		var block = el('div.pcm-crm-related', {}, [
-			el('h3', {}, [title, el('span.count', { text: String(rows.length) })])
+	/**
+	 * A Salesforce-style related list: the parent's children as rows that open
+	 * their own record.
+	 *
+	 * Rows are buttons rather than divs with a click handler, so they are
+	 * reachable by keyboard and announced as actionable — a related list whose
+	 * only affordance is the mouse pointer is half a control.
+	 */
+	function relatedList(config) {
+		var block = el('div.pcm-crm-section', {}, [
+			el('h3.pcm-crm-section-head', {}, [
+				config.title,
+				el('span.count', { text: String(config.rows.length) })
+			])
 		]);
 
-		if (!rows.length) {
+		if (config.before) { block.appendChild(config.before); }
+
+		if (!config.rows.length) {
 			block.appendChild(el('p.pcm-crm-related-empty', { text: 'None yet.' }));
 			return block;
 		}
 
-		var list = el('ul.pcm-crm-related-list');
+		var list = el('div.pcm-crm-related-rows');
 
-		rows.forEach(function (row) {
-			var item = mapper(row);
+		config.rows.forEach(function (row) {
+			var cells = config.columns(row).map(function (col) {
+				if (col.badge) {
+					return el('span.pcm-crm-cell', {}, [
+						el('span.pcm-crm-badge' + (col.tone ? '.pcm-crm-badge-' + col.tone : ''), { text: col.badge })
+					]);
+				}
 
-			list.appendChild(el('li', { style: 'cursor:pointer', onclick: item.onclick }, [
-				el('span', {}, [
-					el('span.primary', { text: item.primary }),
-					item.secondary ? el('span.secondary', { text: ' — ' + item.secondary }) : null
-				]),
-				item.trailing ? el('span.pcm-crm-num', { text: item.trailing }) : null
-			]));
+				return el(
+					'span.pcm-crm-cell' + (col.strong ? '.pcm-crm-cell-primary' : '') + (col.num ? '.pcm-crm-num' : ''),
+					{ text: col.text }
+				);
+			});
+
+			cells.push(el('span.pcm-crm-cell-go', { text: '›', 'aria-hidden': 'true' }));
+
+			list.appendChild(el('button.pcm-crm-related-row', {
+				type: 'button',
+				title: 'Open this ' + config.object.replace(/s$/, ''),
+				onclick: function () { openDrawer(config.object, row.id); }
+			}, cells));
 		});
 
 		block.appendChild(list);
@@ -1062,21 +1240,17 @@
 	}
 
 	/**
-	 * The activity timeline, with a quick-log box above it.
+	 * Log a call, email or note without leaving the record.
 	 *
-	 * Logging a call is the single most frequent write in a CRM, so it is one
-	 * field and a button on the record rather than a trip through the drawer
-	 * for a new Activity.
+	 * The single most frequent write in a CRM, so it is one field and a button
+	 * rather than a trip through a new Activity form.
 	 */
-	function activityBlock(object, record, rows) {
-		var block = el('div.pcm-crm-related', {}, [
-			el('h3', {}, ['Activity', el('span.count', { text: String(rows.length) })])
-		]);
-
+	function quickLog(object, record) {
 		var input = el('input', { type: 'text', placeholder: 'Log a call, email or note…', style: 'flex:1' });
-		var type = el('select', { style: 'flex:0 0 120px' });
+		var type = el('select', { style: 'flex:0 0 130px' });
 
 		(state.boot.activityTypes || []).forEach(function (name) {
+			if (name === 'Web Form') { return; }
 			type.appendChild(el('option', { value: name, text: name, selected: name === 'Call' }));
 		});
 
@@ -1101,31 +1275,15 @@
 			}).catch(showError);
 		}
 
-		block.appendChild(el('div', { style: 'display:flex;gap:8px;margin-bottom:14px' }, [
+		input.addEventListener('keydown', function (event) {
+			if (event.key === 'Enter') { event.preventDefault(); log(); }
+		});
+
+		return el('div.pcm-crm-quicklog', {}, [
 			input,
 			type,
 			el('button.pcm-btn', { type: 'button', text: 'Log', onclick: log })
-		]));
-
-		if (!rows.length) {
-			block.appendChild(el('p.pcm-crm-related-empty', { text: 'Nothing logged yet.' }));
-			return block;
-		}
-
-		var list = el('ul.pcm-crm-timeline');
-
-		rows.forEach(function (row) {
-			list.appendChild(el('li', {}, [
-				el('div', {}, [
-					el('span.subject', { text: row.subject || row.activity_type }),
-					el('span.when', { text: '  ' + row.activity_type + ' · ' + formatDate(row.activity_date) })
-				]),
-				row.description ? el('p.body', { text: row.description }) : null
-			]));
-		});
-
-		block.appendChild(list);
-		return block;
+		]);
 	}
 
 	/* ---------------------------------------------------------------------
