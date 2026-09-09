@@ -45,6 +45,10 @@ require_once PCM_CRM_DIR . 'public/email.php';
 require_once PCM_CRM_DIR . 'public/intake.php';
 require_once PCM_CRM_DIR . 'public/form.php';
 
+// Demo data. The file registers nothing unless WP-CLI is running, so it has no
+// web-facing surface, and the command itself refuses to run on production.
+require_once PCM_CRM_DIR . 'includes/cli-seed.php';
+
 /**
  * Asset URL stamped with the file's mtime.
  *

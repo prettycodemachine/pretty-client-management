@@ -106,6 +106,21 @@ check( 'an empty scalar filter is skipped',
 check( 'submissions table has no is_deleted clause',
 	strpos( $where->invoke( pcm_crm_submissions(), array() ), 'is_deleted' ), false );
 
+echo "\n--- demo data guard ---\n";
+$allowed = function( $host ) {
+	$GLOBALS['pcm_test_host'] = $host;
+	return pcm_crm_seed_allowed();
+};
+
+check( 'staging is allowed', $allowed( 'staging2.prettycodemachine.com' ), true );
+check( 'localhost is allowed', $allowed( 'localhost' ), true );
+check( 'a .local host is allowed', $allowed( 'pcm.local' ), true );
+check( 'PRODUCTION IS REFUSED', $allowed( 'prettycodemachine.com' ), false );
+check( 'www production is refused', $allowed( 'www.prettycodemachine.com' ), false );
+check( 'an unknown host is refused', $allowed( 'some-other-site.com' ), false );
+check( 'the seed command is CLI-only', isset( WP_CLI::$commands['pcm-crm'] ), true );
+$GLOBALS['pcm_test_host'] = 'example.com';
+
 echo "\n--- schema ---\n";
 check( 'five tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 5 );
 

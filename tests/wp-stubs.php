@@ -40,7 +40,7 @@ function wp_parse_args( $a, $d ) { return array_merge( $d, (array) $a ); }
 function wp_list_pluck( $rows, $key ) { return array_map( function( $r ) use ( $key ) { return isset($r[$key]) ? $r[$key] : null; }, $rows ); }
 function current_time( $t ) { return 'timestamp' === $t ? time() : date( 'Y-m-d H:i:s' ); }
 function get_current_user_id() { return 1; }
-function home_url( $p = '/' ) { return 'https://example.com' . $p; }
+function home_url( $p = '/' ) { return 'https://' . ( isset( $GLOBALS['pcm_test_host'] ) ? $GLOBALS['pcm_test_host'] : 'example.com' ) . $p; }
 function admin_url( $p = '' ) { return 'https://example.com/wp-admin/' . $p; }
 function set_url_scheme( $u, $s ) { return preg_replace( '#^https?://#', $s . '://', $u ); }
 function wp_json_encode( $v ) { return json_encode( $v ); }
@@ -89,6 +89,18 @@ function is_wp_error( $t ) { return $t instanceof WP_Error; }
 class WP_REST_Server { const READABLE = 'GET'; const CREATABLE = 'POST'; const DELETABLE = 'DELETE'; }
 function register_rest_route() {} function rest_ensure_response( $v ) { return $v; }
 class WP_REST_Request {}
+
+// Defined so includes/cli-seed.php loads and its production guard can be
+// tested. The command class is registered against this stub and never run.
+define( 'WP_CLI', true );
+class WP_CLI {
+	static $commands = array();
+	static function add_command( $name, $class ) { self::$commands[ $name ] = $class; }
+	static function log( $m ) {} static function warning( $m ) {}
+	static function success( $m ) {} static function error( $m ) { throw new Exception( $m ); }
+}
+function delete_option( $k ) { unset( $GLOBALS['options'][$k] ); return true; }
+function wp_parse_url( $u, $c = -1 ) { return parse_url( $u, $c ); }
 
 class FakeWPDB {
 	public $prefix = 'wp_';
