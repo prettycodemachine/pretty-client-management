@@ -1269,3 +1269,84 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   text-transform: uppercase;
   color: var(--pcm-accent-deep);
 }
+
+/* ==========================================================================
+   Email templates and sequences
+   ========================================================================== */
+.pcm-crm-section-block { margin-bottom: 26px; }
+.pcm-crm-section-block:last-child { margin-bottom: 0; }
+.pcm-crm-section-block input[type="text"],
+.pcm-crm-section-block textarea,
+.pcm-crm-section-block select {
+  width: 100%;
+  padding: 9px 12px;
+  margin-bottom: 10px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background-color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--pcm-ink);
+}
+.pcm-crm-section-block textarea { min-height: 140px; resize: vertical; }
+
+/* The variable pickers above a message body. */
+.pcm-crm-variables { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.pcm-crm-variables select {
+  width: auto;
+  min-width: 150px;
+  margin-bottom: 0;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+}
+
+/* Sequence steps */
+.pcm-crm-steps-editor { width: 100%; }
+.pcm-crm-step-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.pcm-crm-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background: var(--pcm-paper);
+  font-size: 0.88rem;
+}
+.pcm-crm-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pcm-blue);
+  font-weight: 700;
+  color: var(--pcm-ink);
+  flex: 0 0 26px;
+}
+.pcm-crm-step select { flex: 1 1 180px; min-width: 160px; }
+.pcm-crm-step-delay { display: inline-flex; align-items: center; gap: 6px; color: var(--pcm-body); }
+.pcm-crm-step-delay input { width: 70px; }
+.pcm-crm-step select,
+.pcm-crm-step input {
+  padding: 7px 10px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 9px;
+  background-color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--pcm-ink);
+}
+
+/* The enrollment history on a contact. */
+.pcm-crm-related-list { list-style: none; margin: 0; padding: 0; }
+.pcm-crm-related-list li {
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--pcm-line);
+  font-size: 0.88rem;
+}
+.pcm-crm-related-list li:last-child { border-bottom: 0; }
+.pcm-crm-related-list .primary { font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-related-list .secondary { color: var(--pcm-body); }

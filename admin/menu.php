@@ -29,6 +29,8 @@ function pcm_crm_menu() {
 		'pcm-crm-pipeline'      => array( __( 'Pipeline', 'pcm-crm' ), 'pcm_crm_render_pipeline' ),
 		'pcm-crm-activities'    => array( __( 'Activities', 'pcm-crm' ), 'pcm_crm_render_activities' ),
 		'pcm-crm-reports'       => array( __( 'Reports', 'pcm-crm' ), 'pcm_crm_render_reports' ),
+		'pcm-crm-templates'     => array( __( 'Email Templates', 'pcm-crm' ), 'pcm_crm_render_templates' ),
+		'pcm-crm-sequences'     => array( __( 'Sequences', 'pcm-crm' ), 'pcm_crm_render_sequences' ),
 		'pcm-crm-schedules'     => array( __( 'Scheduled Reports', 'pcm-crm' ), 'pcm_crm_render_schedules' ),
 		'pcm-crm-settings'      => array( __( 'Settings', 'pcm-crm' ), 'pcm_crm_render_settings' ),
 	);
@@ -144,6 +146,14 @@ function pcm_crm_render_pipeline() {
 
 function pcm_crm_render_activities() {
 	pcm_crm_screen( 'activities', __( 'Activities', 'pcm-crm' ) );
+}
+
+function pcm_crm_render_templates() {
+	pcm_crm_screen( 'templates', __( 'Email Templates', 'pcm-crm' ), __( 'Reusable emails, with contact, account and opportunity variables.', 'pcm-crm' ) );
+}
+
+function pcm_crm_render_sequences() {
+	pcm_crm_screen( 'sequences', __( 'Sequences', 'pcm-crm' ), __( 'A short run of templates, spaced out. Any reply logged against the contact stops it.', 'pcm-crm' ) );
 }
 
 function pcm_crm_render_schedules() {

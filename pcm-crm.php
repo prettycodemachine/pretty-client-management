@@ -54,6 +54,7 @@ require_once PCM_CRM_DIR . 'includes/layouts.php';
 require_once PCM_CRM_DIR . 'includes/csv.php';
 require_once PCM_CRM_DIR . 'includes/npsp-export.php';
 require_once PCM_CRM_DIR . 'includes/schedules.php';
+require_once PCM_CRM_DIR . 'includes/email-sequences.php';
 require_once PCM_CRM_DIR . 'admin/menu.php';
 require_once PCM_CRM_DIR . 'admin/settings.php';
 require_once PCM_CRM_DIR . 'public/email.php';

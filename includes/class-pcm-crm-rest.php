@@ -27,6 +27,9 @@ class PCM_CRM_REST {
 			'activities'    => pcm_crm_activities(),
 			'submissions'   => pcm_crm_submissions(),
 			'schedules'     => pcm_crm_schedules(),
+			'templates'     => pcm_crm_templates(),
+			'sequences'     => pcm_crm_sequences(),
+			'enrollments'   => pcm_crm_enrollments(),
 		);
 	}
 
@@ -128,6 +131,26 @@ class PCM_CRM_REST {
 		register_rest_route( self::NS, '/schedules/(?P<pcm_id>\d+)/send', array(
 			'methods'             => WP_REST_Server::CREATABLE,
 			'callback'            => array( __CLASS__, 'send_schedule' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
+		// Outreach from a contact record: send one now, start a sequence, or
+		// stop one because they replied.
+		register_rest_route( self::NS, '/contacts/(?P<pcm_id>\d+)/email', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => array( __CLASS__, 'send_contact_email' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
+		register_rest_route( self::NS, '/contacts/(?P<pcm_id>\d+)/enroll', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => array( __CLASS__, 'enroll_contact' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
+		register_rest_route( self::NS, '/enrollments/(?P<pcm_id>\d+)/stop', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => array( __CLASS__, 'stop_enrollment' ),
 			'permission_callback' => array( __CLASS__, 'permission' ),
 		) );
 
@@ -314,7 +337,10 @@ class PCM_CRM_REST {
 			// Days in stage is computed, not stored: it changes every midnight,
 			// and a stored copy would be wrong for most of the day.
 			if ( 'opportunity' === $pcm_object ) {
-				$pcm_days = pcm_crm_days_between( $pcm_item['stage_entered_date'], current_time( 'mysql' ) );
+				$pcm_days = pcm_crm_days_between(
+					isset( $pcm_item['stage_entered_date'] ) ? $pcm_item['stage_entered_date'] : '',
+					current_time( 'mysql' )
+				);
 
 				$pcm_items[ $pcm_i ]['_days_in_stage'] = $pcm_days;
 				$pcm_items[ $pcm_i ]['_is_stalled']    = ( empty( $pcm_item['is_closed'] ) && $pcm_days >= pcm_crm_stall_days() ) ? 1 : 0;
@@ -411,6 +437,13 @@ class PCM_CRM_REST {
 			) ) );
 
 			$pcm_out['activities'] = self::expand( 'activity', pcm_crm_activities_for( 'contact', $pcm_id ) );
+
+			$pcm_out['enrollments'] = self::expand( 'enrollment', pcm_crm_enrollments()->find( array(
+				'filters'  => array( 'contact_id' => $pcm_id ),
+				'orderby'  => 'created_date',
+				'order'    => 'DESC',
+				'per_page' => 50,
+			) ) );
 		}
 
 		if ( 'opportunities' === $pcm_object ) {
@@ -441,6 +474,9 @@ class PCM_CRM_REST {
 			'currency'          => pcm_crm_currency_symbol(),
 			'stallDays'         => pcm_crm_stall_days(),
 			'frequencies'       => pcm_crm_frequencies(),
+			'emailVariables'    => pcm_crm_email_variables(),
+			'templates'         => pcm_crm_template_choices(),
+			'sequences'         => pcm_crm_sequence_choices(),
 			'weekdays'          => pcm_crm_weekdays(),
 		) );
 	}
@@ -456,7 +492,9 @@ class PCM_CRM_REST {
 		$pcm_out = array();
 
 		foreach ( self::models() as $pcm_slug => $pcm_model ) {
-			if ( in_array( $pcm_slug, array( 'submissions', 'schedules' ), true ) ) {
+			// Only the Salesforce-shaped objects belong in the filter builder;
+			// the rest are machinery rather than records anyone reports on.
+			if ( in_array( $pcm_slug, array( 'submissions', 'schedules', 'templates', 'sequences', 'enrollments' ), true ) ) {
 				continue;
 			}
 
@@ -577,6 +615,52 @@ class PCM_CRM_REST {
 			'sent'       => (bool) $pcm_sent,
 			'recipients' => pcm_crm_schedule_recipients( $pcm_schedule['recipients'] ),
 		) );
+	}
+
+	public static function send_contact_email( WP_REST_Request $pcm_request ) {
+		$pcm_body = (array) $pcm_request->get_json_params();
+
+		$pcm_result = pcm_crm_send_contact_email(
+			self::route_id( $pcm_request ),
+			isset( $pcm_body['subject'] ) ? $pcm_body['subject'] : '',
+			isset( $pcm_body['body'] ) ? $pcm_body['body'] : '',
+			array( 'opportunity_id' => isset( $pcm_body['opportunity_id'] ) ? (int) $pcm_body['opportunity_id'] : 0 )
+		);
+
+		if ( is_wp_error( $pcm_result ) ) {
+			$pcm_result->add_data( array( 'status' => 400 ) );
+
+			return $pcm_result;
+		}
+
+		return rest_ensure_response( $pcm_result );
+	}
+
+	public static function enroll_contact( WP_REST_Request $pcm_request ) {
+		$pcm_body = (array) $pcm_request->get_json_params();
+
+		$pcm_result = pcm_crm_enroll_contact(
+			self::route_id( $pcm_request ),
+			isset( $pcm_body['sequence_id'] ) ? (int) $pcm_body['sequence_id'] : 0,
+			isset( $pcm_body['opportunity_id'] ) ? (int) $pcm_body['opportunity_id'] : 0
+		);
+
+		if ( is_wp_error( $pcm_result ) ) {
+			$pcm_result->add_data( array( 'status' => 400 ) );
+
+			return $pcm_result;
+		}
+
+		return rest_ensure_response( array( 'enrollment_id' => $pcm_result ) );
+	}
+
+	public static function stop_enrollment( WP_REST_Request $pcm_request ) {
+		$pcm_body   = (array) $pcm_request->get_json_params();
+		$pcm_reason = ! empty( $pcm_body['reason'] ) ? sanitize_text_field( $pcm_body['reason'] ) : __( 'Stopped by hand', 'pcm-crm' );
+
+		pcm_crm_stop_enrollment( self::route_id( $pcm_request ), $pcm_reason );
+
+		return rest_ensure_response( array( 'stopped' => true ) );
 	}
 
 	public static function report( WP_REST_Request $pcm_request ) {
@@ -700,6 +784,38 @@ function pcm_crm_user_directory() {
 			'id'    => (int) $pcm_user->ID,
 			'name'  => pcm_crm_user_label( $pcm_user ),
 			'email' => $pcm_user->user_email,
+		);
+	}
+
+	return $pcm_out;
+}
+
+/**
+ * Active templates, for the pickers.
+ */
+function pcm_crm_template_choices() {
+	$pcm_out = array();
+
+	foreach ( pcm_crm_templates()->find( array( 'filters' => array( 'is_active' => 1 ), 'orderby' => 'name', 'order' => 'ASC', 'per_page' => 200 ) ) as $pcm_template ) {
+		$pcm_out[] = array(
+			'id'      => (int) $pcm_template['id'],
+			'name'    => $pcm_template['name'],
+			'subject' => $pcm_template['subject'],
+			'body'    => $pcm_template['body'],
+		);
+	}
+
+	return $pcm_out;
+}
+
+function pcm_crm_sequence_choices() {
+	$pcm_out = array();
+
+	foreach ( pcm_crm_sequences()->find( array( 'filters' => array( 'is_active' => 1 ), 'orderby' => 'name', 'order' => 'ASC', 'per_page' => 200 ) ) as $pcm_sequence ) {
+		$pcm_out[] = array(
+			'id'    => (int) $pcm_sequence['id'],
+			'name'  => $pcm_sequence['name'],
+			'steps' => count( pcm_crm_sequence_steps( $pcm_sequence ) ),
 		);
 	}
 

@@ -17,7 +17,7 @@ class PCM_CRM_Schema {
 	 * differs, so an rsync deploy (which never fires the activation hook)
 	 * still picks the change up on the next page load.
 	 */
-	const VERSION = '1.5.0';
+	const VERSION = '1.6.0';
 
 	const OPTION = 'pcm_crm_db_version';
 
@@ -38,6 +38,9 @@ class PCM_CRM_Schema {
 	public static function submissions()   { return self::table( 'form_submissions' ); }
 	public static function history()       { return self::table( 'opportunity_history' ); }
 	public static function schedules()     { return self::table( 'schedules' ); }
+	public static function templates()     { return self::table( 'email_templates' ); }
+	public static function sequences()     { return self::table( 'sequences' ); }
+	public static function enrollments()   { return self::table( 'enrollments' ); }
 
 	/**
 	 * Create or alter every table.
@@ -117,6 +120,9 @@ class PCM_CRM_Schema {
 		$pcm_submissions   = self::submissions();
 		$pcm_history       = self::history();
 		$pcm_schedules     = self::schedules();
+		$pcm_templates     = self::templates();
+		$pcm_sequences     = self::sequences();
+		$pcm_enrollments   = self::enrollments();
 
 		$pcm_tables = array();
 
@@ -322,6 +328,71 @@ class PCM_CRM_Schema {
 			PRIMARY KEY  (id),
 			KEY pcm_sched_active (is_active,is_deleted),
 			KEY pcm_sched_sent (last_sent)
+		) {$pcm_charset};";
+
+		/* Email templates ----------------------------------------------------- */
+		$pcm_tables[] = "CREATE TABLE {$pcm_templates} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(255) NOT NULL DEFAULT '',
+			subject varchar(255) NOT NULL DEFAULT '',
+			body longtext,
+			is_active tinyint(1) NOT NULL DEFAULT 1,
+			owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY pcm_tpl_active (is_active,is_deleted)
+		) {$pcm_charset};";
+
+		/* Sequences ------------------------------------------------------------ */
+		// Steps live as JSON on the sequence rather than in their own table:
+		// they are only ever read as a whole set, and a short sequence edited
+		// as one form is a poor fit for rows that have to be diffed on save.
+		$pcm_tables[] = "CREATE TABLE {$pcm_sequences} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(255) NOT NULL DEFAULT '',
+			description text,
+			steps longtext,
+			is_active tinyint(1) NOT NULL DEFAULT 1,
+			owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY pcm_seq_active (is_active,is_deleted)
+		) {$pcm_charset};";
+
+		/* Enrollments ---------------------------------------------------------- */
+		// One person's progress through one sequence. next_send_at is indexed
+		// because the cron's only question is "what is due", and that must not
+		// become a scan of every enrollment ever made.
+		$pcm_tables[] = "CREATE TABLE {$pcm_enrollments} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			sequence_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			contact_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			opportunity_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			status varchar(20) NOT NULL DEFAULT 'active',
+			current_step int(11) NOT NULL DEFAULT 0,
+			next_send_at datetime DEFAULT NULL,
+			last_sent_at datetime DEFAULT NULL,
+			stopped_reason varchar(255) NOT NULL DEFAULT '',
+			stopped_date datetime DEFAULT NULL,
+			last_error text,
+			owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY pcm_enr_due (status,next_send_at),
+			KEY pcm_enr_contact (contact_id,status),
+			KEY pcm_enr_sequence (sequence_id)
 		) {$pcm_charset};";
 
 		/* Form submissions -------------------------------------------------- */

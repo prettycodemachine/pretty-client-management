@@ -307,8 +307,8 @@ $related = function( $object ) {
 
 check( 'an account exposes all three lists',
 	array_keys( $related( 'accounts' ) ), array( 'contacts', 'opportunities', 'activities' ) );
-check( 'a contact exposes opportunities and activities',
-	array_keys( $related( 'contacts' ) ), array( 'opportunities', 'activities' ) );
+check( 'a contact exposes opportunities, activities and its enrollments',
+	array_keys( $related( 'contacts' ) ), array( 'opportunities', 'activities', 'enrollments' ) );
 check( 'an opportunity exposes activities and its stage history',
 	array_keys( $related( 'opportunities' ) ), array( 'activities', 'history' ) );
 
@@ -347,6 +347,86 @@ $shadow_id = new WP_REST_Request(
 $shadow_result = PCM_CRM_REST::update_item( $shadow_id );
 check( 'and a write still knows which table it is for',
 	is_wp_error( $shadow_result ) ? $shadow_result->get_error_code() : 'ok', 'pcm_crm_not_found' );
+
+echo "\n--- email variables ---\n";
+$groups = pcm_crm_email_variables();
+$prefixes = wp_list_pluck( $groups, 'prefix' );
+check( 'variables are grouped by record', array_slice( $prefixes, 0, 3 ), array( 'contact', 'account', 'opportunity' ) );
+
+$contact_tokens = wp_list_pluck( $groups[0]['fields'], 'token' );
+check( 'a contact field is offered', in_array( '{{contact.first_name}}', $contact_tokens, true ), true );
+// Ids and flags make poor sentences.
+check( 'ids are not offered', in_array( '{{contact.account_id}}', $contact_tokens, true ), false );
+check( 'nor are checkboxes', in_array( '{{contact.do_not_contact}}', $contact_tokens, true ), false );
+
+$context = array(
+	'contact'     => array( 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'title' => 'Director' ),
+	'account'     => array( 'name' => 'Analytical & Co' ),
+	'opportunity' => array(),
+	'sender'      => 'Jason Jensen',
+);
+
+check( 'a contact variable fills', pcm_crm_fill_variables( 'Hi {{contact.first_name}}', $context ), 'Hi Ada' );
+check( 'an account variable fills',
+	pcm_crm_fill_variables( '{{account.name}}', $context ), 'Analytical &amp; Co' );
+check( 'a composed full name fills',
+	pcm_crm_fill_variables( '{{contact.full_name}}', $context ), 'Ada Lovelace' );
+check( 'the sender fills', pcm_crm_fill_variables( '{{sender.name}}', $context ), 'Jason Jensen' );
+// "Hi {{contact.first_name}}," reaching an inbox is worse than "Hi ,".
+check( 'a variable with nothing behind it comes out empty, not as itself',
+	pcm_crm_fill_variables( 'Hi [{{opportunity.name}}]', $context ), 'Hi []' );
+check( 'a submitted value cannot inject markup',
+	pcm_crm_fill_variables( '{{contact.first_name}}', array( 'contact' => array( 'first_name' => '<b>x</b>' ) ) ),
+	'&lt;b&gt;x&lt;/b&gt;' );
+
+echo "\n--- sequence steps ---\n";
+check( 'steps decode from JSON',
+	count( pcm_crm_sequence_steps( array( 'steps' => '[{"template_id":3,"delay_days":2}]' ) ) ), 1 );
+check( 'a step with no template is dropped',
+	count( pcm_crm_sequence_steps( array( 'steps' => '[{"delay_days":2}]' ) ) ), 0 );
+check( 'a negative delay is clamped',
+	pcm_crm_sequence_steps( array( 'steps' => '[{"template_id":1,"delay_days":-9}]' ) )[0]['delay_days'], 0 );
+check( 'malformed JSON is no steps rather than a fatal',
+	pcm_crm_sequence_steps( array( 'steps' => 'not json' ) ), array() );
+check( 'a missing steps column is no steps',
+	pcm_crm_sequence_steps( array( 'steps' => '' ) ), array() );
+
+echo "\n--- outreach guards ---\n";
+class PCM_Outreach_WPDB extends FakeWPDB {
+	public $contact = array();
+	function get_row( $q = '', $o = null ) {
+		return $this->contact ? $this->contact : null;
+	}
+}
+$real_wpdb = $GLOBALS['wpdb'];
+$db = new PCM_Outreach_WPDB();
+$GLOBALS['wpdb'] = $db;
+
+// The one field in this CRM with a consequence outside it. A sequence quietly
+// mailing someone who asked not to be contacted is the failure it exists to
+// prevent.
+$db->contact = array( 'id' => 5, 'email' => 'a@b.com', 'account_id' => 0, 'do_not_contact' => '1',
+	'do_not_contact_reason' => 'Asked to be removed', 'first_name' => 'Ada', 'last_name' => 'L', 'is_deleted' => '0' );
+$blocked = pcm_crm_send_contact_email( 5, 'Subject', 'Body' );
+check( 'a do-not-contact record refuses a send', is_wp_error( $blocked ), true );
+check( 'and says why', false !== strpos( $blocked->get_error_message() , 'Asked to be removed' ), true );
+
+$blocked_enroll = pcm_crm_enroll_contact( 5, 1 );
+check( 'and refuses enrollment too', is_wp_error( $blocked_enroll ), true );
+
+$db->contact = array( 'id' => 6, 'email' => '', 'account_id' => 0, 'do_not_contact' => '0',
+	'first_name' => 'Bo', 'last_name' => 'C', 'is_deleted' => '0' );
+check( 'a contact with no address cannot be mailed',
+	is_wp_error( pcm_crm_send_contact_email( 6, 'S', 'B' ) ), true );
+
+$GLOBALS['wpdb'] = $real_wpdb;
+
+// The activity a send writes must not look like a reply and stop its own
+// sequence.
+check( 'the sending guard is off by default', pcm_crm_sending_sequence(), false );
+pcm_crm_sending_sequence( true );
+check( 'and can be raised while a sequence sends', pcm_crm_sending_sequence(), true );
+pcm_crm_sending_sequence( false );
 
 echo "\n--- schedule due dates ---\n";
 $at = function( $str ) { return strtotime( $str ); };
@@ -742,7 +822,7 @@ check( 'but not to our own id columns, which are not NPSP fields',
 delete_option( 'pcm_crm_npsp_namespace' );
 
 echo "\n--- schema ---\n";
-check( 'seven tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 7 );
+check( 'ten tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 10 );
 $defs = implode( "\n", ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) );
 check( 'history has an index for finding the open row',
 	strpos( $defs, 'pcm_hist_open (opportunity_id,exited_date)' ) !== false, true );

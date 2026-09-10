@@ -497,6 +497,84 @@
 			},
 },
 
+		templates: {
+			label: 'Template',
+			plural: 'Email Templates',
+			title: function (row) { return row.name || 'Template'; },
+			kicker: function (row) { return Number(row.is_active) ? 'Active' : 'Inactive'; },
+			highlights: function (row) {
+				return [
+					{ label: 'Subject', value: row.subject },
+					{ label: 'Status', value: Number(row.is_active) ? 'Active' : 'Inactive' },
+					{ label: 'Owner', value: row._owner_name }
+				];
+			},
+			columns: [
+				{ key: 'name', label: 'Name', strong: true },
+				{ key: 'subject', label: 'Subject' },
+				{ key: 'is_active', label: 'Status', render: function (row) { return Number(row.is_active) ? 'Active' : 'Inactive'; } },
+				{ key: 'last_modified_date', label: 'Modified', date: true }
+			],
+			filters: function () {
+				return [{ key: 'is_active', label: 'Status', options: [
+					{ value: '', label: 'All' },
+					{ value: '1', label: 'Active' },
+					{ value: '0', label: 'Inactive' }
+				] }];
+			},
+			fields: function () {
+				return [
+					{ fields: [
+						{ key: 'name', label: 'Name', required: true, wide: true },
+						{ key: 'subject', label: 'Subject', required: true, wide: true },
+						{ key: 'is_active', label: 'Active', type: 'checkbox' }
+					] },
+					{ title: 'Message', fields: [
+						{ key: 'body', label: 'Body', type: 'email-body', wide: true }
+					] }
+				];
+			}
+		},
+
+		sequences: {
+			label: 'Sequence',
+			plural: 'Sequences',
+			title: function (row) { return row.name || 'Sequence'; },
+			kicker: function (row) { return Number(row.is_active) ? 'Active' : 'Paused'; },
+			highlights: function (row) {
+				return [
+					{ label: 'Steps', value: String(sequenceSteps(row).length) },
+					{ label: 'Status', value: Number(row.is_active) ? 'Active' : 'Paused' },
+					{ label: 'Owner', value: row._owner_name }
+				];
+			},
+			columns: [
+				{ key: 'name', label: 'Name', strong: true },
+				{ key: 'description', label: 'Description' },
+				{ key: 'steps', label: 'Steps', render: function (row) { return String(sequenceSteps(row).length); } },
+				{ key: 'is_active', label: 'Status', render: function (row) { return Number(row.is_active) ? 'Active' : 'Paused'; } }
+			],
+			filters: function () {
+				return [{ key: 'is_active', label: 'Status', options: [
+					{ value: '', label: 'All' },
+					{ value: '1', label: 'Active' },
+					{ value: '0', label: 'Paused' }
+				] }];
+			},
+			fields: function () {
+				return [
+					{ fields: [
+						{ key: 'name', label: 'Name', required: true, wide: true },
+						{ key: 'description', label: 'Description', wide: true },
+						{ key: 'is_active', label: 'Active', type: 'checkbox' }
+					] },
+					{ title: 'Steps', fields: [
+						{ key: 'steps', label: 'Steps', type: 'sequence-steps', wide: true }
+					] }
+				];
+			}
+		},
+
 		schedules: {
 			label: 'Scheduled Report',
 			plural: 'Scheduled Reports',
@@ -1781,6 +1859,22 @@
 			return relatedToControl(field, values);
 		}
 
+		if (field.type === 'email-body') {
+			wrap.classList.add('pcm-crm-field-wide');
+			wrap.appendChild(el('label', { text: field.label }));
+			wrap.appendChild(emailBodyControl(field, values));
+
+			return wrap;
+		}
+
+		if (field.type === 'sequence-steps') {
+			wrap.classList.add('pcm-crm-field-wide');
+			wrap.appendChild(el('label', { text: field.label }));
+			wrap.appendChild(sequenceStepsControl(values));
+
+			return wrap;
+		}
+
 		if (field.type === 'recipients') {
 			wrap.classList.add('pcm-crm-field-wide');
 			wrap.appendChild(el('label', { text: field.label }));
@@ -1994,6 +2088,156 @@
 		]);
 	}
 
+	/**
+	 * A sequence's steps, decoded from the JSON they are stored as.
+	 */
+	function sequenceSteps(row) {
+		try {
+			var steps = JSON.parse(row.steps || '[]');
+			return Array.isArray(steps) ? steps : [];
+		} catch (e) {
+			return [];
+		}
+	}
+
+	/**
+	 * A message body with its variables listed beside it.
+	 *
+	 * A plain textarea rather than a rich editor: these are short outreach
+	 * emails, the branded wrapper supplies the styling, and a rich editor
+	 * inside a modal inside an admin page is a lot of machinery for bold.
+	 */
+	function emailBodyControl(field, values) {
+		var textarea = el('textarea', {
+			rows: '12',
+			text: values[field.key] || '',
+			oninput: function (event) { values[field.key] = event.target.value; }
+		});
+
+		var picker = el('div.pcm-crm-variables');
+
+		(state.boot.emailVariables || []).forEach(function (group) {
+			var select = el('select', {
+				onchange: function (event) {
+					if (!event.target.value) { return; }
+
+					insertAtCursor(textarea, event.target.value);
+					values[field.key] = textarea.value;
+					event.target.value = '';
+				}
+			});
+
+			select.appendChild(el('option', { value: '', text: group.label + '…' }));
+
+			group.fields.forEach(function (variable) {
+				select.appendChild(el('option', { value: variable.token, text: variable.label }));
+			});
+
+			picker.appendChild(select);
+		});
+
+		return el('div', {}, [
+			picker,
+			el('span.pcm-crm-field-note', { text: 'Pick a variable to drop it in where the cursor is. A variable with nothing behind it comes out empty rather than as itself.' }),
+			textarea
+		]);
+	}
+
+	/**
+	 * Put text where the cursor is, not at the end.
+	 */
+	function insertAtCursor(textarea, text) {
+		var start = textarea.selectionStart || 0;
+		var end = textarea.selectionEnd || 0;
+
+		textarea.value = textarea.value.slice(0, start) + text + textarea.value.slice(end);
+		textarea.selectionStart = textarea.selectionEnd = start + text.length;
+		textarea.focus();
+	}
+
+	/**
+	 * The steps of a sequence: a template and how long to wait first.
+	 *
+	 * Stored as JSON in one field, so the control keeps the value in step with
+	 * every edit rather than reading the rows back at save time.
+	 */
+	function sequenceStepsControl(values) {
+		var wrap = el('div.pcm-crm-steps-editor');
+		var list = el('div.pcm-crm-step-list');
+
+		var steps;
+		try {
+			steps = JSON.parse(values.steps || '[]');
+			if (!Array.isArray(steps)) { steps = []; }
+		} catch (e) {
+			steps = [];
+		}
+
+		function commit() {
+			values.steps = JSON.stringify(steps);
+			draw();
+		}
+
+		function draw() {
+			clear(list);
+
+			if (!steps.length) {
+				list.appendChild(el('p.pcm-crm-related-empty', { text: 'No steps yet. A sequence with no steps cannot be started.' }));
+			}
+
+			steps.forEach(function (step, index) {
+				var templateSelect = el('select', {
+					onchange: function (event) { steps[index].template_id = Number(event.target.value); values.steps = JSON.stringify(steps); }
+				});
+
+				templateSelect.appendChild(el('option', { value: '', text: 'Choose a template…' }));
+
+				(state.boot.templates || []).forEach(function (template) {
+					templateSelect.appendChild(el('option', {
+						value: template.id,
+						text: template.name,
+						selected: Number(step.template_id) === Number(template.id)
+					}));
+				});
+
+				list.appendChild(el('div.pcm-crm-step', {}, [
+					el('span.pcm-crm-step-number', { text: String(index + 1) }),
+					templateSelect,
+					el('span.pcm-crm-step-delay', {}, [
+						el('input', {
+							type: 'number',
+							min: '0',
+							value: step.delay_days === undefined ? 0 : step.delay_days,
+							onchange: function (event) { steps[index].delay_days = Math.max(0, Number(event.target.value)); values.steps = JSON.stringify(steps); }
+						}),
+						// The first step counts from enrollment, the rest from
+						// the step before — saying so beats a tooltip.
+						index === 0 ? ' days after enrolling' : ' days after step ' + index
+					]),
+					el('button.pcm-btn.pcm-btn-sm.pcm-btn-danger', {
+						type: 'button',
+						text: 'Remove',
+						onclick: function () { steps.splice(index, 1); commit(); }
+					})
+				]));
+			});
+		}
+
+		draw();
+
+		wrap.appendChild(list);
+		wrap.appendChild(el('button.pcm-btn.pcm-btn-sm', {
+			type: 'button',
+			text: 'Add step',
+			onclick: function () {
+				steps.push({ template_id: 0, delay_days: steps.length ? 3 : 0 });
+				commit();
+			}
+		}));
+
+		return wrap;
+	}
+
 	function relatedToControl(field, values) {
 		var wrap = el('div.pcm-crm-field');
 		var row = el('div', { style: 'display:flex;gap:6px' });
@@ -2168,6 +2412,15 @@
 			]));
 		}
 
+		// Outreach lives on the person, which is where you are when you decide
+		// to send something.
+		if (object === 'contacts') {
+			tabs.push({ id: 'email', label: 'Email' });
+			panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: 'email' }, hidden: true }, [
+				emailPanel(record, related.enrollments || [])
+			]));
+		}
+
 		// An activity has no children, but it does have parents, and being
 		// able to step up to them is the same affordance in the other
 		// direction.
@@ -2286,6 +2539,212 @@
 
 		block.appendChild(list);
 		return block;
+	}
+
+	/**
+	 * Send an email, or start a sequence, from the contact record.
+	 */
+	function emailPanel(record, enrollments) {
+		var panel = el('div.pcm-crm-related');
+
+		if (Number(record.do_not_contact)) {
+			// Nothing else on this panel is offered: the flag exists to stop
+			// exactly this, and a disabled-looking form invites a workaround.
+			panel.appendChild(el('div.pcm-crm-alert', {}, [
+				el('strong', { text: 'Do not contact.' }),
+				' ' + (record.do_not_contact_reason || 'No reason recorded.') +
+					' Nothing can be sent to this contact until that is cleared on the Details tab.'
+			]));
+
+			return panel;
+		}
+
+		if (!record.email) {
+			panel.appendChild(el('p.pcm-crm-related-empty', {
+				text: 'This contact has no email address, so nothing can be sent to them yet.'
+			}));
+
+			return panel;
+		}
+
+		panel.appendChild(sendOneControl(record));
+		panel.appendChild(enrollControl(record, enrollments));
+
+		return panel;
+	}
+
+	function sendOneControl(record) {
+		var subject = el('input', { type: 'text', placeholder: 'Subject' });
+		var body = el('textarea', { rows: '8', placeholder: 'Message' });
+		var status = el('span.pcm-crm-muted');
+
+		var picker = el('select', {
+			onchange: function (event) {
+				var template = (state.boot.templates || []).filter(function (t) {
+					return String(t.id) === event.target.value;
+				})[0];
+
+				if (!template) { return; }
+
+				subject.value = template.subject;
+				body.value = template.body;
+			}
+		});
+
+		picker.appendChild(el('option', { value: '', text: 'Start from a template…' }));
+		(state.boot.templates || []).forEach(function (template) {
+			picker.appendChild(el('option', { value: template.id, text: template.name }));
+		});
+
+		function send(button) {
+			if (!subject.value.trim() || !body.value.trim()) {
+				status.textContent = 'A subject and a message, please.';
+				return;
+			}
+
+			button.disabled = true;
+			status.textContent = 'Sending…';
+
+			api('/contacts/' + record.id + '/email', {
+				method: 'POST',
+				body: { subject: subject.value, body: body.value }
+			}).then(function () {
+				status.textContent = 'Sent, and logged on the activity list.';
+				subject.value = '';
+				body.value = '';
+				button.disabled = false;
+
+				// The send wrote an activity, so the record's other tabs are
+				// now out of date.
+				openDrawer('contacts', record.id);
+			}).catch(function (error) {
+				status.textContent = error.message;
+				button.disabled = false;
+			});
+		}
+
+		return el('div.pcm-crm-section-block', {}, [
+			el('h4.pcm-crm-group-head', { text: 'Send an email' }),
+			picker,
+			subject,
+			body,
+			el('div.pcm-crm-form-actions', {}, [
+				el('button.pcm-btn.pcm-btn-primary', {
+					type: 'button',
+					text: 'Send',
+					onclick: function (event) { send(event.target); }
+				}),
+				status
+			])
+		]);
+	}
+
+	function enrollControl(record, enrollments) {
+		var block = el('div.pcm-crm-section-block', {}, [
+			el('h4.pcm-crm-group-head', { text: 'Sequences' })
+		]);
+
+		var active = enrollments.filter(function (row) { return row.status === 'active'; })[0];
+		var status = el('span.pcm-crm-muted');
+
+		if (active) {
+			var sequence = (state.boot.sequences || []).filter(function (s) {
+				return Number(s.id) === Number(active.sequence_id);
+			})[0];
+
+			block.appendChild(el('p', {}, [
+				el('strong', { text: sequence ? sequence.name : 'A sequence' }),
+				' — step ' + (Number(active.current_step) + 1) +
+					(active.next_send_at ? ', next on ' + formatDate(active.next_send_at) : '')
+			]));
+
+			block.appendChild(el('div.pcm-crm-form-actions', {}, [
+				el('button.pcm-btn.pcm-btn-danger', {
+					type: 'button',
+					text: 'They replied — stop',
+					onclick: function (event) { stopEnrollment(active, record, event.target, status, 'They replied'); }
+				}),
+				el('button.pcm-btn.pcm-btn-quiet', {
+					type: 'button',
+					text: 'Stop',
+					onclick: function (event) { stopEnrollment(active, record, event.target, status, 'Stopped by hand'); }
+				}),
+				status
+			]));
+		} else {
+			var picker = el('select');
+			picker.appendChild(el('option', { value: '', text: 'Choose a sequence…' }));
+
+			(state.boot.sequences || []).forEach(function (sequence) {
+				picker.appendChild(el('option', {
+					value: sequence.id,
+					text: sequence.name + ' (' + sequence.steps + (sequence.steps === 1 ? ' step)' : ' steps)')
+				}));
+			});
+
+			block.appendChild(el('div.pcm-crm-form-actions', {}, [
+				picker,
+				el('button.pcm-btn.pcm-btn-primary', {
+					type: 'button',
+					text: 'Enroll',
+					onclick: function (event) {
+						if (!picker.value) { status.textContent = 'Pick a sequence first.'; return; }
+
+						event.target.disabled = true;
+						status.textContent = 'Enrolling…';
+
+						api('/contacts/' + record.id + '/enroll', {
+							method: 'POST',
+							body: { sequence_id: Number(picker.value) }
+						}).then(function () {
+							openDrawer('contacts', record.id);
+						}).catch(function (error) {
+							status.textContent = error.message;
+							event.target.disabled = false;
+						});
+					}
+				}),
+				status
+			]));
+		}
+
+		var past = enrollments.filter(function (row) { return row.status !== 'active'; });
+
+		if (past.length) {
+			var list = el('ul.pcm-crm-related-list');
+
+			past.forEach(function (row) {
+				var sequence = (state.boot.sequences || []).filter(function (s) {
+					return Number(s.id) === Number(row.sequence_id);
+				})[0];
+
+				list.appendChild(el('li', {}, [
+					el('span', {}, [
+						el('span.primary', { text: sequence ? sequence.name : 'Sequence #' + row.sequence_id }),
+						el('span.secondary', {
+							text: ' — ' + row.status + (row.stopped_reason ? ': ' + row.stopped_reason : '')
+						})
+					])
+				]));
+			});
+
+			block.appendChild(el('p.pcm-crm-field-note', { text: 'Earlier runs' }));
+			block.appendChild(list);
+		}
+
+		return block;
+	}
+
+	function stopEnrollment(enrollment, record, button, status, reason) {
+		button.disabled = true;
+		status.textContent = 'Stopping…';
+
+		api('/enrollments/' + enrollment.id + '/stop', { method: 'POST', body: { reason: reason } })
+			.then(function () { openDrawer('contacts', record.id); })
+			.catch(function (error) {
+				status.textContent = error.message;
+				button.disabled = false;
+			});
 	}
 
 	/**
