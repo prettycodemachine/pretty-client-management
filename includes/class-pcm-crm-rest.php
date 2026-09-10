@@ -290,6 +290,14 @@ class PCM_CRM_REST {
 		}
 
 		foreach ( $pcm_items as $pcm_i => $pcm_item ) {
+			// A row can be missing — a record deleted between the write and the
+			// read back, most plausibly — and expanding null should skip it
+			// rather than take the whole response down.
+			if ( ! is_array( $pcm_item ) ) {
+				unset( $pcm_items[ $pcm_i ] );
+				continue;
+			}
+
 			if ( isset( $pcm_item['account_id'] ) ) {
 				$pcm_items[ $pcm_i ]['_account_name'] = isset( $pcm_accounts[ $pcm_item['account_id'] ] )
 					? $pcm_accounts[ $pcm_item['account_id'] ]['name'] : '';
@@ -316,6 +324,8 @@ class PCM_CRM_REST {
 				$pcm_items[ $pcm_i ]['_owner_name'] = pcm_crm_user_name( $pcm_item['owner_id'] );
 			}
 
+			$pcm_items[ $pcm_i ] = self::expand_custom_relationships( $pcm_object, $pcm_items[ $pcm_i ] );
+
 			// For the System Information panel. Resolved here rather than in
 			// the browser because only the server can see the user table.
 			if ( isset( $pcm_item['created_by_id'] ) ) {
@@ -327,7 +337,46 @@ class PCM_CRM_REST {
 			}
 		}
 
-		return $pcm_items;
+		return array_values( $pcm_items );
+	}
+
+	/**
+	 * Resolve a custom relationship column to the record's name.
+	 *
+	 * Without this a relationship field shows the raw id in a list, which is
+	 * the one thing a lookup exists to avoid. Cached per request, so a page of
+	 * rows pointing at the same handful of records is one query, not one each.
+	 */
+	protected static function expand_custom_relationships( $pcm_object, array $pcm_item ) {
+		static $pcm_cache = array();
+
+		$pcm_slug = $pcm_object . 's';
+
+		foreach ( pcm_crm_custom_fields( $pcm_slug ) as $pcm_field ) {
+			if ( 'relationship' !== $pcm_field['type'] || empty( $pcm_field['related'] ) ) {
+				continue;
+			}
+
+			$pcm_column = pcm_crm_custom_column( $pcm_field['key'] );
+			$pcm_id     = isset( $pcm_item[ $pcm_column ] ) ? (int) $pcm_item[ $pcm_column ] : 0;
+
+			if ( ! $pcm_id ) {
+				continue;
+			}
+
+			$pcm_key = $pcm_field['related'] . ':' . $pcm_id;
+
+			if ( ! isset( $pcm_cache[ $pcm_key ] ) ) {
+				$pcm_model = self::model( $pcm_field['related'] );
+				$pcm_row   = $pcm_model ? $pcm_model->get( $pcm_id ) : null;
+
+				$pcm_cache[ $pcm_key ] = $pcm_row ? pcm_crm_record_label( $pcm_field['related'], $pcm_row ) : '';
+			}
+
+			$pcm_item[ '_' . $pcm_column . '_name' ] = $pcm_cache[ $pcm_key ];
+		}
+
+		return $pcm_item;
 	}
 
 	public static function related( WP_REST_Request $pcm_request ) {
@@ -427,6 +476,9 @@ class PCM_CRM_REST {
 				'label'   => $pcm_model->object(),
 				'fields'  => self::field_list( $pcm_model, '' ),
 				'related' => $pcm_related,
+				// The record form is built from this rather than from a list
+				// in the JS, which is what makes a layout editable at all.
+				'layout'  => pcm_crm_layout( $pcm_slug ),
 			);
 		}
 
@@ -451,8 +503,20 @@ class PCM_CRM_REST {
 				'type'  => $pcm_def['type'],
 			);
 
-			if ( ! empty( $pcm_def['options'] ) && is_callable( $pcm_def['options'] ) ) {
-				$pcm_field['options'] = self::normalize_options( call_user_func( $pcm_def['options'] ) );
+			// How to draw the control, where that differs from how the value
+			// is stored: a currency and a plain number are both decimals.
+			foreach ( array( 'ui', 'related', 'help', 'custom' ) as $pcm_hint ) {
+				if ( ! empty( $pcm_def[ $pcm_hint ] ) ) {
+					$pcm_field[ $pcm_hint ] = $pcm_def[ $pcm_hint ];
+				}
+			}
+
+			if ( ! empty( $pcm_def['options'] ) ) {
+				// A built-in picklist names a function; a custom one carries
+				// its values directly.
+				$pcm_field['options'] = is_callable( $pcm_def['options'] )
+					? self::normalize_options( call_user_func( $pcm_def['options'] ) )
+					: self::normalize_options( $pcm_def['options'] );
 			}
 
 			$pcm_fields[] = $pcm_field;

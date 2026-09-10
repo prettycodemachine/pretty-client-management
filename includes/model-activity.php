@@ -29,7 +29,11 @@ function pcm_crm_activities() {
 				'description'   => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Details' ),
 				'is_completed'  => array( 'type' => 'bool', 'sf' => 'IsClosed', 'label' => 'Completed' ),
 			),
-			PCM_CRM_Model::system_fields()
+			PCM_CRM_Model::system_fields(),
+			// Admin-defined fields are real columns, so they join the map as
+			// equals — every filter, export and report downstream reads this
+			// map and needs no idea that some of it was configured.
+			pcm_crm_custom_field_map( 'activities' )
 		);
 
 		$pcm_model = new PCM_CRM_Model(

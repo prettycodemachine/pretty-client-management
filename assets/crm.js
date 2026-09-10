@@ -371,6 +371,16 @@
 		}));
 	}
 
+	/**
+	 * Per-object definitions: how a record reads in a list, in a header, and
+	 * which filters sit permanently in the bar.
+	 *
+	 * The four CRM objects deliberately declare no field list. Their record
+	 * forms are built from the layout the server sends, because those layouts
+	 * are editable — a copy here would be a second source of truth that drifts
+	 * the first time someone rearranges one. Only objects outside that system,
+	 * like schedules, still declare their own.
+	 */
 	var objects = {
 		accounts: {
 			label: 'Account',
@@ -401,31 +411,7 @@
 					{ key: 'owner_id', label: 'Owner', options: ownerOptions() }
 				];
 			},
-			fields: function () {
-				return [
-					{ fields: [
-						{ key: 'name', label: 'Account name', required: true },
-						{ key: 'website', label: 'Website', type: 'url' },
-						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-						{ key: 'type', label: 'Type', options: options(state.boot.accountTypes, true) },
-						{ key: 'industry', label: 'Industry', options: options(state.boot.industries, true) },
-						{ key: 'phone', label: 'Phone' },
-						{ key: 'annual_revenue', label: 'Annual revenue', type: 'number' },
-						{ key: 'number_of_employees', label: 'Employees', type: 'number' }
-					] },
-					{ title: 'Billing address', fields: [
-						{ key: 'billing_street', label: 'Street', wide: true },
-						{ key: 'billing_city', label: 'City' },
-						{ key: 'billing_state', label: 'State' },
-						{ key: 'billing_postal_code', label: 'Postal code' },
-						{ key: 'billing_country', label: 'Country' }
-					] },
-					{ title: 'Notes', fields: [
-						{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
-					] }
-				];
-			}
-		},
+},
 
 		contacts: {
 			label: 'Contact',
@@ -464,40 +450,7 @@
 					{ key: 'owner_id', label: 'Owner', options: ownerOptions() }
 				];
 			},
-			fields: function () {
-				return [
-					{ fields: [
-						{ key: 'first_name', label: 'First name' },
-						{ key: 'last_name', label: 'Last name', required: true },
-						{ key: 'title', label: 'Title' },
-						{ key: 'account_id', label: 'Account', lookup: 'accounts' },
-						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-						{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) },
-						{ key: 'service_interest', label: 'Interested in',
-							options: options(interestLabels(), true) }
-					] },
-					{ title: 'Contact details', fields: [
-						{ key: 'email', label: 'Email', type: 'email' },
-						{ key: 'phone', label: 'Phone' },
-						{ key: 'mobile_phone', label: 'Mobile' },
-						{ key: 'do_not_contact', label: 'Do not contact', type: 'checkbox' },
-						{ key: 'do_not_contact_reason', label: 'Reason for do not contact', wide: true,
-							showWhen: 'do_not_contact',
-							note: 'Required. Whoever revisits this later needs to know why.' }
-					] },
-					{ title: 'Mailing address', fields: [
-						{ key: 'mailing_street', label: 'Street', wide: true },
-						{ key: 'mailing_city', label: 'City' },
-						{ key: 'mailing_state', label: 'State' },
-						{ key: 'mailing_postal_code', label: 'Postal code' },
-						{ key: 'mailing_country', label: 'Country' }
-					] },
-					{ title: 'Notes', fields: [
-						{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
-					] }
-				];
-			}
-		},
+},
 
 		opportunities: {
 			label: 'Opportunity',
@@ -542,33 +495,7 @@
 					{ key: 'owner_id', label: 'Owner', options: ownerOptions() }
 				];
 			},
-			fields: function () {
-				return [
-					{ fields: [
-						{ key: 'name', label: 'Opportunity name', required: true, wide: true },
-						{ key: 'account_id', label: 'Account', lookup: 'accounts' },
-						{ key: 'primary_contact_id', label: 'Primary contact', lookup: 'contacts' },
-						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-						{ key: 'stage_name', label: 'Stage', options: options(state.boot.stages) },
-						{ key: 'closed_lost_reason', label: 'Closed lost reason', wide: true,
-							showWhen: 'stage_name', showWhenLost: true }
-					] },
-					{ title: 'Forecast', fields: [
-						{ key: 'amount', label: 'Amount', type: 'number' },
-						{ key: 'close_date', label: 'Close date', type: 'date' },
-						{ key: 'probability', label: 'Probability %', type: 'number' },
-						{ key: 'type', label: 'Type', options: options(state.boot.opportunityTypes, true) },
-						{ key: 'lead_source', label: 'Lead source', options: options(state.boot.leadSources, true) },
-						{ key: 'service_interest', label: 'Interested in',
-							options: options(interestLabels(), true) }
-					] },
-					{ title: 'Notes', fields: [
-						{ key: 'next_step', label: 'Next step', wide: true },
-						{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
-					] }
-				];
-			}
-		},
+},
 
 		schedules: {
 			label: 'Scheduled Report',
@@ -662,26 +589,7 @@
 					{ key: 'owner_id', label: 'Owner', options: ownerOptions() }
 				];
 			},
-			fields: function () {
-				return [
-					{ fields: [
-						{ key: 'subject', label: 'Subject', required: true, wide: true },
-						{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
-						{ key: 'activity_type', label: 'Type', options: options(state.boot.activityTypes) },
-						{ key: 'status', label: 'Status', options: options(state.boot.activityStatuses) },
-						{ key: 'priority', label: 'Priority', options: options(state.boot.priorities) },
-						{ key: 'due_date', label: 'Due date', type: 'date' }
-					] },
-					{ title: 'Related records', fields: [
-						{ key: 'who_id', label: 'Contact', lookup: 'contacts' },
-						{ key: 'what_id', label: 'Related to', lookupPair: true }
-					] },
-					{ title: 'Notes', fields: [
-						{ key: 'description', label: 'Details', type: 'textarea', wide: true }
-					] }
-				];
-			}
-		}
+}
 	};
 
 	/* ---------------------------------------------------------------------
@@ -1628,16 +1536,19 @@
 		var isNew = !record.id;
 
 		var form = el('form', { onsubmit: function (e) { e.preventDefault(); } });
-		var firstGrid = null;
 
-		def.fields().forEach(function (group) {
+		layoutFor(object).forEach(function (group) {
 			var grid = el('div.pcm-crm-fields');
 
-			if (!firstGrid) { firstGrid = grid; }
+			group.fields.forEach(function (name) {
+				var field = fieldDefinition(object, name);
 
-			group.fields.forEach(function (field) {
-				grid.appendChild(fieldControl(field, values));
+				if (field) { grid.appendChild(fieldControl(field, values)); }
 			});
+
+			// A section whose fields have all been removed would otherwise
+			// print its heading over nothing.
+			if (!grid.children.length) { return; }
 
 			if (group.title) {
 				form.appendChild(el('h4.pcm-crm-group-head', { text: group.title }));
@@ -1756,14 +1667,86 @@
 		return panel;
 	}
 
+	/**
+	 * The sections a record's form is built from.
+	 *
+	 * Served rather than declared here, so an admin rearranging a layout
+	 * changes what this returns. The object's own definition supplies only the
+	 * few hints a layout cannot carry — which fields sit full width, which are
+	 * conditional on another.
+	 */
+	function layoutFor(object) {
+		var schema = state.schema && state.schema[object];
+
+		if (schema && schema.layout && schema.layout.length) { return schema.layout; }
+
+		// Schedules and anything else outside the customisable objects keep
+		// their own declared list.
+		return (objects[object] && objects[object].fields) ? objects[object].fields() : [];
+	}
+
+	/**
+	 * A field's definition for the form: what the server knows about the
+	 * column, plus this screen's presentation hints.
+	 */
+	function fieldDefinition(object, name) {
+		var schema = state.schema && state.schema[object];
+
+		if (!schema) { return null; }
+
+		var field = schema.fields.filter(function (f) { return f.key === name; })[0];
+
+		if (!field) { return null; }
+
+		return Object.assign({}, field, fieldHints(object, name), { key: name });
+	}
+
+	/**
+	 * Presentation that the column type cannot imply.
+	 *
+	 * Kept small and per object rather than stored with the layout: which
+	 * field is a lookup and which is conditional is a fact about the data
+	 * model, not a choice someone makes when arranging a form.
+	 */
+	function fieldHints(object, name) {
+		var wide = {
+			accounts: ['name', 'billing_street', 'description'],
+			contacts: ['do_not_contact_reason', 'mailing_street', 'description'],
+			opportunities: ['name', 'next_step', 'description'],
+			activities: ['subject', 'description']
+		};
+
+		var lookups = {
+			account_id: 'accounts',
+			primary_contact_id: 'contacts',
+			who_id: 'contacts'
+		};
+
+		var hints = {};
+
+		if ((wide[object] || []).indexOf(name) !== -1) { hints.wide = true; }
+		if (lookups[name]) { hints.lookup = lookups[name]; }
+		if (name === 'what_id') { hints.lookupPair = true; }
+		if (name === 'owner_id') { hints.options = ownerOptions(); }
+
+		if (name === 'closed_lost_reason') {
+			hints.showWhen = 'stage_name';
+			hints.showWhenLost = true;
+			hints.wide = true;
+		}
+
+		if (name === 'do_not_contact_reason') {
+			hints.showWhen = 'do_not_contact';
+			hints.note = 'Required. Whoever revisits this later needs to know why.';
+		}
+
+		if (name === 'description' || name === 'next_step') { hints.wide = true; }
+
+		return hints;
+	}
+
 	function fieldControl(field, values) {
 		var id = 'pcm-crm-field-' + field.key;
-
-		if (field.lookupPair) {
-			// what_id is polymorphic: the object it points at has to be chosen
-			// alongside the record, so the two controls move together.
-			return relatedToControl(field, values);
-		}
 
 		function onInput(event) {
 			values[field.key] = event.target.value;
@@ -1773,7 +1756,7 @@
 
 		// A checkbox is a control with a label beside it, not a labelled box
 		// in a column — laid out like the text fields it collapses to a line.
-		if (field.type === 'checkbox') {
+		if (field.type === 'checkbox' || field.type === 'bool' || field.ui === 'checkbox') {
 			var box = el('input', {
 				id: id,
 				type: 'checkbox',
@@ -1794,6 +1777,10 @@
 		});
 		var control;
 
+		if (field.lookupPair) {
+			return relatedToControl(field, values);
+		}
+
 		if (field.type === 'recipients') {
 			wrap.classList.add('pcm-crm-field-wide');
 			wrap.appendChild(el('label', { text: field.label }));
@@ -1802,11 +1789,22 @@
 			return wrap;
 		}
 
-		if (field.options || field.lookup) {
+		// A custom relationship points at another object; the picker is the same
+		// one a built-in lookup uses, so it needs the same cached list.
+		var lookup = field.lookup || (field.ui === 'relationship' ? field.related : '');
+
+		if (lookup && !lookups[lookup]) {
+			loadLookup(lookup).then(function () {
+				var replacement = fieldControl(field, values);
+				if (wrap.parentNode) { wrap.parentNode.replaceChild(replacement, wrap); }
+			});
+		}
+
+		if (field.options || lookup) {
 			control = el('select', { id: id, onchange: onInput });
 
-			var list = field.lookup
-				? [{ value: '', label: '—' }].concat(lookups[field.lookup] || [])
+			var list = lookup
+				? [{ value: '', label: '—' }].concat(lookups[lookup] || [])
 				: field.options;
 
 			list.forEach(function (option) {
@@ -1816,12 +1814,13 @@
 					selected: String(values[field.key] || '') === String(option.value)
 				}));
 			});
-		} else if (field.type === 'textarea') {
+		} else if (field.type === 'textarea' || field.type === 'longtext') {
 			control = el('textarea', { id: id, oninput: onInput, text: values[field.key] || '' });
 		} else {
 			control = el('input', {
 				id: id,
-				type: field.type || 'text',
+				type: inputTypeFor(field),
+				step: (field.ui === 'currency' || field.type === 'decimal') ? '0.01' : null,
 				value: values[field.key] === null || values[field.key] === undefined ? '' : values[field.key],
 				required: field.required,
 				oninput: onInput
@@ -1867,6 +1866,27 @@
 				el('span.pcm-crm-static-value', { text: row.value })
 			]);
 		}));
+	}
+
+	/**
+	 * Which HTML input a field wants.
+	 *
+	 * The UI hint wins where it is more specific than the storage type — a
+	 * currency and a plain number are both decimals, and a date field stored
+	 * as a date is not the same control as a datetime stamp.
+	 */
+	function inputTypeFor(field) {
+		var byUi = { currency: 'number', number: 'number', date: 'date', url: 'url', text: 'text' };
+
+		if (field.ui && byUi[field.ui]) { return byUi[field.ui]; }
+
+		var byType = {
+			decimal: 'number', int: 'number', id: 'number',
+			date: 'date', datetime: 'datetime-local',
+			email: 'email', url: 'url', text: 'text'
+		};
+
+		return byType[field.type] || field.type || 'text';
 	}
 
 	/**

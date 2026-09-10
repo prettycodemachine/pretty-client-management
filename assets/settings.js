@@ -17,6 +17,258 @@
 		fieldBuilder();
 		mergeFields();
 		copyShortcode();
+		customFields();
+		layoutEditor();
+	}
+
+	/* -------------------------------------------------------------------
+	   Custom fields
+	   ------------------------------------------------------------------- */
+
+	function customFields() {
+		var list = document.querySelector('[data-role="custom-fields"]');
+		if (!list) { return; }
+
+		var template = document.getElementById('tmpl-pcm-crm-custom-field');
+		var addButton = document.querySelector('[data-role="add-custom-field"]');
+
+		function renumber() {
+			Array.prototype.forEach.call(list.querySelectorAll('[data-role="custom-field-row"]'), function (row, index) {
+				Array.prototype.forEach.call(row.querySelectorAll('[name]'), function (input) {
+					input.name = input.name.replace(/\[(?:\d+|__index__)\]/, '[' + index + ']');
+				});
+			});
+		}
+
+		if (addButton && template) {
+			addButton.addEventListener('click', function () {
+				var wrapper = document.createElement('div');
+				wrapper.innerHTML = template.innerHTML;
+
+				var row = wrapper.querySelector('[data-role="custom-field-row"]');
+				list.appendChild(row);
+				renumber();
+				row.querySelector('.pcm-crm-field-label').focus();
+			});
+		}
+
+		list.addEventListener('click', function (event) {
+			if (!event.target.closest('[data-role="remove-custom-field"]')) { return; }
+
+			event.preventDefault();
+
+			// Removing a definition hides the field; the column and its data
+			// stay, so this is not the destructive act it looks like.
+			if (!window.confirm('Remove this field from the CRM? Its column and data are kept.')) { return; }
+
+			event.target.closest('[data-role="custom-field-row"]').remove();
+			renumber();
+		});
+
+		// Only a picklist needs values, and only a relationship needs a target.
+		list.addEventListener('change', function (event) {
+			var select = event.target.closest('[data-role="custom-type"]');
+			if (!select) { return; }
+
+			var row = select.closest('[data-role="custom-field-row"]');
+			var options = row.querySelector('[data-role="custom-options"]');
+			var related = row.querySelector('[data-role="custom-related"]');
+
+			if (options) { options.hidden = select.value !== 'picklist'; }
+			if (related) { related.hidden = select.value !== 'relationship'; }
+		});
+	}
+
+	/* -------------------------------------------------------------------
+	   Layout editor
+	   ------------------------------------------------------------------- */
+
+	/**
+	 * Drag fields between sections, and within them.
+	 *
+	 * A chip inside a section carries a hidden input naming that section's
+	 * field array; one in Available carries none. Moving a chip is therefore
+	 * a DOM move plus adding or removing that input, which is why the whole
+	 * thing needs no model of its own to keep in sync.
+	 */
+	function layoutEditor() {
+		var editor = document.querySelector('[data-role="layout"]');
+		if (!editor) { return; }
+
+		var dragging = null;
+
+		function inputNameFor(list) {
+			return list.dataset.name || '';
+		}
+
+		/**
+		 * Put a chip's hidden input in step with the list it now sits in.
+		 */
+		function sync(chip, list) {
+			var existing = chip.querySelector('input[type="hidden"]');
+			var name = inputNameFor(list);
+
+			if (!name) {
+				// Back in Available: no input, so the field is simply absent
+				// from the posted layout.
+				if (existing) { existing.remove(); }
+				return;
+			}
+
+			if (existing) {
+				existing.name = name;
+				return;
+			}
+
+			var input = document.createElement('input');
+			input.type = 'hidden';
+			input.name = name;
+			input.value = chip.dataset.field;
+			chip.appendChild(input);
+		}
+
+		function syncAll() {
+			Array.prototype.forEach.call(editor.querySelectorAll('[data-role="section-fields"], [data-role="available"]'), function (list) {
+				Array.prototype.forEach.call(list.querySelectorAll('[data-role="chip"]'), function (chip) { sync(chip, list); });
+			});
+		}
+
+		/**
+		 * Which chip a drop should land before.
+		 *
+		 * Measured from each chip's midpoint, so a drop reads as "before the
+		 * one I am pointing above" rather than snapping to the end.
+		 */
+		function chipAfter(list, y) {
+			var chips = Array.prototype.slice.call(list.querySelectorAll('[data-role="chip"]:not(.is-dragging)'));
+
+			return chips.reduce(function (closest, chip) {
+				var box = chip.getBoundingClientRect();
+				var offset = y - box.top - box.height / 2;
+
+				return (offset < 0 && offset > closest.offset) ? { offset: offset, element: chip } : closest;
+			}, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+		}
+
+		editor.addEventListener('dragstart', function (event) {
+			var chip = event.target.closest('[data-role="chip"]');
+			if (!chip) { return; }
+
+			dragging = chip;
+			chip.classList.add('is-dragging');
+			event.dataTransfer.effectAllowed = 'move';
+			// Firefox will not start a drag without data on the transfer.
+			event.dataTransfer.setData('text/plain', chip.dataset.field);
+		});
+
+		editor.addEventListener('dragend', function () {
+			if (dragging) { dragging.classList.remove('is-dragging'); }
+			dragging = null;
+			syncAll();
+		});
+
+		editor.addEventListener('dragover', function (event) {
+			var list = event.target.closest('[data-role="section-fields"], [data-role="available"]');
+			if (!list || !dragging) { return; }
+
+			event.preventDefault();
+			list.classList.add('is-over');
+
+			var before = chipAfter(list, event.clientY);
+
+			if (before) { list.insertBefore(dragging, before); }
+			else { list.appendChild(dragging); }
+		});
+
+		editor.addEventListener('dragleave', function (event) {
+			var list = event.target.closest('[data-role="section-fields"], [data-role="available"]');
+			if (list) { list.classList.remove('is-over'); }
+		});
+
+		editor.addEventListener('drop', function (event) {
+			event.preventDefault();
+
+			Array.prototype.forEach.call(editor.querySelectorAll('.is-over'), function (list) {
+				list.classList.remove('is-over');
+			});
+
+			syncAll();
+		});
+
+		// Keyboard equivalent. A layout editor reachable only by mouse would
+		// lock out anyone who cannot use one, and this is the whole feature.
+		editor.addEventListener('keydown', function (event) {
+			var chip = event.target.closest('[data-role="chip"]');
+			if (!chip) { return; }
+
+			var list = chip.parentNode;
+			var handled = true;
+
+			if (event.key === 'ArrowUp' && chip.previousElementSibling) {
+				list.insertBefore(chip, chip.previousElementSibling);
+			} else if (event.key === 'ArrowDown' && chip.nextElementSibling) {
+				list.insertBefore(chip.nextElementSibling, chip);
+			} else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+				var lists = Array.prototype.slice.call(
+					editor.querySelectorAll('[data-role="section-fields"], [data-role="available"]')
+				);
+				var index = lists.indexOf(list);
+				var target = lists[index + (event.key === 'ArrowRight' ? 1 : -1)];
+
+				if (target) { target.appendChild(chip); }
+			} else {
+				handled = false;
+			}
+
+			if (handled) {
+				event.preventDefault();
+				syncAll();
+				chip.focus();
+			}
+		});
+
+		var addSection = document.querySelector('[data-role="add-section"]');
+
+		if (addSection) {
+			addSection.addEventListener('click', function () {
+				var sections = editor.querySelector('[data-role="sections"]');
+				var index = sections.querySelectorAll('[data-role="section"]').length;
+				var object = editor.dataset.object;
+				var base = 'pcm_crm_layouts[' + object + '][' + index + ']';
+
+				var section = document.createElement('div');
+				section.className = 'pcm-crm-layout-section';
+				section.dataset.role = 'section';
+				section.innerHTML =
+					'<div class="pcm-crm-layout-section-head">' +
+					'<input type="text" name="' + base + '[title]" placeholder="Section heading (optional)">' +
+					'<button type="button" class="button-link pcm-crm-field-remove" data-role="remove-section" aria-label="Remove section">&times;</button>' +
+					'</div>' +
+					'<div class="pcm-crm-layout-list" data-role="section-fields" data-name="' + base + '[fields][]"></div>';
+
+				sections.appendChild(section);
+				section.querySelector('input').focus();
+			});
+		}
+
+		editor.addEventListener('click', function (event) {
+			if (!event.target.closest('[data-role="remove-section"]')) { return; }
+
+			event.preventDefault();
+
+			var section = event.target.closest('[data-role="section"]');
+			var available = editor.querySelector('[data-role="available"]');
+
+			// The fields go back to Available rather than away with the
+			// section — removing a heading should not quietly remove six
+			// fields from the form.
+			Array.prototype.forEach.call(section.querySelectorAll('[data-role="chip"]'), function (chip) {
+				available.appendChild(chip);
+			});
+
+			section.remove();
+			syncAll();
+		});
 	}
 
 	/* -------------------------------------------------------------------

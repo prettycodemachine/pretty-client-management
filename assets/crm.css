@@ -968,7 +968,13 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-field-move .button-link { font-size: 1.05rem; text-decoration: none; }
 .pcm-crm-field-remove { color: var(--pcm-accent-deep); }
 .pcm-crm-field-row-body { margin-top: 8px; }
-.pcm-crm-field-options { display: block; max-width: 420px; }
+/* [hidden] is display:none in the UA sheet, so an author display wins — which
+   is why the choices box stayed visible for every field type. Same trap as the
+   modal and the conditional fields; anything toggled with `hidden` needs this. */
+.pcm-crm-field-options,
+.pcm-crm-field-related { display: block; max-width: 420px; }
+.pcm-crm-field-options[hidden],
+.pcm-crm-field-related[hidden] { display: none !important; }
 .pcm-crm-field-options textarea { width: 100%; }
 
 /* Merge field buttons */
@@ -1166,4 +1172,100 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
     font-size: 11pt;
   }
   .pcm-crm-print-head strong { font-size: 14pt; }
+}
+
+/* ==========================================================================
+   Fields and layouts
+   ========================================================================== */
+.pcm-crm-object-switch { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.pcm-crm-object-pill {
+  padding: 7px 16px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 999px;
+  background: var(--pcm-paper);
+  color: var(--pcm-ink);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+.pcm-crm-object-pill:hover { background: var(--pcm-paper-tint); color: var(--pcm-ink); }
+.pcm-crm-object-pill.is-active { background: var(--pcm-ink); color: #fff; }
+
+.pcm-crm-field-key {
+  font-size: 0.76rem;
+  color: var(--pcm-body);
+  background: var(--pcm-paper-tint);
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+
+/* Layout editor ------------------------------------------------------------- */
+.pcm-crm-layout-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .pcm-crm-layout-editor { grid-template-columns: minmax(0, 1fr); }
+}
+
+.pcm-crm-layout-section {
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  background: var(--pcm-paper);
+}
+.pcm-crm-layout-section-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--pcm-blue);
+  border-radius: 11px 11px 0 0;
+}
+.pcm-crm-layout-section-head input { flex: 1; }
+
+.pcm-crm-layout-available h3 { margin-top: 0; }
+.pcm-crm-layout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* A drop target has to exist before anything is in it, so an empty list
+     keeps a minimum height rather than collapsing to nothing. */
+  min-height: 54px;
+  padding: 10px 12px;
+  border-radius: 0 0 11px 11px;
+}
+.pcm-crm-layout-available .pcm-crm-layout-list {
+  border: 2px dashed var(--pcm-gray);
+  border-radius: var(--radius);
+  background: var(--pcm-paper-tint);
+}
+.pcm-crm-layout-list.is-over { background: #e7f0fa; }
+
+.pcm-crm-layout-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 9px;
+  background: var(--pcm-paper);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--pcm-ink);
+  cursor: grab;
+}
+.pcm-crm-layout-chip:active { cursor: grabbing; }
+.pcm-crm-layout-chip.is-dragging { opacity: 0.4; }
+.pcm-crm-layout-chip:focus-visible { outline: 2px solid var(--pcm-blue-deep); outline-offset: 2px; }
+.pcm-crm-layout-chip.is-custom { border-color: var(--pcm-accent-deep); }
+.pcm-crm-layout-chip-label { flex: 1; }
+.pcm-crm-layout-chip-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pcm-accent-deep);
 }

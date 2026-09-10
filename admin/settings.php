@@ -58,6 +58,17 @@ function pcm_crm_register_settings() {
 		'default'           => array(),
 	) );
 
+	register_setting( 'pcm_crm_fields_settings', PCM_CRM_CUSTOM_FIELDS_OPTION, array(
+		'type'              => 'array',
+		'sanitize_callback' => 'pcm_crm_sanitize_custom_fields',
+		'default'           => array(),
+	) );
+	register_setting( 'pcm_crm_fields_settings', PCM_CRM_LAYOUTS_OPTION, array(
+		'type'              => 'array',
+		'sanitize_callback' => 'pcm_crm_sanitize_layouts',
+		'default'           => array(),
+	) );
+
 	register_setting( 'pcm_crm_export_settings', 'pcm_crm_npsp_namespace', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'pcm_crm_sanitize_checkbox',
@@ -79,6 +90,7 @@ function pcm_crm_settings_tabs() {
 	return array(
 		'form'     => __( 'Contact Form', 'pcm-crm' ),
 		'export'   => __( 'Data Export', 'pcm-crm' ),
+		'fields'   => __( 'Fields & Layouts', 'pcm-crm' ),
 		'pipeline' => __( 'Pipeline', 'pcm-crm' ),
 	);
 }
@@ -157,6 +169,8 @@ function pcm_crm_render_settings() {
 
 		if ( 'export' === $pcm_tab ) {
 			pcm_crm_render_export_tab();
+		} elseif ( 'fields' === $pcm_tab ) {
+			pcm_crm_render_fields_tab();
 		} elseif ( 'pipeline' === $pcm_tab ) {
 			pcm_crm_render_pipeline_tab();
 		} else {
@@ -721,3 +735,201 @@ function pcm_crm_test_email_notice() {
 	printf( '<div class="notice %s is-dismissible"><p>%s</p></div>', esc_attr( $pcm_class ), esc_html( $pcm_message ) );
 }
 add_action( 'admin_notices', 'pcm_crm_test_email_notice' );
+
+/* ---------------------------------------------------------------------------
+   Fields and layouts tab
+   --------------------------------------------------------------------------- */
+
+/**
+ * Which object this screen is editing.
+ *
+ * One object at a time rather than all four on one page: a layout editor is
+ * already a busy screen, and four of them would be unusable.
+ */
+function pcm_crm_current_fields_object() {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
+	$pcm_object = isset( $_GET['object'] ) ? sanitize_key( wp_unslash( $_GET['object'] ) ) : 'contacts';
+
+	return isset( pcm_crm_customisable_objects()[ $pcm_object ] ) ? $pcm_object : 'contacts';
+}
+
+function pcm_crm_render_fields_tab() {
+	$pcm_object = pcm_crm_current_fields_object();
+	$pcm_model  = PCM_CRM_REST::model( $pcm_object );
+	?>
+	<div class="pcm-crm-object-switch">
+		<?php foreach ( pcm_crm_customisable_objects() as $pcm_slug => $pcm_label ) : ?>
+			<a class="pcm-crm-object-pill<?php echo $pcm_slug === $pcm_object ? ' is-active' : ''; ?>"
+				href="<?php echo esc_url( add_query_arg( 'object', $pcm_slug, pcm_crm_settings_url( 'fields' ) ) ); ?>">
+				<?php echo esc_html( $pcm_label ); ?>
+			</a>
+		<?php endforeach; ?>
+	</div>
+
+	<form method="post" action="options.php" class="pcm-crm-fields-form" data-object="<?php echo esc_attr( $pcm_object ); ?>">
+		<?php settings_fields( 'pcm_crm_fields_settings' ); ?>
+
+		<div class="pcm-crm-card">
+			<h2><?php esc_html_e( 'Custom fields', 'pcm-crm' ); ?></h2>
+			<p class="description">
+				<?php esc_html_e( 'Each becomes a real column, so a custom field can be filtered, sorted, grouped and exported exactly like a built-in one. A field’s name is fixed once created — it is the column — but its label can change freely.', 'pcm-crm' ); ?>
+			</p>
+
+			<div class="pcm-crm-custom-fields" data-role="custom-fields">
+				<?php foreach ( pcm_crm_custom_fields( $pcm_object ) as $pcm_index => $pcm_field ) : ?>
+					<?php pcm_crm_render_custom_field_row( $pcm_object, $pcm_index, $pcm_field ); ?>
+				<?php endforeach; ?>
+			</div>
+
+			<p>
+				<button type="button" class="button" data-role="add-custom-field"><?php esc_html_e( 'Add custom field', 'pcm-crm' ); ?></button>
+			</p>
+
+			<script type="text/html" id="tmpl-pcm-crm-custom-field">
+				<?php pcm_crm_render_custom_field_row( $pcm_object, '__index__', array( 'key' => '', 'label' => '', 'type' => 'text' ) ); ?>
+			</script>
+		</div>
+
+		<div class="pcm-crm-card">
+			<h2><?php esc_html_e( 'Page layout', 'pcm-crm' ); ?></h2>
+			<p class="description">
+				<?php esc_html_e( 'Drag a field to move it, within a section or between them. Sections become the headed blocks on the record. Anything left in Available is simply not on the form — the data is still there, and still exported.', 'pcm-crm' ); ?>
+			</p>
+
+			<div class="pcm-crm-layout-editor" data-role="layout" data-object="<?php echo esc_attr( $pcm_object ); ?>">
+				<div class="pcm-crm-layout-sections" data-role="sections">
+					<?php foreach ( pcm_crm_layout( $pcm_object ) as $pcm_i => $pcm_section ) : ?>
+						<?php pcm_crm_render_layout_section( $pcm_object, $pcm_model, $pcm_i, $pcm_section ); ?>
+					<?php endforeach; ?>
+				</div>
+
+				<div class="pcm-crm-layout-available">
+					<h3><?php esc_html_e( 'Available fields', 'pcm-crm' ); ?></h3>
+					<div class="pcm-crm-layout-list" data-role="available">
+						<?php foreach ( pcm_crm_layout_available_fields( $pcm_object ) as $pcm_name ) : ?>
+							<?php pcm_crm_render_layout_chip( $pcm_object, $pcm_model, $pcm_name, false ); ?>
+						<?php endforeach; ?>
+					</div>
+				</div>
+			</div>
+
+			<p>
+				<button type="button" class="button" data-role="add-section"><?php esc_html_e( 'Add section', 'pcm-crm' ); ?></button>
+			</p>
+		</div>
+
+		<?php submit_button( __( 'Save fields and layout', 'pcm-crm' ) ); ?>
+	</form>
+	<?php
+}
+
+function pcm_crm_render_custom_field_row( $pcm_object, $pcm_index, array $pcm_field ) {
+	$pcm_name = PCM_CRM_CUSTOM_FIELDS_OPTION . '[' . $pcm_object . '][' . $pcm_index . ']';
+	$pcm_type = isset( $pcm_field['type'] ) ? $pcm_field['type'] : 'text';
+	$pcm_existing = ! empty( $pcm_field['key'] );
+	?>
+	<div class="pcm-crm-field-row" data-role="custom-field-row">
+		<div class="pcm-crm-field-row-head">
+			<input type="text" class="pcm-crm-field-label" name="<?php echo esc_attr( $pcm_name ); ?>[label]"
+				value="<?php echo esc_attr( isset( $pcm_field['label'] ) ? $pcm_field['label'] : '' ); ?>"
+				placeholder="<?php esc_attr_e( 'Field label', 'pcm-crm' ); ?>">
+
+			<select name="<?php echo esc_attr( $pcm_name ); ?>[type]" data-role="custom-type"
+				<?php echo $pcm_existing ? 'disabled' : ''; ?>>
+				<?php foreach ( pcm_crm_custom_field_types() as $pcm_value => $pcm_meta ) : ?>
+					<option value="<?php echo esc_attr( $pcm_value ); ?>" <?php selected( $pcm_type, $pcm_value ); ?>>
+						<?php echo esc_html( $pcm_meta['label'] ); ?>
+					</option>
+				<?php endforeach; ?>
+			</select>
+
+			<?php if ( $pcm_existing ) : ?>
+				<?php // A disabled select posts nothing, and the type must survive the save. ?>
+				<input type="hidden" name="<?php echo esc_attr( $pcm_name ); ?>[type]" value="<?php echo esc_attr( $pcm_type ); ?>">
+				<code class="pcm-crm-field-key"><?php echo esc_html( pcm_crm_custom_column( $pcm_field['key'] ) ); ?></code>
+			<?php endif; ?>
+
+			<span class="pcm-crm-field-move">
+				<button type="button" class="button-link pcm-crm-field-remove" data-role="remove-custom-field"
+					aria-label="<?php esc_attr_e( 'Remove field', 'pcm-crm' ); ?>">&times;</button>
+			</span>
+		</div>
+
+		<div class="pcm-crm-field-row-body">
+			<input type="hidden" name="<?php echo esc_attr( $pcm_name ); ?>[key]" value="<?php echo esc_attr( isset( $pcm_field['key'] ) ? $pcm_field['key'] : '' ); ?>">
+
+			<label class="pcm-crm-field-options" data-role="custom-options"<?php echo 'picklist' === $pcm_type ? '' : ' hidden'; ?>>
+				<span class="description"><?php esc_html_e( 'Picklist values, one per line', 'pcm-crm' ); ?></span>
+				<textarea name="<?php echo esc_attr( $pcm_name ); ?>[options]" rows="3"><?php echo esc_textarea( implode( "\n", isset( $pcm_field['options'] ) ? (array) $pcm_field['options'] : array() ) ); ?></textarea>
+			</label>
+
+			<label class="pcm-crm-field-related" data-role="custom-related"<?php echo 'relationship' === $pcm_type ? '' : ' hidden'; ?>>
+				<span class="description"><?php esc_html_e( 'Points at', 'pcm-crm' ); ?></span>
+				<select name="<?php echo esc_attr( $pcm_name ); ?>[related]">
+					<?php foreach ( pcm_crm_customisable_objects() as $pcm_slug => $pcm_label ) : ?>
+						<option value="<?php echo esc_attr( $pcm_slug ); ?>" <?php selected( isset( $pcm_field['related'] ) ? $pcm_field['related'] : '', $pcm_slug ); ?>>
+							<?php echo esc_html( $pcm_label ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+
+			<?php if ( $pcm_existing ) : ?>
+				<p class="description">
+					<?php esc_html_e( 'Exports as', 'pcm-crm' ); ?>
+					<code><?php echo esc_html( pcm_crm_custom_api_name( $pcm_field ) ); ?></code>
+					&middot;
+					<?php esc_html_e( 'Removing this field hides it, but keeps the column and its data.', 'pcm-crm' ); ?>
+				</p>
+			<?php endif; ?>
+		</div>
+	</div>
+	<?php
+}
+
+function pcm_crm_render_layout_section( $pcm_object, $pcm_model, $pcm_index, array $pcm_section ) {
+	$pcm_name = PCM_CRM_LAYOUTS_OPTION . '[' . $pcm_object . '][' . $pcm_index . ']';
+	?>
+	<div class="pcm-crm-layout-section" data-role="section">
+		<div class="pcm-crm-layout-section-head">
+			<input type="text" name="<?php echo esc_attr( $pcm_name ); ?>[title]"
+				value="<?php echo esc_attr( isset( $pcm_section['title'] ) ? $pcm_section['title'] : '' ); ?>"
+				placeholder="<?php esc_attr_e( 'Section heading (optional)', 'pcm-crm' ); ?>">
+			<button type="button" class="button-link pcm-crm-field-remove" data-role="remove-section"
+				aria-label="<?php esc_attr_e( 'Remove section', 'pcm-crm' ); ?>">&times;</button>
+		</div>
+
+		<div class="pcm-crm-layout-list" data-role="section-fields" data-name="<?php echo esc_attr( $pcm_name ); ?>[fields][]">
+			<?php foreach ( (array) $pcm_section['fields'] as $pcm_field ) : ?>
+				<?php pcm_crm_render_layout_chip( $pcm_object, $pcm_model, $pcm_field, true, $pcm_name . '[fields][]' ); ?>
+			<?php endforeach; ?>
+		</div>
+	</div>
+	<?php
+}
+
+/**
+ * One draggable field.
+ *
+ * A chip in a section carries a hidden input; one in the Available column does
+ * not, which is how "not on the layout" is expressed — moving a chip between
+ * the two lists is the whole interaction, and the JS only has to add or remove
+ * that input.
+ */
+function pcm_crm_render_layout_chip( $pcm_object, $pcm_model, $pcm_name, $pcm_placed, $pcm_input_name = '' ) {
+	$pcm_defs  = $pcm_model ? $pcm_model->fields() : array();
+	$pcm_def   = isset( $pcm_defs[ $pcm_name ] ) ? $pcm_defs[ $pcm_name ] : array();
+	$pcm_label = ! empty( $pcm_def['label'] ) ? $pcm_def['label'] : $pcm_name;
+	?>
+	<div class="pcm-crm-layout-chip<?php echo ! empty( $pcm_def['custom'] ) ? ' is-custom' : ''; ?>"
+		draggable="true" data-field="<?php echo esc_attr( $pcm_name ); ?>" data-role="chip" tabindex="0">
+		<span class="pcm-crm-layout-chip-label"><?php echo esc_html( $pcm_label ); ?></span>
+		<?php if ( ! empty( $pcm_def['custom'] ) ) : ?>
+			<span class="pcm-crm-layout-chip-tag"><?php esc_html_e( 'custom', 'pcm-crm' ); ?></span>
+		<?php endif; ?>
+		<?php if ( $pcm_placed ) : ?>
+			<input type="hidden" name="<?php echo esc_attr( $pcm_input_name ); ?>" value="<?php echo esc_attr( $pcm_name ); ?>">
+		<?php endif; ?>
+	</div>
+	<?php
+}

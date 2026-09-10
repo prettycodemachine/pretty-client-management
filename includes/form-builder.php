@@ -58,7 +58,7 @@ function pcm_crm_form_field_types() {
  * would be noise with a trap in it.
  */
 function pcm_crm_form_field_targets() {
-	return array(
+	$pcm_targets = array(
 		''                         => __( '— Not stored on a record —', 'pcm-crm' ),
 		'contact.first_name'       => __( 'Contact: First name', 'pcm-crm' ),
 		'contact.last_name'        => __( 'Contact: Last name', 'pcm-crm' ),
@@ -72,6 +72,31 @@ function pcm_crm_form_field_targets() {
 		'account.phone'            => __( 'Account: Phone', 'pcm-crm' ),
 		'activity.description'     => __( 'Activity: Message body', 'pcm-crm' ),
 	);
+
+	// Custom fields belong here too: a field someone created to capture
+	// something the form asks about is exactly the field that answer should
+	// land in, and leaving them out would make the builder able to ask a
+	// question it could not store.
+	$pcm_labels = array(
+		'contact'     => __( 'Contact', 'pcm-crm' ),
+		'account'     => __( 'Account', 'pcm-crm' ),
+		'activity'    => __( 'Activity', 'pcm-crm' ),
+	);
+
+	foreach ( array( 'contacts' => 'contact', 'accounts' => 'account', 'activities' => 'activity' ) as $pcm_object => $pcm_prefix ) {
+		foreach ( pcm_crm_custom_fields( $pcm_object ) as $pcm_field ) {
+			// A relationship expects a record id, which a visitor filling in a
+			// form has no way to supply.
+			if ( 'relationship' === $pcm_field['type'] ) {
+				continue;
+			}
+
+			$pcm_targets[ $pcm_prefix . '.' . pcm_crm_custom_column( $pcm_field['key'] ) ] =
+				$pcm_labels[ $pcm_prefix ] . ': ' . $pcm_field['label'];
+		}
+	}
+
+	return $pcm_targets;
 }
 
 /**

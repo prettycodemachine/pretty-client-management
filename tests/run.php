@@ -598,6 +598,104 @@ check( 'an unknown host is refused', $allowed( 'some-other-site.com' ), false );
 check( 'the seed command is CLI-only', isset( WP_CLI::$commands['pcm-crm'] ), true );
 $GLOBALS['pcm_test_host'] = 'example.com';
 
+echo "\n--- custom fields ---\n";
+$defs = pcm_crm_sanitize_custom_fields( array(
+	'contacts' => array(
+		array( 'label' => 'LinkedIn URL', 'type' => 'url' ),
+		array( 'label' => 'Renewal date', 'type' => 'date' ),
+		array( 'label' => 'Tier', 'type' => 'picklist', 'options' => "Gold\nSilver" ),
+		array( 'label' => 'Partner', 'type' => 'relationship', 'related' => 'accounts' ),
+		array( 'label' => '', 'type' => 'text' ),
+		array( 'label' => 'Bad type', 'type' => 'nonsense' ),
+	),
+	'nonsense_object' => array( array( 'label' => 'x' ) ),
+) );
+
+check( 'a key is derived from the label', $defs['contacts'][0]['key'], 'linkedin_url' );
+check( 'unlabelled fields are dropped', count( $defs['contacts'] ), 5 );
+check( 'an unknown type falls back to text', $defs['contacts'][4]['type'], 'text' );
+check( 'a picklist keeps its values', $defs['contacts'][2]['options'], array( 'Gold', 'Silver' ) );
+check( 'a relationship keeps its target', $defs['contacts'][3]['related'], 'accounts' );
+check( 'an object that cannot carry fields is ignored', isset( $defs['nonsense_object'] ), false );
+
+check( 'the column is prefixed so it cannot collide with a built-in',
+	pcm_crm_custom_column( 'linkedin_url' ), 'cf_linkedin_url' );
+check( 'and is recognisable as custom afterwards',
+	pcm_crm_is_custom_column( 'cf_linkedin_url' ), true );
+check( 'a built-in column is not', pcm_crm_is_custom_column( 'first_name' ), false );
+
+check( 'the Salesforce name reads like the label',
+	pcm_crm_custom_api_name( array( 'label' => 'LinkedIn URL' ) ), 'LinkedIn_URL__c' );
+// A Salesforce API name cannot start with a digit.
+check( 'a label starting with a number is still a valid API name',
+	pcm_crm_custom_api_name( array( 'label' => '2026 Goal' ) ), 'PCM_2026_Goal__c' );
+check( 'an explicit API name wins',
+	pcm_crm_custom_api_name( array( 'label' => 'Anything', 'api_name' => 'Chosen__c' ) ), 'Chosen__c' );
+
+update_option( 'pcm_crm_custom_fields', $defs );
+$map = pcm_crm_custom_field_map( 'contacts' );
+check( 'a url field maps to the url type', $map['cf_linkedin_url']['type'], 'url' );
+check( 'a date field maps to the date type', $map['cf_renewal_date']['type'], 'date' );
+check( 'a relationship stores an id', $map['cf_partner']['type'], 'id' );
+check( 'a picklist carries its values into the field map', $map['cf_tier']['options'], array( 'Gold', 'Silver' ) );
+check( 'every custom field is exportable', isset( $map['cf_tier']['sf'] ), true );
+
+// The screen edits one object at a time; a save must not read as "delete
+// everything on the others".
+$defs['accounts'] = array( array( 'key' => 'region', 'label' => 'Region', 'type' => 'text' ) );
+update_option( 'pcm_crm_custom_fields', $defs );
+$partial = pcm_crm_sanitize_custom_fields( array( 'contacts' => array( array( 'label' => 'Only one', 'type' => 'text' ) ) ) );
+check( 'saving one object leaves the others alone', isset( $partial['accounts'] ), true );
+check( 'while replacing the one that was submitted', count( $partial['contacts'] ), 1 );
+
+echo "\n--- page layouts ---\n";
+delete_option( 'pcm_crm_custom_fields' );
+
+$layout = pcm_crm_layout( 'contacts' );
+check( 'the shipped layout has its sections', count( $layout ) >= 4, true );
+check( 'the first section is the unheaded one', $layout[0]['title'], '' );
+check( 'and holds the name fields', in_array( 'first_name', $layout[0]['fields'], true ), true );
+
+// A field created after a layout was saved must not be invisible.
+update_option( 'pcm_crm_custom_fields', array( 'contacts' => array(
+	array( 'key' => 'tier', 'label' => 'Tier', 'type' => 'text' ),
+) ) );
+$with_custom = pcm_crm_layout( 'contacts' );
+$last = end( $with_custom );
+check( 'an unplaced custom field is appended rather than lost',
+	in_array( 'cf_tier', $last['fields'], true ), true );
+
+$saved = pcm_crm_sanitize_layouts( array( 'contacts' => array(
+	array( 'title' => 'Basics', 'fields' => array( 'first_name', 'last_name', 'first_name', 'not_a_column' ) ),
+) ) );
+check( 'a field placed twice is only kept once',
+	$saved['contacts'][0]['fields'], array( 'first_name', 'last_name' ) );
+check( 'a name that is not a column is dropped',
+	in_array( 'not_a_column', $saved['contacts'][0]['fields'], true ), false );
+
+$emptied = pcm_crm_sanitize_layouts( array( 'contacts' => array() ) );
+check( 'an empty layout falls back to the shipped one rather than leaving no form',
+	count( $emptied['contacts'] ) >= 4, true );
+
+check( 'available fields exclude the ones already placed',
+	in_array( 'first_name', pcm_crm_layout_available_fields( 'contacts' ), true ), false );
+check( 'and exclude the audit stamps, which have their own panel',
+	in_array( 'created_date', pcm_crm_layout_available_fields( 'contacts' ), true ), false );
+
+echo "\n--- custom fields on the contact form ---\n";
+$targets = pcm_crm_form_field_targets();
+check( 'a custom contact field can be mapped from the form',
+	isset( $targets['contact.cf_tier'] ), true );
+check( 'and is named for where it lands', $targets['contact.cf_tier'], 'Contact: Tier' );
+
+update_option( 'pcm_crm_custom_fields', array( 'contacts' => array(
+	array( 'key' => 'partner', 'label' => 'Partner', 'type' => 'relationship', 'related' => 'accounts' ),
+) ) );
+// A visitor filling in a form has no way to supply a record id.
+check( 'a relationship field is not offered to the form',
+	isset( pcm_crm_form_field_targets()['contact.cf_partner'] ), false );
+delete_option( 'pcm_crm_custom_fields' );
+
 echo "\n--- export headers ---\n";
 // The rule: a Salesforce standard name only where the value loads as it
 // stands. Anything holding one of our ids gets a PCM-prefixed custom name.
