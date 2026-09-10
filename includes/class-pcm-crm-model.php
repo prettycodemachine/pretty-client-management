@@ -246,11 +246,15 @@ class PCM_CRM_Model {
 	/**
 	 * Build the WHERE clause shared by find() and count().
 	 *
+	 * Public because the aggregate queries in reports.php need the same
+	 * filtering the list views get, and reaching it by reflection to avoid
+	 * saying so would be worse than saying so.
+	 *
 	 * Column names are interpolated, never prepared — placeholders cannot
 	 * stand in for identifiers — so every one is checked against the field map
 	 * first and an unknown column is dropped rather than passed through.
 	 */
-	protected function where( array $pcm_args ) {
+	public function where( array $pcm_args ) {
 		global $wpdb;
 
 		$pcm_where = array();

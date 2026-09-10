@@ -17,7 +17,7 @@ class PCM_CRM_Schema {
 	 * differs, so an rsync deploy (which never fires the activation hook)
 	 * still picks the change up on the next page load.
 	 */
-	const VERSION = '1.3.0';
+	const VERSION = '1.4.0';
 
 	const OPTION = 'pcm_crm_db_version';
 
@@ -36,6 +36,7 @@ class PCM_CRM_Schema {
 	public static function opportunities() { return self::table( 'opportunities' ); }
 	public static function activities()    { return self::table( 'activities' ); }
 	public static function submissions()   { return self::table( 'form_submissions' ); }
+	public static function history()       { return self::table( 'opportunity_history' ); }
 
 	/**
 	 * Create or alter every table.
@@ -55,7 +56,46 @@ class PCM_CRM_Schema {
 			dbDelta( $pcm_sql );
 		}
 
+		self::backfill_history();
+
 		update_option( self::OPTION, self::VERSION );
+	}
+
+	/**
+	 * Give existing opportunities a starting history row.
+	 *
+	 * Without this every deal that predates the feature reads as zero days in
+	 * stage forever, since there is nothing to measure from. Two set-based
+	 * statements rather than a loop: this runs inside a page load, and a row
+	 * at a time over a real pipeline would be felt.
+	 *
+	 * Only opportunities with no history at all are touched, so it is safe to
+	 * run again — which it will be, on every schema bump.
+	 */
+	private static function backfill_history() {
+		global $wpdb;
+
+		$pcm_opps    = self::opportunities();
+		$pcm_history = self::history();
+
+		// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+		$wpdb->query(
+			"INSERT INTO {$pcm_history}
+				(opportunity_id, stage_name, previous_stage, amount, entered_date, exited_date, is_closed, is_won, created_by_id, created_date)
+			 SELECT o.id, o.stage_name, '', o.amount, o.created_date, NULL, o.is_closed, o.is_won, o.created_by_id, o.created_date
+			 FROM {$pcm_opps} o
+			 WHERE NOT EXISTS (SELECT 1 FROM {$pcm_history} h WHERE h.opportunity_id = o.id)"
+		);
+
+		// The deal entered its current stage when it was created, as far as
+		// anything now knowable goes.
+		// phpcs:ignore WordPress.DB.PreparedSQL -- table name is internal
+		$wpdb->query( "UPDATE {$pcm_opps} SET stage_entered_date = created_date WHERE stage_entered_date = '0000-00-00 00:00:00'" );
+
+		// A deal already closed has no recorded closing moment either; its
+		// forecast close date is the best available stand-in.
+		// phpcs:ignore WordPress.DB.PreparedSQL -- table name is internal
+		$wpdb->query( "UPDATE {$pcm_opps} SET closed_date = close_date WHERE is_closed = 1 AND closed_date = '0000-00-00 00:00:00' AND close_date IS NOT NULL" );
 	}
 
 	/**
@@ -74,6 +114,7 @@ class PCM_CRM_Schema {
 		$pcm_opportunities = self::opportunities();
 		$pcm_activities    = self::activities();
 		$pcm_submissions   = self::submissions();
+		$pcm_history       = self::history();
 
 		$pcm_tables = array();
 
@@ -158,6 +199,8 @@ class PCM_CRM_Schema {
 			type varchar(80) NOT NULL DEFAULT '',
 			lead_source varchar(80) NOT NULL DEFAULT '',
 			next_step varchar(255) NOT NULL DEFAULT '',
+			stage_entered_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			closed_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			service_interest varchar(120) NOT NULL DEFAULT '',
 			closed_lost_reason varchar(255) NOT NULL DEFAULT '',
 			forecast_category varchar(40) NOT NULL DEFAULT '',
@@ -175,6 +218,8 @@ class PCM_CRM_Schema {
 			KEY pcm_opp_contact (primary_contact_id),
 			KEY pcm_opp_stage (stage_name),
 			KEY pcm_opp_close (close_date),
+			KEY pcm_opp_entered (stage_entered_date),
+			KEY pcm_opp_closed (closed_date),
 			KEY pcm_opp_owner (owner_id),
 			KEY pcm_opp_deleted (is_deleted),
 			KEY pcm_opp_sf (sf_id)
@@ -214,6 +259,36 @@ class PCM_CRM_Schema {
 			KEY pcm_act_owner (owner_id),
 			KEY pcm_act_deleted (is_deleted),
 			KEY pcm_act_sf (sf_id)
+		) {$pcm_charset};";
+
+		/* Opportunity stage history ------------------------------------------ */
+		// Salesforce's OpportunityHistory: one row per stage a deal entered.
+		// It keeps exited_date and days_in_stage as well, which Salesforce
+		// derives at report time — storing them means a stalled-deal query is
+		// a comparison rather than a scan of every row that came before.
+		//
+		// The open row is the one with exited_date NULL, and it is also the
+		// record of what stage the deal is in as far as history is concerned,
+		// which is how a transition is detected without stashing state.
+		$pcm_tables[] = "CREATE TABLE {$pcm_history} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			sf_id varchar(18) DEFAULT NULL,
+			opportunity_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			stage_name varchar(80) NOT NULL DEFAULT '',
+			previous_stage varchar(80) NOT NULL DEFAULT '',
+			amount decimal(18,2) DEFAULT NULL,
+			entered_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			exited_date datetime DEFAULT NULL,
+			days_in_stage int(11) DEFAULT NULL,
+			is_closed tinyint(1) NOT NULL DEFAULT 0,
+			is_won tinyint(1) NOT NULL DEFAULT 0,
+			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			PRIMARY KEY  (id),
+			KEY pcm_hist_opp (opportunity_id),
+			KEY pcm_hist_stage (stage_name),
+			KEY pcm_hist_entered (entered_date),
+			KEY pcm_hist_open (opportunity_id,exited_date)
 		) {$pcm_charset};";
 
 		/* Form submissions -------------------------------------------------- */

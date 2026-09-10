@@ -22,6 +22,11 @@ function pcm_crm_opportunities() {
 				'next_step'          => array( 'type' => 'text', 'sf' => 'NextStep', 'label' => 'Next Step' ),
 				'service_interest'   => array( 'type' => 'text', 'sf' => 'Service_Interest__c', 'label' => 'Interested In', 'options' => 'pcm_crm_interest_labels' ),
 				'closed_lost_reason' => array( 'type' => 'text', 'sf' => 'Closed_Lost_Reason__c', 'label' => 'Closed Lost Reason' ),
+				// Maintained by the history recorder, never posted: the moment
+				// the current stage was entered, and the moment the deal
+				// actually closed — as against close_date, which is a forecast.
+				'stage_entered_date' => array( 'type' => 'datetime', 'sf' => 'Stage_Entered_Date__c', 'label' => 'Stage Entered Date', 'readonly' => true ),
+				'closed_date'        => array( 'type' => 'datetime', 'sf' => 'Closed_Date__c', 'label' => 'Closed Date', 'readonly' => true ),
 				'forecast_category'  => array( 'type' => 'text', 'sf' => 'ForecastCategoryName', 'label' => 'Forecast Category' ),
 				'is_closed'          => array( 'type' => 'bool', 'sf' => 'IsClosed', 'label' => 'Closed', 'readonly' => true ),
 				'is_won'             => array( 'type' => 'bool', 'sf' => 'IsWon', 'label' => 'Won', 'readonly' => true ),

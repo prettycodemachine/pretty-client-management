@@ -221,6 +221,12 @@ class PCM_Related_WPDB extends FakeWPDB {
 			return array( array( 'id' => 9, 'subject' => 'Intro call', 'activity_type' => 'Call',
 				'who_id' => 5, 'what_id' => 2, 'what_type' => 'account', 'owner_id' => '1', 'is_deleted' => '0' ) );
 		}
+		if ( false !== strpos( $q, 'opportunity_history' ) ) {
+			return array( array( 'id' => 3, 'opportunity_id' => 7, 'stage_name' => 'Proposal',
+				'previous_stage' => 'Discovery', 'entered_date' => '2026-03-01 09:00:00', 'exited_date' => null,
+				'days_in_stage' => null, 'is_closed' => '0', 'is_won' => '0', 'created_by_id' => '1',
+				'created_date' => '2026-03-01 09:00:00' ) );
+		}
 		if ( false !== strpos( $q, 'contacts' ) ) {
 			return array( array( 'id' => 5, 'account_id' => 2, 'first_name' => 'Ada', 'last_name' => 'Lovelace',
 				'email' => 'a@b.c', 'owner_id' => '1', 'is_deleted' => '0' ) );
@@ -239,8 +245,12 @@ check( 'an account exposes all three lists',
 	array_keys( $related( 'accounts' ) ), array( 'contacts', 'opportunities', 'activities' ) );
 check( 'a contact exposes opportunities and activities',
 	array_keys( $related( 'contacts' ) ), array( 'opportunities', 'activities' ) );
-check( 'an opportunity exposes activities',
-	array_keys( $related( 'opportunities' ) ), array( 'activities' ) );
+check( 'an opportunity exposes activities and its stage history',
+	array_keys( $related( 'opportunities' ) ), array( 'activities', 'history' ) );
+
+$history = $related( 'opportunities' )['history'];
+check( 'the open history row is marked as current', $history[0]['_is_current'], 1 );
+check( 'and its age is measured from when it was entered', $history[0]['_days'] > 0, true );
 
 $rows = $related( 'contacts' );
 check( 'related opportunities carry their account name',
@@ -249,6 +259,73 @@ check( 'related activities carry their contact name',
 	isset( $rows['activities'][0]['_contact_name'] ), true );
 
 $GLOBALS['wpdb'] = $real_wpdb;
+
+echo "\n--- time in stage ---\n";
+check( 'whole days between two moments',
+	pcm_crm_days_between( '2026-03-01 09:00:00', '2026-03-11 09:00:00' ), 10 );
+check( 'part of a day does not count as one',
+	pcm_crm_days_between( '2026-03-01 09:00:00', '2026-03-01 23:59:00' ), 0 );
+// The seeder backdates records, so an exit can precede an entry. A negative
+// age would poison every average that reads it.
+check( 'a backwards interval is clamped rather than negative',
+	pcm_crm_days_between( '2026-03-11 09:00:00', '2026-03-01 09:00:00' ), 0 );
+// MySQL's zero date parses to the year zero rather than failing, so without
+// a guard an unrecorded stage reads as two thousand years old.
+check( 'the zero date means unrecorded, not the year zero',
+	pcm_crm_days_between( '0000-00-00 00:00:00', '2026-03-01 09:00:00' ), 0 );
+check( 'and in the other position too',
+	pcm_crm_days_between( '2026-03-01 09:00:00', '0000-00-00 00:00:00' ), 0 );
+check( 'an empty date is unrecorded as well', pcm_crm_days_between( '', '2026-03-01 09:00:00' ), 0 );
+
+check( 'the stall threshold defaults to 30 days', pcm_crm_stall_days(), 30 );
+update_option( 'pcm_crm_stall_days', 14 );
+check( 'and is configurable', pcm_crm_stall_days(), 14 );
+update_option( 'pcm_crm_stall_days', 0 );
+check( 'zero would flag everything, so it falls back', pcm_crm_stall_days(), 30 );
+delete_option( 'pcm_crm_stall_days' );
+
+check( 'stalled means open and sitting still',
+	pcm_crm_stalled_args( array() )['filters']['is_closed'], 0 );
+check( 'measured from when the stage was entered',
+	isset( pcm_crm_stalled_args( array() )['filters']['stage_entered_date']['max'] ), true );
+
+echo "\n--- stage conversion ---\n";
+class PCM_History_WPDB extends FakeWPDB {
+	public $entered = array( 'Qualification' => 40, 'Discovery' => 30, 'Proposal' => 12, 'Negotiation' => 9, 'Closed Won' => 6 );
+	function get_results( $q = '', $o = null ) {
+		if ( false !== strpos( $q, 'COUNT(DISTINCT opportunity_id)' ) ) {
+			$rows = array();
+			foreach ( $this->entered as $stage => $deals ) {
+				$rows[] = array( 'stage_name' => $stage, 'deals' => $deals );
+			}
+			return $rows;
+		}
+		return array();
+	}
+}
+$real_wpdb = $GLOBALS['wpdb'];
+$GLOBALS['wpdb'] = new PCM_History_WPDB();
+
+$conv = pcm_crm_stage_conversion();
+check( 'a row per open stage', count( $conv ), 4 );
+check( 'the first step measures Qualification to Discovery',
+	array( $conv[0]['stage'], $conv[0]['next'] ), array( 'Qualification', 'Discovery' ) );
+check( '30 of 40 reaching Discovery is 75%', $conv[0]['rate'], 75 );
+check( '12 of 30 reaching Proposal is 40%', $conv[1]['rate'], 40 );
+check( 'the last open stage converts to won', $conv[3]['next'], 'Closed Won' );
+check( 'and 6 of 9 is 67%', $conv[3]['rate'], 67 );
+
+// A deal can re-enter a stage, so a later stage can hold more deals than an
+// earlier one. Reporting 150% would read as a bug rather than as churn.
+$GLOBALS['wpdb']->entered = array( 'Qualification' => 4, 'Discovery' => 6 );
+check( 'a rate cannot exceed 100%', pcm_crm_stage_conversion()[0]['rate'], 100 );
+
+$GLOBALS['wpdb']->entered = array();
+check( 'no history yet reports zero rather than dividing by zero',
+	pcm_crm_stage_conversion()[0]['rate'], 0 );
+
+$GLOBALS['wpdb'] = $real_wpdb;
+check( 'the won stage is found by its flag', pcm_crm_won_stage_name(), 'Closed Won' );
 
 echo "\n--- filter operators ---\n";
 $opps_where = new ReflectionMethod( 'PCM_CRM_Model', 'where' );
@@ -341,7 +418,12 @@ check( 'the seed command is CLI-only', isset( WP_CLI::$commands['pcm-crm'] ), tr
 $GLOBALS['pcm_test_host'] = 'example.com';
 
 echo "\n--- schema ---\n";
-check( 'five tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 5 );
+check( 'six tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 6 );
+$defs = implode( "\n", ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) );
+check( 'history has an index for finding the open row',
+	strpos( $defs, 'pcm_hist_open (opportunity_id,exited_date)' ) !== false, true );
+check( 'opportunities can be sorted by when they entered their stage',
+	strpos( $defs, 'pcm_opp_entered (stage_entered_date)' ) !== false, true );
 
 echo "\n" . ( $fail ? "$fail FAILED\n" : "All checks passed\n" );
 exit( $fail ? 1 : 0 );

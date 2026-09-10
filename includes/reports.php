@@ -56,12 +56,17 @@ function pcm_crm_dashboard_data( array $pcm_args = array() ) {
 			'contactCount'   => $pcm_contacts->count( $pcm_args ),
 			'accountCount'   => pcm_crm_accounts()->count( $pcm_args ),
 			'overdueCount'   => $pcm_activities->count( $pcm_overdue ),
+			'cycleDays'      => pcm_crm_sales_cycle_days( $pcm_args ),
+			'stalledCount'   => $pcm_opps->count( pcm_crm_stalled_args( $pcm_args ) ),
+			'stallDays'      => pcm_crm_stall_days(),
 		),
 		'charts' => array(
 			'pipelineByStage' => pcm_crm_pipeline_by_stage( $pcm_open ),
 			'byMonth'         => pcm_crm_opportunities_by_month( $pcm_args ),
 			'byLeadSource'    => $pcm_opps->group_by( 'lead_source', pcm_crm_merge_args( $pcm_args, array() ), 'amount' ),
 			'activityByType'  => $pcm_activities->group_by( 'activity_type', $pcm_args ),
+			'avgDaysByStage'  => pcm_crm_avg_days_by_stage(),
+			'conversion'      => pcm_crm_stage_conversion(),
 		),
 	);
 }
@@ -189,9 +194,19 @@ function pcm_crm_pipeline_data( array $pcm_args = array() ) {
 		$pcm_items = $pcm_opps->find( $pcm_stage_args );
 
 		$pcm_accounts = pcm_crm_accounts()->get_many( wp_list_pluck( $pcm_items, 'account_id' ) );
+		$pcm_now      = current_time( 'mysql' );
+		$pcm_stall    = pcm_crm_stall_days();
+
 		foreach ( $pcm_items as $pcm_i => $pcm_item ) {
 			$pcm_items[ $pcm_i ]['_account_name'] = isset( $pcm_accounts[ $pcm_item['account_id'] ] )
 				? $pcm_accounts[ $pcm_item['account_id'] ]['name'] : '';
+
+			// The board's whole purpose is spotting what is not moving, so
+			// every card carries its own age in the column it sits in.
+			$pcm_days = pcm_crm_days_between( $pcm_item['stage_entered_date'], $pcm_now );
+
+			$pcm_items[ $pcm_i ]['_days_in_stage'] = $pcm_days;
+			$pcm_items[ $pcm_i ]['_is_stalled']    = ( empty( $pcm_stage['is_closed'] ) && $pcm_days >= $pcm_stall ) ? 1 : 0;
 		}
 
 		$pcm_columns[] = array(
@@ -227,4 +242,155 @@ function pcm_crm_run_report( $pcm_object, $pcm_group_by, array $pcm_args = array
 		'total'  => $pcm_model->count( $pcm_args ),
 		'sum'    => $pcm_sum ? $pcm_model->sum( 'amount', $pcm_args ) : 0,
 	);
+}
+
+/* ---------------------------------------------------------------------------
+   Stage history metrics
+   --------------------------------------------------------------------------- */
+
+/**
+ * Deals sitting in one stage longer than the configured threshold.
+ *
+ * Open deals only — a closed one is not stalled, it is finished — and measured
+ * from stage_entered_date, which the history recorder maintains.
+ */
+function pcm_crm_stalled_args( array $pcm_args = array() ) {
+	$pcm_cutoff = gmdate( 'Y-m-d H:i:s', strtotime( '-' . pcm_crm_stall_days() . ' days', current_time( 'timestamp' ) ) );
+
+	return pcm_crm_merge_args( $pcm_args, array(
+		'is_closed'          => 0,
+		'stage_entered_date' => array( 'max' => $pcm_cutoff ),
+	) );
+}
+
+/**
+ * Average days between creation and closing, for deals that actually closed.
+ *
+ * Won deals only by default: a loss can close in a day because it was never
+ * real, and averaging those in makes the cycle look shorter than it sells.
+ */
+function pcm_crm_sales_cycle_days( array $pcm_args = array(), $pcm_won_only = true ) {
+	global $wpdb;
+
+	$pcm_model = pcm_crm_opportunities();
+	$pcm_extra = $pcm_won_only ? array( 'is_won' => 1 ) : array( 'is_closed' => 1 );
+
+	$pcm_where = $pcm_model->where( pcm_crm_merge_args( $pcm_args, $pcm_extra ) );
+
+	$pcm_table = $pcm_model->table();
+
+	// Rows with no recorded closing moment are excluded rather than counted as
+	// zero-day cycles, which would drag the average toward nothing.
+	$pcm_clause = $pcm_where ? $pcm_where . " AND closed_date > '0000-00-00 00:00:00'" : "WHERE closed_date > '0000-00-00 00:00:00'";
+
+	// phpcs:ignore WordPress.DB.PreparedSQL -- clauses built and escaped by the model
+	$pcm_avg = $wpdb->get_var( "SELECT AVG(DATEDIFF(closed_date, created_date)) FROM {$pcm_table} {$pcm_clause}" );
+
+	return null === $pcm_avg ? 0 : (int) round( (float) $pcm_avg );
+}
+
+/**
+ * Average days spent in each stage, from the history rows that have closed.
+ *
+ * Only exited rows count: a deal still sitting in Proposal has not finished
+ * telling us how long Proposal takes, and including it would report an average
+ * that falls whenever a new deal arrives.
+ */
+function pcm_crm_avg_days_by_stage() {
+	global $wpdb;
+
+	$pcm_table = PCM_CRM_Schema::history();
+
+	// phpcs:ignore WordPress.DB.PreparedSQL -- table name is internal
+	$pcm_rows = $wpdb->get_results(
+		"SELECT stage_name, AVG(days_in_stage) AS avg_days, COUNT(*) AS count
+		 FROM {$pcm_table}
+		 WHERE exited_date IS NOT NULL AND days_in_stage IS NOT NULL
+		 GROUP BY stage_name",
+		ARRAY_A
+	);
+
+	$pcm_index = array();
+	foreach ( (array) $pcm_rows as $pcm_row ) {
+		$pcm_index[ $pcm_row['stage_name'] ] = array(
+			'days'  => (int) round( (float) $pcm_row['avg_days'] ),
+			'count' => (int) $pcm_row['count'],
+		);
+	}
+
+	// Emitted in pipeline order, including stages nothing has left yet, so the
+	// chart reads as a funnel rather than as whichever stages had data.
+	$pcm_out = array();
+	foreach ( pcm_crm_stages() as $pcm_stage ) {
+		$pcm_name = $pcm_stage['name'];
+
+		$pcm_out[] = array(
+			'value' => $pcm_name,
+			'count' => isset( $pcm_index[ $pcm_name ] ) ? $pcm_index[ $pcm_name ]['count'] : 0,
+			'total' => isset( $pcm_index[ $pcm_name ] ) ? $pcm_index[ $pcm_name ]['days'] : 0,
+		);
+	}
+
+	return $pcm_out;
+}
+
+/**
+ * Stage-to-stage conversion.
+ *
+ * Counts distinct deals that ever *entered* each stage, which is what history
+ * is for — a deal now in Negotiation entered Proposal on the way, and asking
+ * the opportunities table alone would only ever see where things are now.
+ *
+ * The rate on a stage is the share of deals reaching it that went on to reach
+ * the next open stage; the last open stage converts to won.
+ */
+function pcm_crm_stage_conversion() {
+	global $wpdb;
+
+	$pcm_table = PCM_CRM_Schema::history();
+
+	// phpcs:ignore WordPress.DB.PreparedSQL -- table name is internal
+	$pcm_rows = $wpdb->get_results(
+		"SELECT stage_name, COUNT(DISTINCT opportunity_id) AS deals FROM {$pcm_table} GROUP BY stage_name",
+		ARRAY_A
+	);
+
+	$pcm_entered = array();
+	foreach ( (array) $pcm_rows as $pcm_row ) {
+		$pcm_entered[ $pcm_row['stage_name'] ] = (int) $pcm_row['deals'];
+	}
+
+	$pcm_open = pcm_crm_open_stages();
+	$pcm_out  = array();
+
+	foreach ( $pcm_open as $pcm_i => $pcm_stage ) {
+		$pcm_name = $pcm_stage['name'];
+		$pcm_here = isset( $pcm_entered[ $pcm_name ] ) ? $pcm_entered[ $pcm_name ] : 0;
+
+		$pcm_next_stage = isset( $pcm_open[ $pcm_i + 1 ] ) ? $pcm_open[ $pcm_i + 1 ]['name'] : pcm_crm_won_stage_name();
+		$pcm_next       = ( $pcm_next_stage && isset( $pcm_entered[ $pcm_next_stage ] ) ) ? $pcm_entered[ $pcm_next_stage ] : 0;
+
+		$pcm_out[] = array(
+			'stage' => $pcm_name,
+			'next'  => $pcm_next_stage,
+			'deals' => $pcm_here,
+			'moved' => $pcm_next,
+			// Capped at 100: a deal can re-enter a stage, and a later stage
+			// holding more deals than an earlier one would otherwise report a
+			// conversion above everything, which reads as a bug.
+			'rate'  => $pcm_here ? min( 100, (int) round( ( $pcm_next / $pcm_here ) * 100 ) ) : 0,
+		);
+	}
+
+	return $pcm_out;
+}
+
+function pcm_crm_won_stage_name() {
+	foreach ( pcm_crm_stages() as $pcm_stage ) {
+		if ( ! empty( $pcm_stage['is_won'] ) ) {
+			return $pcm_stage['name'];
+		}
+	}
+
+	return '';
 }

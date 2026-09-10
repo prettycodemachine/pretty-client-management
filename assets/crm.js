@@ -451,6 +451,10 @@
 				{ key: 'amount', label: 'Amount', money: true },
 				{ key: 'probability', label: '%', render: function (row) { return row.probability + '%'; }, num: true },
 				{ key: 'close_date', label: 'Close', date: true },
+				// Sorted on stage_entered_date, the real column behind it —
+				// ascending puts the longest-sitting deals first, which is the
+				// order worth looking at.
+				{ key: 'stage_entered_date', label: 'In stage', age: true },
 				{ key: '_owner_name', label: 'Owner' }
 			],
 			filters: function () {
@@ -1182,6 +1186,17 @@
 			]);
 		}
 
+		if (column.age) {
+			var days = Number(row._days_in_stage || 0);
+			var text = days === 1 ? '1 day' : days + ' days';
+
+			if (row._is_stalled) {
+				return el('td', {}, [el('span.pcm-crm-badge.pcm-crm-badge-due', { text: '⚠ ' + text })]);
+			}
+
+			return el('td', { text: row.is_closed ? '—' : text });
+		}
+
 		if (column.stage) {
 			var tone = row.is_won ? '.pcm-crm-badge-won' : (row.is_closed ? '.pcm-crm-badge-lost' : '.pcm-crm-badge-open');
 			return el('td', {}, [el('span.pcm-crm-badge' + tone, { text: value || '—' })]);
@@ -1867,6 +1882,13 @@
 			panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: id }, hidden: true }, [list]));
 		}
 
+		if (object === 'opportunities' && related.history && related.history.length) {
+			tabs.push({ id: 'history', label: 'Stage History', count: related.history.length });
+			panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: 'history' }, hidden: true }, [
+				stageHistory(record, related.history)
+			]));
+		}
+
 		// An activity has no children, but it does have parents, and being
 		// able to step up to them is the same affordance in the other
 		// direction.
@@ -1942,6 +1964,49 @@
 				{ text: formatDate(row.activity_date) }
 			];
 		};
+	}
+
+	/**
+	 * A deal's path through the stages.
+	 *
+	 * Read as a timeline rather than a table because the shape of it is the
+	 * point — where it moved quickly, and where it sat.
+	 */
+	function stageHistory(record, rows) {
+		var block = el('div.pcm-crm-related');
+
+		var total = rows.reduce(function (sum, row) { return sum + Number(row._days || 0); }, 0);
+		var closed = Number(record.is_closed);
+
+		block.appendChild(el('div.pcm-crm-history-summary', {}, [
+			el('span', {}, [el('strong', { text: String(total) }), closed ? ' days, start to close' : ' days in the pipeline so far']),
+			el('span', {}, [el('strong', { text: String(rows.length) }), rows.length === 1 ? ' stage' : ' stages'])
+		]));
+
+		var list = el('ol.pcm-crm-history');
+
+		rows.forEach(function (row) {
+			var stalled = row._is_current && !closed && Number(row._days) >= Number(state.boot.stallDays || 30);
+
+			list.appendChild(el('li.pcm-crm-history-step' + (row._is_current ? '.is-current' : '') + (stalled ? '.is-stalled' : ''), {}, [
+				el('div.pcm-crm-history-head', {}, [
+					el('span.pcm-crm-history-stage', { text: row.stage_name }),
+					el('span.pcm-crm-history-days', {
+						text: row._is_current
+							? Number(row._days) + (Number(row._days) === 1 ? ' day (current)' : ' days (current)')
+							: Number(row._days) + (Number(row._days) === 1 ? ' day' : ' days')
+					})
+				]),
+				el('div.pcm-crm-history-when', {
+					text: 'Entered ' + formatDateTime(row.entered_date) +
+						(row.exited_date ? ' · left ' + formatDateTime(row.exited_date) : '') +
+						(row._changed_by ? ' · ' + row._changed_by : '')
+				})
+			]));
+		});
+
+		block.appendChild(list);
+		return block;
 	}
 
 	/**
@@ -2137,9 +2202,12 @@
 				el('span', { text: money(item.amount) })
 			]),
 			el('span.meta', {}, [
-				el('span.pcm-crm-muted', { text: 'Closes ' + formatDate(item.close_date) })
+				el('span.pcm-crm-muted', { text: 'Closes ' + formatDate(item.close_date) }),
+				stageAge(item)
 			])
 		]);
+
+		if (item._is_stalled) { card.classList.add('is-stalled'); }
 
 		card.addEventListener('dragstart', function (event) {
 			event.dataTransfer.setData('text/plain', String(item.id));
@@ -2149,6 +2217,23 @@
 		card.addEventListener('dragend', function () { card.classList.remove('is-dragging'); });
 
 		return card;
+	}
+
+	/**
+	 * How long a deal has sat where it is.
+	 *
+	 * The board exists to show what is not moving, so this is on the card
+	 * rather than a column to sort by — you should not have to go looking.
+	 */
+	function stageAge(item) {
+		var days = Number(item._days_in_stage || 0);
+		var label = days === 1 ? '1 day here' : days + ' days here';
+
+		if (item._is_stalled) {
+			return el('span.pcm-crm-stalled', { title: 'No stage change in ' + days + ' days', text: '⚠ ' + label });
+		}
+
+		return el('span.pcm-crm-muted', { text: label });
 	}
 
 	/* ---------------------------------------------------------------------
@@ -2181,6 +2266,9 @@
 				tile('Weighted', money(tiles.weightedValue), 'Discounted by stage probability'),
 				tile('Won', money(tiles.wonValue), tiles.wonCount + ' closed won'),
 				tile('Win rate', tiles.winRate + '%', 'Of everything closed'),
+				tile('Sales cycle', tiles.cycleDays + (tiles.cycleDays === 1 ? ' day' : ' days'), 'Average, created to won'),
+				tile('Stalled', String(tiles.stalledCount),
+					'No stage change in ' + tiles.stallDays + '+ days', tiles.stalledCount > 0),
 				tile('Accounts', String(tiles.accountCount), tiles.contactCount + ' contacts'),
 				tile('Overdue', String(tiles.overdueCount), 'Activities past due', tiles.overdueCount > 0)
 			]);
@@ -2196,7 +2284,9 @@
 					centerLabel: 'activities'
 				}), legend(data.charts.activityByType.map(function (row) {
 					return { label: (row.value || 'Unspecified') + ' (' + row.count + ')' };
-				})))
+				}))),
+				chartCard('Average days in stage', charts.days(data.charts.avgDaysByStage)),
+				chartCard('Stage conversion', conversionTable(data.charts.conversion))
 			]);
 
 			clear(dom.body);
@@ -2230,6 +2320,49 @@
 				item.label
 			]);
 		}));
+	}
+
+	/**
+	 * Conversion as a table rather than a chart.
+	 *
+	 * Each row is a claim with two numbers behind it — "62% of deals that
+	 * reached Proposal went on to Negotiation" — and a bar would show the
+	 * percentage while hiding the counts that say whether to believe it.
+	 */
+	function conversionTable(rows) {
+		if (!rows || !rows.length) {
+			return el('p.pcm-crm-related-empty', { text: 'No stage history yet.' });
+		}
+
+		var body = el('tbody');
+
+		rows.forEach(function (row) {
+			body.appendChild(el('tr', { style: 'cursor:default' }, [
+				el('td.pcm-crm-strong', { text: row.stage }),
+				el('td', {}, [el('span.pcm-crm-muted', { text: '→ ' + (row.next || 'Won') })]),
+				el('td.pcm-crm-num', { text: String(row.deals) }),
+				el('td.pcm-crm-num', { text: String(row.moved) }),
+				el('td.pcm-crm-num', {}, [
+					el('span.pcm-crm-rate', {}, [
+						el('span.pcm-crm-rate-bar', { style: 'width:' + row.rate + '%' }),
+						el('span.pcm-crm-rate-value', { text: row.rate + '%' })
+					])
+				])
+			]));
+		});
+
+		return el('div.pcm-crm-table-wrap', { style: 'border:0' }, [
+			el('table.pcm-crm-table', {}, [
+				el('thead', {}, [el('tr', {}, [
+					el('th', { text: 'Stage' }),
+					el('th', { text: 'To' }),
+					el('th', { text: 'Reached' }),
+					el('th', { text: 'Moved on' }),
+					el('th', { text: 'Rate' })
+				])]),
+				body
+			])
+		]);
 	}
 
 	/* ---------------------------------------------------------------------

@@ -405,6 +405,16 @@
 .pcm-crm-card-deal.is-dragging { opacity: 0.4; }
 .pcm-crm-card-deal .name { font-weight: 700; color: var(--pcm-ink); display: block; margin-bottom: 3px; }
 .pcm-crm-card-deal .meta { font-size: 0.78rem; color: var(--pcm-body); display: flex; justify-content: space-between; gap: 8px; }
+/* A card that has not moved in too long. The left edge carries it rather than
+   the whole card turning red — a board where half the cards shout is a board
+   nobody reads. */
+.pcm-crm-card-deal.is-stalled {
+  border-color: var(--pcm-accent-deep);
+  border-left-width: 6px;
+  box-shadow: 3px 3px 0 var(--pcm-accent);
+}
+.pcm-crm-stalled { color: var(--pcm-accent-deep); font-weight: 700; }
+
 .pcm-crm-column-empty { font-size: 0.82rem; color: var(--pcm-gray); text-align: center; padding: 20px 0; }
 
 /* Record modal ------------------------------------------------------------- */
@@ -783,6 +793,70 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 
 .pcm-crm-related-empty { color: var(--pcm-gray); font-size: 0.88rem; padding: 8px 0; }
 
+/* Stage history ------------------------------------------------------------- */
+.pcm-crm-history-summary {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--pcm-paper-tint);
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+.pcm-crm-history-summary strong { color: var(--pcm-ink); font-size: 1.05rem; }
+
+.pcm-crm-history { list-style: none; margin: 0; padding: 0; }
+.pcm-crm-history-step {
+  position: relative;
+  padding: 0 0 18px 22px;
+  border-left: 2px solid var(--pcm-gray-light);
+}
+.pcm-crm-history-step:last-child { border-left-color: transparent; padding-bottom: 0; }
+.pcm-crm-history-step::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-blue-deep);
+}
+/* The stage it is in now is filled, so the eye lands on it first. */
+.pcm-crm-history-step.is-current::before { background: var(--pcm-blue-deep); }
+.pcm-crm-history-step.is-stalled::before { background: var(--pcm-accent-deep); border-color: var(--pcm-accent-deep); }
+.pcm-crm-history-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.pcm-crm-history-stage { font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-history-days { font-size: 0.82rem; color: var(--pcm-body); }
+.pcm-crm-history-step.is-stalled .pcm-crm-history-days { color: var(--pcm-accent-deep); font-weight: 700; }
+.pcm-crm-history-when { font-size: 0.78rem; color: var(--pcm-gray); margin-top: 2px; }
+
+/* Conversion rate bars ------------------------------------------------------ */
+.pcm-crm-rate {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 92px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: var(--pcm-paper-tint);
+  overflow: hidden;
+}
+.pcm-crm-rate-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--pcm-blue);
+}
+.pcm-crm-rate-value { position: relative; font-weight: 700; color: var(--pcm-ink); font-size: 0.82rem; }
+
+/* Timeline
 /* States -------------------------------------------------------------------- */
 .pcm-crm-loading, .pcm-crm-empty {
   padding: 40px 20px;

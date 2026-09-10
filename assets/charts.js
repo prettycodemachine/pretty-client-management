@@ -254,8 +254,47 @@
 		return chart;
 	}
 
+	/**
+	 * Horizontal bars measured in days rather than currency.
+	 *
+	 * The value chart formats its trailing label as money, which would report
+	 * an average of 12 days as $12.
+	 */
+	function daysChart(rows) {
+		var W = 520;
+		var rowH = 38;
+		var labelW = 130;
+		var H = Math.max(rows.length * rowH + 16, 60);
+		var chart = svg(W, H);
+		var max = Math.max.apply(null, rows.map(function (r) { return r.total || 0; }).concat([1]));
+		var colors = palette();
+
+		rows.forEach(function (row, i) {
+			var y = i * rowH + 8;
+			var barW = Math.max(((row.total || 0) / max) * (W - labelW - 110), row.total ? 3 : 0);
+
+			chart.appendChild(text(row.value || '—', {
+				x: labelW - 10, y: y + 15, 'text-anchor': 'end',
+				'font-size': '12', 'font-weight': '700', fill: '#2c2c2e'
+			}));
+
+			chart.appendChild(el('rect', { x: labelW, y: y, width: W - labelW - 110, height: 22, rx: 5, fill: '#f4f8fc' }));
+			chart.appendChild(el('rect', { x: labelW, y: y, width: barW, height: 22, rx: 5, fill: colors[i % colors.length] }));
+
+			// A stage nothing has left yet has no average, and reporting that
+			// as "0 days" would read as instant rather than as unknown.
+			chart.appendChild(text(
+				row.count ? (row.total + (row.total === 1 ? ' day' : ' days') + '  ·  ' + row.count) : 'no data yet',
+				{ x: W - 104, y: y + 15, 'font-size': '11', fill: row.count ? '#46464a' : '#aaaaaa' }
+			));
+		});
+
+		return chart;
+	}
+
 	window.PCM_CRM_Charts = {
 		bar: barChart,
+		days: daysChart,
 		funnel: funnelChart,
 		donut: donutChart,
 		columns: columnChart,

@@ -29,6 +29,11 @@ function pcm_crm_register_settings() {
 		'sanitize_callback' => 'wp_kses_post',
 		'default'           => '',
 	) );
+	register_setting( 'pcm_crm_settings', 'pcm_crm_stall_days', array(
+		'type'              => 'integer',
+		'sanitize_callback' => 'absint',
+		'default'           => 30,
+	) );
 	register_setting( 'pcm_crm_settings', 'pcm_crm_attachment_ids', array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_sanitize_ids',
@@ -196,6 +201,29 @@ function pcm_crm_render_settings() {
 
 			<?php submit_button(); ?>
 		</form>
+
+		<div class="pcm-crm-card">
+			<h2><?php esc_html_e( 'Pipeline', 'pcm-crm' ); ?></h2>
+			<form method="post" action="options.php">
+				<?php settings_fields( 'pcm_crm_settings' ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row">
+							<label for="pcm_crm_stall_days"><?php esc_html_e( 'Stalled after', 'pcm-crm' ); ?></label>
+						</th>
+						<td>
+							<input type="number" min="1" step="1" class="small-text" id="pcm_crm_stall_days"
+								name="pcm_crm_stall_days" value="<?php echo esc_attr( pcm_crm_stall_days() ); ?>">
+							<?php esc_html_e( 'days in the same stage', 'pcm-crm' ); ?>
+							<p class="description">
+								<?php esc_html_e( 'How long an open deal may sit in one stage before the board flags it. A judgement about how you sell, not a fact about the software — a long enterprise cycle wants a higher number than a quick retainer.', 'pcm-crm' ); ?>
+							</p>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button( __( 'Save pipeline settings', 'pcm-crm' ), 'secondary' ); ?>
+			</form>
+		</div>
 
 		<div class="pcm-crm-card">
 			<h2><?php esc_html_e( 'Send a test', 'pcm-crm' ); ?></h2>

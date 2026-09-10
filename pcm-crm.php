@@ -45,6 +45,7 @@ require_once PCM_CRM_DIR . 'includes/model-contact.php';
 require_once PCM_CRM_DIR . 'includes/model-opportunity.php';
 require_once PCM_CRM_DIR . 'includes/model-activity.php';
 require_once PCM_CRM_DIR . 'includes/model-submission.php';
+require_once PCM_CRM_DIR . 'includes/model-history.php';
 require_once PCM_CRM_DIR . 'includes/reports.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-rest.php';
 require_once PCM_CRM_DIR . 'includes/csv.php';

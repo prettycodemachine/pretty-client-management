@@ -274,6 +274,15 @@ class PCM_CRM_REST {
 				$pcm_items[ $pcm_i ]['_contact_name'] = pcm_crm_contact_name( $pcm_contacts[ $pcm_item['who_id'] ] );
 			}
 
+			// Days in stage is computed, not stored: it changes every midnight,
+			// and a stored copy would be wrong for most of the day.
+			if ( 'opportunity' === $pcm_object ) {
+				$pcm_days = pcm_crm_days_between( $pcm_item['stage_entered_date'], current_time( 'mysql' ) );
+
+				$pcm_items[ $pcm_i ]['_days_in_stage'] = $pcm_days;
+				$pcm_items[ $pcm_i ]['_is_stalled']    = ( empty( $pcm_item['is_closed'] ) && $pcm_days >= pcm_crm_stall_days() ) ? 1 : 0;
+			}
+
 			if ( isset( $pcm_item['owner_id'] ) ) {
 				$pcm_items[ $pcm_i ]['_owner_name'] = pcm_crm_user_name( $pcm_item['owner_id'] );
 			}
@@ -328,6 +337,7 @@ class PCM_CRM_REST {
 
 		if ( 'opportunities' === $pcm_object ) {
 			$pcm_out['activities'] = self::expand( 'activity', pcm_crm_activities_for( 'opportunity', $pcm_id ) );
+			$pcm_out['history']    = pcm_crm_stage_history_for( $pcm_id );
 		}
 
 		return rest_ensure_response( $pcm_out );
@@ -350,6 +360,7 @@ class PCM_CRM_REST {
 			'interests'         => pcm_crm_interest_options(),
 			'owners'            => pcm_crm_owner_choices(),
 			'currency'          => pcm_crm_currency_symbol(),
+			'stallDays'         => pcm_crm_stall_days(),
 		) );
 	}
 

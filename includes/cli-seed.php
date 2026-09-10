@@ -141,6 +141,19 @@ class PCM_CRM_Seed_Command {
 
 		$total = 0;
 
+		// History hangs off the opportunities and is not recorded by id, so it
+		// goes by its parent — otherwise removing the sample set would leave
+		// orphaned stage rows behind to skew every average.
+		$ids = isset( $stored['opportunities'] ) ? array_filter( array_map( 'absint', $stored['opportunities'] ) ) : array();
+
+		if ( $ids ) {
+			$history = PCM_CRM_Schema::history();
+			$in      = implode( ',', $ids );
+
+			// phpcs:ignore WordPress.DB.PreparedSQL -- ids are cast to int above
+			$total += (int) $wpdb->query( "DELETE FROM {$history} WHERE opportunity_id IN ({$in})" );
+		}
+
 		foreach ( $tables as $key => $table ) {
 			$ids = isset( $stored[ $key ] ) ? array_filter( array_map( 'absint', $stored[ $key ] ) ) : array();
 
@@ -488,10 +501,106 @@ class PCM_CRM_Seed_Command {
 			$this->backdate( PCM_CRM_Schema::opportunities(), $id, $this->days( $created_offset ) );
 			$this->remember( 'opportunities', $id );
 
+			$this->seed_stage_history( $id, $stage_name, $created_offset, $close_offset );
+
 			$opportunities[] = array( 'id' => (int) $id, 'account_id' => $account_id, 'contact_id' => $contact ? $contact['id'] : 0 );
 		}
 
 		return $opportunities;
+	}
+
+	/**
+	 * Walk a deal through the stages it must have passed on the way.
+	 *
+	 * The recorder that runs on a real save writes one row at the moment of
+	 * the change, which for seeded data would put every stage change at the
+	 * instant the command ran — every deal a day old, every average zero. So
+	 * the rows are written directly, spread across the deal's real lifetime.
+	 *
+	 * Roughly a quarter of open deals are left sitting well past the stall
+	 * threshold, because a board where nothing is ever stuck teaches nothing
+	 * about a feature for spotting stuck deals.
+	 */
+	private function seed_stage_history( $opportunity_id, $stage_name, $created_offset, $close_offset ) {
+		global $wpdb;
+
+		$stages = pcm_crm_stages();
+		$path   = array();
+
+		// Every stage up to and including the one it reached: a deal in
+		// Negotiation went through Qualification, Discovery and Proposal, and
+		// conversion rates are meaningless without that trail.
+		foreach ( $stages as $stage ) {
+			if ( ! empty( $stage['is_closed'] ) && $stage['name'] !== $stage_name ) {
+				continue;
+			}
+
+			$path[] = $stage['name'];
+
+			if ( $stage['name'] === $stage_name ) {
+				break;
+			}
+		}
+
+		$is_closed = pcm_crm_stage( $stage_name ) && ! empty( pcm_crm_stage( $stage_name )['is_closed'] );
+		$ends_at   = $is_closed ? $close_offset : 0;
+		$span      = max( 1, $ends_at - $created_offset );
+
+		$cursor = $created_offset;
+		$count  = count( $path );
+
+		// A quarter of open deals stall in their final stage.
+		$stalled = ! $is_closed && mt_rand( 1, 4 ) === 1;
+
+		foreach ( $path as $index => $stage ) {
+			$last = ( $index === $count - 1 );
+
+			if ( $last ) {
+				$entered = $stalled ? -mt_rand( 45, 120 ) : $cursor;
+				$exited  = null;
+
+				if ( $is_closed ) {
+					$entered = $ends_at;
+				}
+			} else {
+				$entered = $cursor;
+				// Spread the earlier stages across the time before the last
+				// one, so no deal moves through four stages in an afternoon.
+				$cursor  = min( $ends_at, $cursor + max( 1, (int) round( $span / $count ) ) + mt_rand( -3, 8 ) );
+				$exited  = $cursor;
+			}
+
+			$definition = pcm_crm_stage( $stage );
+
+			$wpdb->insert(
+				PCM_CRM_Schema::history(),
+				array(
+					'opportunity_id' => $opportunity_id,
+					'stage_name'     => $stage,
+					'previous_stage' => $index ? $path[ $index - 1 ] : '',
+					'entered_date'   => $this->days( $entered ),
+					'exited_date'    => null === $exited ? null : $this->days( $exited ),
+					'days_in_stage'  => null === $exited ? null : max( 0, $exited - $entered ),
+					'is_closed'      => $definition ? (int) $definition['is_closed'] : 0,
+					'is_won'         => $definition ? (int) $definition['is_won'] : 0,
+					'created_date'   => $this->days( $entered ),
+				),
+				array( '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s' )
+			);
+
+			if ( $last ) {
+				$wpdb->update(
+					PCM_CRM_Schema::opportunities(),
+					array(
+						'stage_entered_date' => $this->days( $entered ),
+						'closed_date'        => $is_closed ? $this->days( $ends_at ) : '0000-00-00 00:00:00',
+					),
+					array( 'id' => $opportunity_id ),
+					array( '%s', '%s' ),
+					array( '%d' )
+				);
+			}
+		}
 	}
 
 	private function seed_activities( $accounts, $contacts, $opportunities, $owners ) {
