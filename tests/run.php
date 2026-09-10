@@ -211,7 +211,9 @@ check( 'Web is still offered', in_array( 'Web', pcm_crm_lead_sources(), true ), 
 echo "\n--- salesforce field map ---\n";
 $map = $opps->salesforce_map();
 check( 'stage maps to StageName', $map['stage_name'], 'StageName' );
-check( 'account maps to AccountId', $map['account_id'], 'AccountId' );
+// A column holding one of our ids must never wear a Salesforce standard name:
+// Data Loader would map it automatically and reject every row.
+check( 'account id travels as a PCM custom field', $map['account_id'], 'PCM_Account_Id__c' );
 check( 'contacts map LastName', pcm_crm_contacts()->salesforce_map()['last_name'], 'LastName' );
 check( 'name_key is not exported', isset( pcm_crm_accounts()->salesforce_map()['name_key'] ), false );
 
@@ -242,7 +244,8 @@ echo "\n--- system information ---\n";
 foreach ( array( 'accounts', 'contacts', 'opportunities', 'activities' ) as $slug ) {
 	$model = PCM_CRM_REST::model( $slug );
 	check( $slug . ' record who last changed it', $model->has_field( 'last_modified_by_id' ), true );
-	check( $slug . ' maps it for Salesforce', $model->salesforce_map()['last_modified_by_id'], 'LastModifiedById' );
+	check( $slug . ' keeps the modifier as a PCM field, not a Salesforce user',
+		$model->salesforce_map()['last_modified_by_id'], 'PCM_Last_Modified_By__c' );
 	check( $slug . ' will not let it be written from a request',
 		isset( $model->sanitize( array( 'last_modified_by_id' => 99 ) )['last_modified_by_id'] ), false );
 }
@@ -594,6 +597,51 @@ check( 'www production is refused', $allowed( 'www.prettycodemachine.com' ), fal
 check( 'an unknown host is refused', $allowed( 'some-other-site.com' ), false );
 check( 'the seed command is CLI-only', isset( WP_CLI::$commands['pcm-crm'] ), true );
 $GLOBALS['pcm_test_host'] = 'example.com';
+
+echo "\n--- export headers ---\n";
+// The rule: a Salesforce standard name only where the value loads as it
+// stands. Anything holding one of our ids gets a PCM-prefixed custom name.
+foreach ( array( 'accounts', 'contacts', 'opportunities', 'activities' ) as $slug ) {
+	$offenders = array();
+
+	foreach ( PCM_CRM_REST::model( $slug )->salesforce_map() as $field => $api ) {
+		if ( preg_match( '/_id$/', $field ) && ! preg_match( '/__c$/', $api ) ) {
+			$offenders[] = $field . ' -> ' . $api;
+		}
+	}
+
+	check( $slug . ': no id column wears a standard name', $offenders, array() );
+}
+
+// sf_id is empty until a migration fills it, and a blank column called Id is
+// the one thing Data Loader should never be handed.
+check( 'the empty Salesforce id column is not exported at all',
+	isset( pcm_crm_accounts()->salesforce_map()['sf_id'] ), false );
+check( 'value fields keep their standard names',
+	pcm_crm_opportunities()->salesforce_map()['stage_name'], 'StageName' );
+check( 'and so do audit dates, which are values',
+	pcm_crm_accounts()->salesforce_map()['created_date'], 'CreatedDate' );
+
+echo "\n--- NPSP data import ---\n";
+$npsp = pcm_crm_npsp_headers( false );
+check( 'the file leads with our own ids for tracing back',
+	array_slice( $npsp, 0, 2 ), array( 'PCM_Contact_Id__c', 'PCM_Account_Id__c' ) );
+check( 'a person and their organization are on one row',
+	in_array( 'Contact1_First_Name__c', $npsp, true ) && in_array( 'Account1_Name__c', $npsp, true ), true );
+check( 'donations are left out unless asked for',
+	in_array( 'Donation_Amount__c', $npsp, true ), false );
+check( 'and included when they are',
+	in_array( 'Donation_Amount__c', pcm_crm_npsp_headers( true ), true ), true );
+
+// Which spelling an org uses depends on how NPSP was installed, so it is a
+// setting rather than a guess.
+check( 'no namespace by default', pcm_crm_npsp_prefix(), '' );
+update_option( 'pcm_crm_npsp_namespace', '1' );
+check( 'the managed-package prefix is applied to every NPSP column',
+	in_array( 'npsp__Contact1_First_Name__c', pcm_crm_npsp_headers( false ), true ), true );
+check( 'but not to our own id columns, which are not NPSP fields',
+	in_array( 'PCM_Contact_Id__c', pcm_crm_npsp_headers( false ), true ), true );
+delete_option( 'pcm_crm_npsp_namespace' );
 
 echo "\n--- schema ---\n";
 check( 'seven tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 7 );

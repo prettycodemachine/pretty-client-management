@@ -23,9 +23,9 @@ function pcm_crm_activities() {
 				// travels as a custom field rather than as the wrong standard.
 				'activity_date' => array( 'type' => 'datetime', 'sf' => 'Activity_Logged_Date__c', 'label' => 'Logged Date' ),
 				'due_date'      => array( 'type' => 'date', 'sf' => 'ActivityDate', 'label' => 'Due Date' ),
-				'who_id'        => array( 'type' => 'id',   'sf' => 'WhoId', 'label' => 'Contact' ),
-				'what_id'       => array( 'type' => 'id',   'sf' => 'WhatId', 'label' => 'Related Record' ),
-				'what_type'     => array( 'type' => 'text', 'label' => 'Related To' ),
+				'who_id'        => array( 'type' => 'id',   'sf' => 'PCM_Contact_Id__c', 'label' => 'Contact' ),
+				'what_id'       => array( 'type' => 'id',   'sf' => 'PCM_Related_Id__c', 'label' => 'Related Record' ),
+				'what_type'     => array( 'type' => 'text', 'sf' => 'PCM_Related_Type__c', 'label' => 'Related To' ),
 				'description'   => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Details' ),
 				'is_completed'  => array( 'type' => 'bool', 'sf' => 'IsClosed', 'label' => 'Completed' ),
 			),

@@ -745,13 +745,20 @@ class PCM_CRM_Model {
 			// 'internal' keeps a column out of the filter builder: sf_id is
 			// blank until a migration fills it, and is_deleted is the query's
 			// own business rather than something to filter on by hand.
-			'sf_id'               => array( 'type' => 'text', 'sf' => 'Id', 'internal' => true ),
-			'owner_id'            => array( 'type' => 'id', 'sf' => 'OwnerId', 'label' => 'Owner', 'options' => 'pcm_crm_owner_options' ),
-			'created_by_id'       => array( 'type' => 'id', 'sf' => 'CreatedById', 'label' => 'Created By', 'options' => 'pcm_crm_owner_options', 'readonly' => true ),
+			// sf_id carries no header at all: it is empty until a migration
+			// fills it, and a blank column called Id is exactly the thing
+			// Data Loader should never be offered.
+			'sf_id'               => array( 'type' => 'text', 'internal' => true ),
+			// The owner and audit ids are WordPress user ids. A column called
+			// OwnerId invites Data Loader to map it to a Salesforce user and
+			// fail on every row, so they travel under names that say whose
+			// ids they are.
+			'owner_id'            => array( 'type' => 'id', 'sf' => 'PCM_Owner__c', 'label' => 'Owner', 'options' => 'pcm_crm_owner_options' ),
+			'created_by_id'       => array( 'type' => 'id', 'sf' => 'PCM_Created_By__c', 'label' => 'Created By', 'options' => 'pcm_crm_owner_options', 'readonly' => true ),
 			'created_date'        => array( 'type' => 'datetime', 'sf' => 'CreatedDate', 'label' => 'Created Date', 'readonly' => true ),
-			'last_modified_by_id' => array( 'type' => 'id', 'sf' => 'LastModifiedById', 'label' => 'Last Modified By', 'options' => 'pcm_crm_owner_options', 'readonly' => true ),
+			'last_modified_by_id' => array( 'type' => 'id', 'sf' => 'PCM_Last_Modified_By__c', 'label' => 'Last Modified By', 'options' => 'pcm_crm_owner_options', 'readonly' => true ),
 			'last_modified_date'  => array( 'type' => 'datetime', 'sf' => 'LastModifiedDate', 'label' => 'Last Modified Date', 'readonly' => true ),
-			'is_deleted'          => array( 'type' => 'bool', 'sf' => 'IsDeleted', 'readonly' => true, 'internal' => true ),
+			'is_deleted'          => array( 'type' => 'bool', 'readonly' => true, 'internal' => true ),
 		);
 	}
 }

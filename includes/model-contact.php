@@ -10,7 +10,7 @@ function pcm_crm_contacts() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'account_id'            => array( 'type' => 'id',   'sf' => 'AccountId', 'label' => 'Account' ),
+				'account_id'            => array( 'type' => 'id',   'sf' => 'PCM_Account_Id__c', 'label' => 'Account' ),
 				'salutation'            => array( 'type' => 'text', 'sf' => 'Salutation', 'label' => 'Salutation' ),
 				'first_name'            => array( 'type' => 'text', 'sf' => 'FirstName', 'label' => 'First Name' ),
 				'last_name'             => array( 'type' => 'text', 'sf' => 'LastName', 'label' => 'Last Name' ),

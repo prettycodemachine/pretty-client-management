@@ -10,8 +10,8 @@ function pcm_crm_opportunities() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'account_id'         => array( 'type' => 'id',   'sf' => 'AccountId', 'label' => 'Account' ),
-				'primary_contact_id' => array( 'type' => 'id',   'sf' => 'ContactId', 'label' => 'Primary Contact' ),
+				'account_id'         => array( 'type' => 'id',   'sf' => 'PCM_Account_Id__c', 'label' => 'Account' ),
+				'primary_contact_id' => array( 'type' => 'id',   'sf' => 'PCM_Contact_Id__c', 'label' => 'Primary Contact' ),
 				'name'               => array( 'type' => 'text', 'sf' => 'Name', 'label' => 'Opportunity Name' ),
 				'stage_name'         => array( 'type' => 'text', 'sf' => 'StageName', 'label' => 'Stage', 'options' => 'pcm_crm_stage_names' ),
 				'amount'             => array( 'type' => 'decimal', 'sf' => 'Amount', 'label' => 'Amount' ),

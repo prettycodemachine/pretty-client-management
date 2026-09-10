@@ -50,6 +50,7 @@ require_once PCM_CRM_DIR . 'includes/model-history.php';
 require_once PCM_CRM_DIR . 'includes/reports.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-rest.php';
 require_once PCM_CRM_DIR . 'includes/csv.php';
+require_once PCM_CRM_DIR . 'includes/npsp-export.php';
 require_once PCM_CRM_DIR . 'includes/schedules.php';
 require_once PCM_CRM_DIR . 'admin/menu.php';
 require_once PCM_CRM_DIR . 'admin/settings.php';
