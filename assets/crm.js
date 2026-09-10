@@ -1195,11 +1195,22 @@
 			})
 		], object);
 
-		clear(dom.actions, el('button.pcm-btn.pcm-btn-primary', {
-			type: 'button',
-			text: 'New ' + def.label,
-			onclick: function () { openDrawer(object, 0); }
-		}));
+		clear(dom.actions);
+
+		// A schedule with no view behind it would have nothing to send, so it
+		// is created from the Dashboard or a Report rather than from here.
+		if (object === 'schedules') {
+			dom.actions.appendChild(el('span.pcm-crm-muted', {
+				style: 'align-self:center;font-size:0.82rem;max-width:340px;text-align:right',
+				text: 'Create one with the Schedule button on the Dashboard or a Report.'
+			}));
+		} else {
+			dom.actions.appendChild(el('button.pcm-btn.pcm-btn-primary', {
+				type: 'button',
+				text: 'New ' + def.label,
+				onclick: function () { openDrawer(object, 0); }
+			}));
+		}
 
 		loadList(object);
 	}
@@ -1405,6 +1416,14 @@
 			// built from the record's own parents rather than fetched.
 			if (object === 'activities') {
 				renderRelated(object, record, {});
+				return;
+			}
+
+			// Only the three objects with children have a related route.
+			// Asking for one anywhere else is a guaranteed 404, which then
+			// showed up as an error tab on a record that simply has nothing
+			// hanging off it.
+			if (['accounts', 'contacts', 'opportunities'].indexOf(object) === -1) {
 				return;
 			}
 
@@ -1616,7 +1635,7 @@
 			actions.appendChild(el('button.pcm-btn', {
 				type: 'button',
 				text: 'Send now',
-				onclick: function (event) { sendScheduleNow(record, event.target, status); }
+				onclick: function (event) { sendScheduleNow(record, values, event.target, status); }
 			}));
 		}
 
@@ -2908,15 +2927,27 @@
 	/**
 	 * Send a schedule now, from its own record.
 	 */
-	function sendScheduleNow(record, button, status) {
+	/**
+	 * Send a schedule now.
+	 *
+	 * Saves first. The server sends the stored record, so sending without
+	 * saving would deliver the previous version — silently, and looking for
+	 * all the world like the edits on screen had been used.
+	 */
+	function sendScheduleNow(record, values, button, status) {
 		button.disabled = true;
-		status.textContent = 'Sending…';
+		status.textContent = 'Saving…';
 
-		api('/schedules/' + record.id + '/send', { method: 'POST' }).then(function (result) {
+		api('/schedules/' + record.id, { method: 'PUT', body: values }).then(function () {
+			status.textContent = 'Sending…';
+
+			return api('/schedules/' + record.id + '/send', { method: 'POST' });
+		}).then(function (result) {
 			status.textContent = result.sent
 				? 'Sent to ' + result.recipients.join(', ')
 				: 'The server would not send it. Check the site’s mail configuration.';
 			button.disabled = false;
+			refreshView();
 		}).catch(function (error) {
 			status.textContent = error.message;
 			button.disabled = false;
@@ -2941,12 +2972,7 @@
 		else if (objects[state.view]) { renderList(state.view); }
 		else { clear(dom.body, el('p', { text: 'Unknown screen.' })); }
 
-		if (state.view === 'schedules') {
-			dom.actions.appendChild(el('span.pcm-crm-muted', {
-				style: 'align-self:center;font-size:0.82rem',
-				text: 'Create one from the Dashboard or a Report using its Schedule button.'
-			}));
-		}
+
 
 		// A record id in the hash — a link from the notification email, or a
 		// reloaded page — opens straight onto that record.

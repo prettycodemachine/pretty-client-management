@@ -135,6 +135,35 @@ function pcm_crm_schedule_is_due( array $pcm_schedule, $pcm_now = null ) {
 	return true;
 }
 
+/**
+ * A schedule with no reachable recipient can never do anything.
+ *
+ * Refused on save rather than discovered on the first send, which would be a
+ * week later and silent. Validated against the merged record, so editing the
+ * frequency on an existing schedule does not have to restate its recipients.
+ */
+function pcm_crm_validate_schedule( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) {
+	if ( is_wp_error( $pcm_error ) || 'schedule' !== $pcm_object ) {
+		return $pcm_error;
+	}
+
+	$pcm_existing = $pcm_id ? pcm_crm_schedules()->get( $pcm_id ) : array();
+	$pcm_merged   = array_merge( (array) $pcm_existing, $pcm_row );
+
+	$pcm_to = pcm_crm_schedule_recipients( isset( $pcm_merged['recipients'] ) ? $pcm_merged['recipients'] : '' );
+
+	if ( ! $pcm_to ) {
+		return new WP_Error(
+			'pcm_crm_no_recipients',
+			__( 'Choose at least one person, or add an email address, before saving.', 'pcm-crm' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	return $pcm_error;
+}
+add_filter( 'pcm_crm_validate', 'pcm_crm_validate_schedule', 10, 4 );
+
 /* ---------------------------------------------------------------------------
    Cron
    --------------------------------------------------------------------------- */
@@ -244,7 +273,16 @@ function pcm_crm_send_schedule( array $pcm_schedule ) {
 	$pcm_to = pcm_crm_schedule_recipients( $pcm_schedule['recipients'] );
 
 	if ( ! $pcm_to ) {
-		throw new Exception( 'No usable recipients.' );
+		// Naming what was stored, because "no usable recipients" on a schedule
+		// that visibly has one is a dead end — the useful question is whether
+		// the field is empty or holds something that no longer resolves.
+		$pcm_stored = trim( (string) $pcm_schedule['recipients'] );
+
+		throw new Exception(
+			'' === $pcm_stored
+				? 'No recipients are saved on this schedule.'
+				: sprintf( 'None of the saved recipients resolve to an email address (%s).', $pcm_stored )
+		);
 	}
 
 	$pcm_args = array( 'filters' => pcm_crm_schedule_filters( $pcm_schedule ) );

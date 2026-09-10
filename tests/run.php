@@ -348,6 +348,26 @@ check( 'an id with no user behind it is dropped', pcm_crm_schedule_recipients( '
 $GLOBALS['pcm_test_users'] = array();
 check( 'nothing in, nothing out', pcm_crm_schedule_recipients( '' ), array() );
 
+// A failure has to say which of the two problems it is.
+$empty_error = '';
+try { pcm_crm_send_schedule( array( 'recipients' => '', 'report_type' => 'dashboard', 'name' => 'x' ) ); }
+catch ( Exception $e ) { $empty_error = $e->getMessage(); }
+check( 'an empty field says so', $empty_error, 'No recipients are saved on this schedule.' );
+
+$stale_error = '';
+try { pcm_crm_send_schedule( array( 'recipients' => '999', 'report_type' => 'dashboard', 'name' => 'x' ) ); }
+catch ( Exception $e ) { $stale_error = $e->getMessage(); }
+check( 'and an unresolvable one names what is stored',
+	false !== strpos( $stale_error, '999' ), true );
+
+// Better to refuse the save than to discover it a week later, silently.
+check( 'a schedule with no recipients cannot be saved',
+	is_wp_error( pcm_crm_validate_schedule( null, 'schedule', array( 'recipients' => '' ), 0 ) ), true );
+check( 'one with a real address can',
+	is_wp_error( pcm_crm_validate_schedule( null, 'schedule', array( 'recipients' => 'a@b.com' ), 0 ) ), false );
+check( 'other objects are not subject to the rule',
+	is_wp_error( pcm_crm_validate_schedule( null, 'account', array( 'recipients' => '' ), 0 ) ), false );
+
 echo "\n--- schedule storage ---\n";
 $model = pcm_crm_schedules();
 check( 'filters survive as JSON rather than being sanitised apart',
