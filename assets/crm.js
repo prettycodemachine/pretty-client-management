@@ -592,6 +592,18 @@
 				{ key: 'is_active', label: 'Status', render: function (row) { return Number(row.is_active) ? 'Active' : 'Paused'; } },
 				{ key: 'last_sent', label: 'Last sent', date: true }
 			],
+			rowActions: function () {
+				return [{
+					label: 'Cancel',
+					title: 'Stop this schedule and remove it',
+					danger: true,
+					run: function (row, reload) {
+						if (!window.confirm('Cancel “' + (row.name || 'this schedule') + '”? It will stop sending.')) { return; }
+
+						api('/schedules/' + row.id, { method: 'DELETE' }).then(reload).catch(showError);
+					}
+				}];
+			},
 			filters: function () {
 				return [
 					{ key: 'report_type', label: 'Type', options: [
@@ -1259,6 +1271,8 @@
 	function buildTable(object, def, items) {
 		var head = el('tr');
 
+		var actions = def.rowActions ? def.rowActions() : null;
+
 		def.columns.forEach(function (column) {
 			var sorted = state.query.orderby === column.key;
 
@@ -1281,6 +1295,10 @@
 			]));
 		});
 
+		if (actions) {
+			head.appendChild(el('th', { 'aria-label': 'Actions' }));
+		}
+
 		var body = el('tbody');
 
 		items.forEach(function (row) {
@@ -1293,6 +1311,25 @@
 			});
 
 			def.columns.forEach(function (column) { tr.appendChild(cell(column, row)); });
+
+			if (actions) {
+				tr.appendChild(el('td.pcm-crm-row-actions', {}, actions.map(function (action) {
+					return el('button.pcm-btn.pcm-btn-sm' + (action.danger ? '.pcm-btn-danger' : '.pcm-btn-quiet'), {
+						type: 'button',
+						text: action.label,
+						title: action.title || action.label,
+						// The row opens the record on click and on Enter, so an
+						// action inside it has to stop both — otherwise
+						// deleting a row also opens it on the way out.
+						onclick: function (event) {
+							event.stopPropagation();
+							action.run(row, function () { loadList(object); });
+						},
+						onkeydown: function (event) { event.stopPropagation(); }
+					});
+				})));
+			}
+
 			body.appendChild(tr);
 		});
 

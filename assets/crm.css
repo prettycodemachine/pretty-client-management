@@ -286,6 +286,13 @@
 .pcm-crm-table tbody tr:hover { background: var(--pcm-paper-tint); }
 .pcm-crm-table tbody tr:last-child td { border-bottom: 0; }
 .pcm-crm-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Row actions sit right and stay quiet until the row is under the pointer, so
+   a list of them does not read as a column of warnings. */
+.pcm-crm-row-actions { text-align: right; white-space: nowrap; }
+.pcm-crm-row-actions .pcm-btn { opacity: 0.35; transition: opacity 0.12s ease; }
+.pcm-crm-table tbody tr:hover .pcm-crm-row-actions .pcm-btn,
+.pcm-crm-row-actions .pcm-btn:focus-visible { opacity: 1; }
 .pcm-crm-strong { font-weight: 700; color: var(--pcm-ink); }
 .pcm-crm-muted { color: var(--pcm-gray); }
 
