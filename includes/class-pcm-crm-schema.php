@@ -17,7 +17,7 @@ class PCM_CRM_Schema {
 	 * differs, so an rsync deploy (which never fires the activation hook)
 	 * still picks the change up on the next page load.
 	 */
-	const VERSION = '1.4.0';
+	const VERSION = '1.5.0';
 
 	const OPTION = 'pcm_crm_db_version';
 
@@ -37,6 +37,7 @@ class PCM_CRM_Schema {
 	public static function activities()    { return self::table( 'activities' ); }
 	public static function submissions()   { return self::table( 'form_submissions' ); }
 	public static function history()       { return self::table( 'opportunity_history' ); }
+	public static function schedules()     { return self::table( 'schedules' ); }
 
 	/**
 	 * Create or alter every table.
@@ -115,6 +116,7 @@ class PCM_CRM_Schema {
 		$pcm_activities    = self::activities();
 		$pcm_submissions   = self::submissions();
 		$pcm_history       = self::history();
+		$pcm_schedules     = self::schedules();
 
 		$pcm_tables = array();
 
@@ -289,6 +291,37 @@ class PCM_CRM_Schema {
 			KEY pcm_hist_stage (stage_name),
 			KEY pcm_hist_entered (entered_date),
 			KEY pcm_hist_open (opportunity_id,exited_date)
+		) {$pcm_charset};";
+
+		/* Scheduled deliveries ----------------------------------------------- */
+		// A saved view plus who receives it and when. The filters are stored as
+		// the same JSON the UI puts in the URL, so a schedule and the screen it
+		// was created from cannot drift apart.
+		$pcm_tables[] = "CREATE TABLE {$pcm_schedules} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(255) NOT NULL DEFAULT '',
+			report_type varchar(20) NOT NULL DEFAULT 'dashboard',
+			object varchar(40) NOT NULL DEFAULT '',
+			group_by varchar(60) NOT NULL DEFAULT '',
+			filters longtext,
+			recipients text,
+			frequency varchar(20) NOT NULL DEFAULT 'weekly',
+			send_time varchar(5) NOT NULL DEFAULT '08:00',
+			day_of_week tinyint(1) NOT NULL DEFAULT 1,
+			day_of_month tinyint(2) NOT NULL DEFAULT 1,
+			attach_csv tinyint(1) NOT NULL DEFAULT 1,
+			is_active tinyint(1) NOT NULL DEFAULT 1,
+			last_sent datetime DEFAULT NULL,
+			last_error text,
+			owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY pcm_sched_active (is_active,is_deleted),
+			KEY pcm_sched_sent (last_sent)
 		) {$pcm_charset};";
 
 		/* Form submissions -------------------------------------------------- */

@@ -26,6 +26,7 @@ class PCM_CRM_REST {
 			'opportunities' => pcm_crm_opportunities(),
 			'activities'    => pcm_crm_activities(),
 			'submissions'   => pcm_crm_submissions(),
+			'schedules'     => pcm_crm_schedules(),
 		);
 	}
 
@@ -99,6 +100,12 @@ class PCM_CRM_REST {
 		register_rest_route( self::NS, '/pipeline', array(
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => array( __CLASS__, 'pipeline' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
+		register_rest_route( self::NS, '/schedules/(?P<id>\d+)/send', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => array( __CLASS__, 'send_schedule' ),
 			'permission_callback' => array( __CLASS__, 'permission' ),
 		) );
 
@@ -361,6 +368,8 @@ class PCM_CRM_REST {
 			'owners'            => pcm_crm_owner_choices(),
 			'currency'          => pcm_crm_currency_symbol(),
 			'stallDays'         => pcm_crm_stall_days(),
+			'frequencies'       => pcm_crm_frequencies(),
+			'weekdays'          => pcm_crm_weekdays(),
 		) );
 	}
 
@@ -375,7 +384,7 @@ class PCM_CRM_REST {
 		$pcm_out = array();
 
 		foreach ( self::models() as $pcm_slug => $pcm_model ) {
-			if ( 'submissions' === $pcm_slug ) {
+			if ( in_array( $pcm_slug, array( 'submissions', 'schedules' ), true ) ) {
 				continue;
 			}
 
@@ -456,6 +465,31 @@ class PCM_CRM_REST {
 		$pcm_args['per_page'] = 0;
 
 		return rest_ensure_response( pcm_crm_pipeline_data( $pcm_args ) );
+	}
+
+	/**
+	 * Send a schedule now.
+	 *
+	 * Waiting until Monday at eight to discover a recipient list is wrong is
+	 * not a reasonable way to find out.
+	 */
+	public static function send_schedule( WP_REST_Request $pcm_request ) {
+		$pcm_schedule = pcm_crm_schedules()->get( (int) $pcm_request['id'] );
+
+		if ( ! $pcm_schedule ) {
+			return new WP_Error( 'pcm_crm_not_found', __( 'That schedule no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+		}
+
+		try {
+			$pcm_sent = pcm_crm_send_schedule( $pcm_schedule );
+		} catch ( Exception $pcm_e ) {
+			return new WP_Error( 'pcm_crm_send_failed', $pcm_e->getMessage(), array( 'status' => 400 ) );
+		}
+
+		return rest_ensure_response( array(
+			'sent'       => (bool) $pcm_sent,
+			'recipients' => pcm_crm_schedule_recipients( $pcm_schedule['recipients'] ),
+		) );
 	}
 
 	public static function report( WP_REST_Request $pcm_request ) {

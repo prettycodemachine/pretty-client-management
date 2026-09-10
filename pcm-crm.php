@@ -49,6 +49,7 @@ require_once PCM_CRM_DIR . 'includes/model-history.php';
 require_once PCM_CRM_DIR . 'includes/reports.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-rest.php';
 require_once PCM_CRM_DIR . 'includes/csv.php';
+require_once PCM_CRM_DIR . 'includes/schedules.php';
 require_once PCM_CRM_DIR . 'admin/menu.php';
 require_once PCM_CRM_DIR . 'admin/settings.php';
 require_once PCM_CRM_DIR . 'public/email.php';
@@ -102,6 +103,7 @@ function pcm_crm_activate() {
 register_activation_hook( __FILE__, 'pcm_crm_activate' );
 
 function pcm_crm_deactivate() {
+	pcm_crm_deactivate_cron();
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'pcm_crm_deactivate' );

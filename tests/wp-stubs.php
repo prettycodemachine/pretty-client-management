@@ -16,6 +16,7 @@
 define( 'ABSPATH', '/tmp/' );
 
 define( 'ARRAY_A', 'ARRAY_A' );
+define( 'MINUTE_IN_SECONDS', 60 );
 define( 'DAY_IN_SECONDS', 86400 );
 define( 'HOUR_IN_SECONDS', 3600 );
 define( 'OBJECT', 'OBJECT' );
@@ -71,6 +72,13 @@ function plugin_dir_path( $f ) { return dirname( $f ) . '/'; }
 function plugin_dir_url() { return 'https://example.com/plugin/'; }
 function add_query_arg( $k, $v = null, $u = null ) { return is_array($k) ? $u : $u . '?' . $k . '=' . $v; }
 function get_role() { return null; } function get_users() { return array(); }
+function get_user_by( $field, $value ) { return null; }
+function wp_delete_file( $f ) { @unlink( $f ); }
+function get_temp_dir() { return sys_get_temp_dir() . '/'; }
+function trailingslashit( $p ) { return rtrim( $p, '/' ) . '/'; }
+function date_i18n( $f ) { return date( $f ); }
+function number_format_i18n( $n ) { return number_format( $n ); }
+function ucfirst_stub() {}
 function get_userdata( $id ) {
 	return isset( $GLOBALS['pcm_test_users'][ $id ] ) ? $GLOBALS['pcm_test_users'][ $id ] : null;
 } function current_user_can() { return true; }

@@ -260,6 +260,65 @@ check( 'related activities carry their contact name',
 
 $GLOBALS['wpdb'] = $real_wpdb;
 
+echo "\n--- schedule due dates ---\n";
+$at = function( $str ) { return strtotime( $str ); };
+$sched = function( $overrides = array() ) {
+	return array_merge( array(
+		'is_active' => 1, 'frequency' => 'daily', 'send_time' => '08:00',
+		'day_of_week' => 1, 'day_of_month' => 1, 'last_sent' => null,
+	), $overrides );
+};
+
+// Monday 2026-09-14.
+check( 'a daily schedule is not due before its time',
+	pcm_crm_schedule_is_due( $sched(), $at( '2026-09-14 07:59' ) ), false );
+check( 'and is due once the time passes',
+	pcm_crm_schedule_is_due( $sched(), $at( '2026-09-14 08:00' ) ), true );
+check( 'a paused schedule never sends',
+	pcm_crm_schedule_is_due( $sched( array( 'is_active' => 0 ) ), $at( '2026-09-14 09:00' ) ), false );
+check( 'already sent today, so not again',
+	pcm_crm_schedule_is_due( $sched( array( 'last_sent' => '2026-09-14 08:01:00' ) ), $at( '2026-09-14 09:00' ) ), false );
+// A cron that arrives hours late must still deliver rather than skip the day.
+check( 'a late run still delivers',
+	pcm_crm_schedule_is_due( $sched( array( 'last_sent' => '2026-09-13 08:01:00' ) ), $at( '2026-09-14 15:00' ) ), true );
+
+check( 'a weekly schedule waits for its weekday',
+	pcm_crm_schedule_is_due( $sched( array( 'frequency' => 'weekly', 'day_of_week' => 3 ) ), $at( '2026-09-14 09:00' ) ), false );
+check( 'and sends on it',
+	pcm_crm_schedule_is_due( $sched( array( 'frequency' => 'weekly', 'day_of_week' => 3 ) ), $at( '2026-09-16 09:00' ) ), true );
+
+check( 'a monthly schedule waits for its date',
+	pcm_crm_schedule_is_due( $sched( array( 'frequency' => 'monthly', 'day_of_month' => 15 ) ), $at( '2026-09-14 09:00' ) ), false );
+check( 'and sends on it',
+	pcm_crm_schedule_is_due( $sched( array( 'frequency' => 'monthly', 'day_of_month' => 15 ) ), $at( '2026-09-15 09:00' ) ), true );
+// A schedule set for the 31st would otherwise never fire in February.
+check( 'the 31st lands on the last day of a short month',
+	pcm_crm_schedule_is_due( $sched( array( 'frequency' => 'monthly', 'day_of_month' => 31 ) ), $at( '2026-02-28 09:00' ) ), true );
+check( 'but not earlier in that month',
+	pcm_crm_schedule_is_due( $sched( array( 'frequency' => 'monthly', 'day_of_month' => 31 ) ), $at( '2026-02-27 09:00' ) ), false );
+check( 'a nonsense send time falls back rather than failing',
+	pcm_crm_schedule_is_due( $sched( array( 'send_time' => 'lunchtime' ) ), $at( '2026-09-14 09:00' ) ), true );
+
+echo "\n--- schedule recipients ---\n";
+check( 'plain addresses come through',
+	pcm_crm_schedule_recipients( 'a@b.com, c@d.com' ), array( 'a@b.com', 'c@d.com' ) );
+check( 'separators can be commas, semicolons or spaces',
+	pcm_crm_schedule_recipients( 'a@b.com; c@d.com  e@f.com' ), array( 'a@b.com', 'c@d.com', 'e@f.com' ) );
+check( 'duplicates are collapsed',
+	pcm_crm_schedule_recipients( 'a@b.com, a@b.com' ), array( 'a@b.com' ) );
+check( 'an unresolvable name is dropped rather than mailed',
+	pcm_crm_schedule_recipients( 'not-a-user' ), array() );
+check( 'nothing in, nothing out', pcm_crm_schedule_recipients( '' ), array() );
+
+echo "\n--- schedule storage ---\n";
+$model = pcm_crm_schedules();
+check( 'filters survive as JSON rather than being sanitised apart',
+	$model->sanitize( array( 'filters' => '{"stage_name":"Proposal"}' ) )['filters'], '{"stage_name":"Proposal"}' );
+check( 'last_sent cannot be set from a request',
+	isset( $model->sanitize( array( 'last_sent' => '2026-01-01 00:00:00' ) )['last_sent'] ), false );
+check( 'schedules are not offered to the filter builder',
+	isset( ( (array) PCM_CRM_REST::schema( new WP_REST_Request() ) )['schedules'] ), false );
+
 echo "\n--- time in stage ---\n";
 check( 'whole days between two moments',
 	pcm_crm_days_between( '2026-03-01 09:00:00', '2026-03-11 09:00:00' ), 10 );
@@ -418,7 +477,7 @@ check( 'the seed command is CLI-only', isset( WP_CLI::$commands['pcm-crm'] ), tr
 $GLOBALS['pcm_test_host'] = 'example.com';
 
 echo "\n--- schema ---\n";
-check( 'six tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 6 );
+check( 'seven tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 7 );
 $defs = implode( "\n", ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) );
 check( 'history has an index for finding the open row',
 	strpos( $defs, 'pcm_hist_open (opportunity_id,exited_date)' ) !== false, true );

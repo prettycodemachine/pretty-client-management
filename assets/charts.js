@@ -43,6 +43,36 @@
 		return '$' + Math.round(value);
 	}
 
+	/**
+	 * Make a mark act as a button into the data behind it.
+	 *
+	 * Keyboard reachable as well as clickable: a chart segment that only
+	 * answers the mouse hides the drill-down from anyone not using one. The
+	 * <title> gives the hover tooltip and the accessible name at once.
+	 */
+	function selectable(node, label, onSelect) {
+		if (typeof onSelect !== 'function') { return node; }
+
+		var title = el('title', {});
+		title.textContent = label;
+		node.appendChild(title);
+
+		node.setAttribute('role', 'button');
+		node.setAttribute('tabindex', '0');
+		node.setAttribute('cursor', 'pointer');
+		node.setAttribute('class', 'pcm-chart-hit');
+
+		node.addEventListener('click', onSelect);
+		node.addEventListener('keydown', function (event) {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				onSelect(event);
+			}
+		});
+
+		return node;
+	}
+
 	function svg(width, height) {
 		return el('svg', {
 			viewBox: '0 0 ' + width + ' ' + height,
@@ -82,10 +112,19 @@
 				x: labelW, y: y, width: W - labelW - 90, height: 22, rx: 5, fill: '#f4f8fc'
 			}));
 
-			chart.appendChild(el('rect', {
+			// The whole row is the target, not just the drawn bar — a short
+			// bar would otherwise be a very small thing to hit.
+			var group = el('g', {});
+			group.appendChild(el('rect', {
 				x: labelW, y: y, width: barW, height: 22, rx: 5,
 				fill: colors[i % colors.length]
 			}));
+			group.appendChild(el('rect', {
+				x: labelW, y: y, width: W - labelW - 90, height: 22, rx: 5, fill: 'transparent'
+			}));
+
+			chart.appendChild(selectable(group, (row.value || '—') + ': ' + formatCurrency(row.total || 0),
+				options.onSelect && function () { options.onSelect(row); }));
 
 			chart.appendChild(text(formatCurrency(row.total || 0) + '  ·  ' + (row.count || 0), {
 				x: W - 84, y: y + 15, 'font-size': '11', fill: '#46464a'
@@ -104,7 +143,8 @@
 	/**
 	 * Funnel — stage counts as tapering bands, which is how a pipeline is read.
 	 */
-	function funnelChart(rows) {
+	function funnelChart(rows, options) {
+		options = options || {};
 		var W = 520;
 		var bandH = 44;
 		var H = Math.max(rows.length * bandH + 10, 60);
@@ -119,10 +159,14 @@
 			var w = Math.max(((row.count || 0) / max) * (W - 180), 40);
 			var x = (W - 180 - w) / 2 + 20;
 
-			chart.appendChild(el('rect', {
-				x: x, y: y, width: w, height: bandH - 8, rx: 6,
-				fill: colors[i % colors.length], opacity: row.count ? '1' : '0.25'
-			}));
+			chart.appendChild(selectable(
+				el('rect', {
+					x: x, y: y, width: w, height: bandH - 8, rx: 6,
+					fill: colors[i % colors.length], opacity: row.count ? '1' : '0.25'
+				}),
+				row.value + ': ' + row.count + ' deals, ' + formatCurrency(row.total || 0),
+				options.onSelect && function () { options.onSelect(row); }
+			));
 
 			chart.appendChild(text(row.count || 0, {
 				x: x + w / 2, y: y + 24, 'text-anchor': 'middle',
@@ -172,12 +216,16 @@
 			// the path silently draws the short way round.
 			var large = portion > 0.5 ? 1 : 0;
 
-			chart.appendChild(el('path', {
-				d: 'M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2,
-				fill: 'none',
-				stroke: colors[i % colors.length],
-				'stroke-width': thickness
-			}));
+			chart.appendChild(selectable(
+				el('path', {
+					d: 'M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2,
+					fill: 'none',
+					stroke: colors[i % colors.length],
+					'stroke-width': thickness
+				}),
+				(row.value || 'Unspecified') + ': ' + (row[key] || 0),
+				options.onSelect && function () { options.onSelect(row); }
+			));
 
 			angle = end;
 		});
@@ -197,7 +245,8 @@
 	/**
 	 * Grouped columns over months — created against won.
 	 */
-	function columnChart(rows, series) {
+	function columnChart(rows, series, options) {
+		options = options || {};
 		var W = 520, H = 220;
 		var padL = 34, padB = 28, padT = 10;
 		var chart = svg(W, H);
@@ -227,6 +276,16 @@
 
 		rows.forEach(function (row, i) {
 			var gx = padL + i * groupW;
+
+			// One target per month, covering the full column height, so a
+			// month with two short bars is still easy to hit.
+			if (options.onSelect) {
+				chart.appendChild(selectable(
+					el('rect', { x: gx, y: padT, width: groupW, height: plotH, fill: 'transparent' }),
+					row.label + ': ' + (row.created || 0) + ' created, ' + (row.won || 0) + ' won',
+					function () { options.onSelect(row); }
+				));
+			}
 
 			series.forEach(function (s, si) {
 				var value = row[s.key] || 0;
@@ -260,7 +319,8 @@
 	 * The value chart formats its trailing label as money, which would report
 	 * an average of 12 days as $12.
 	 */
-	function daysChart(rows) {
+	function daysChart(rows, options) {
+		options = options || {};
 		var W = 520;
 		var rowH = 38;
 		var labelW = 130;
@@ -279,7 +339,13 @@
 			}));
 
 			chart.appendChild(el('rect', { x: labelW, y: y, width: W - labelW - 110, height: 22, rx: 5, fill: '#f4f8fc' }));
-			chart.appendChild(el('rect', { x: labelW, y: y, width: barW, height: 22, rx: 5, fill: colors[i % colors.length] }));
+
+			var group = el('g', {});
+			group.appendChild(el('rect', { x: labelW, y: y, width: barW, height: 22, rx: 5, fill: colors[i % colors.length] }));
+			group.appendChild(el('rect', { x: labelW, y: y, width: W - labelW - 110, height: 22, rx: 5, fill: 'transparent' }));
+
+			chart.appendChild(selectable(group, row.value + ': ' + (row.total || 0) + ' days average',
+				options.onSelect && function () { options.onSelect(row); }));
 
 			// A stage nothing has left yet has no average, and reporting that
 			// as "0 days" would read as instant rather than as unknown.

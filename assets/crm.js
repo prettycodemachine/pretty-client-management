@@ -183,10 +183,16 @@
 	   State
 	   --------------------------------------------------------------------- */
 
+	// Which report the Reports screen is showing. Declared beside the rest of
+	// the state because the hash carries it, and the hash is read before the
+	// Reports view is ever built.
+	var report = { object: 'opportunities', groupBy: 'stage_name' };
+
 	var state = {
 		view: '',
 		boot: null,
 		schema: null,
+		drillTitle: '',
 		query: { search: '', filters: {}, orderby: '', order: 'DESC', page: 1, per_page: 25 },
 		recordId: 0,
 		creating: null
@@ -208,7 +214,10 @@
 			o: state.query.orderby || undefined,
 			d: state.query.order !== 'DESC' ? state.query.order : undefined,
 			p: state.query.page > 1 ? state.query.page : undefined,
-			id: state.recordId || undefined
+			id: state.recordId || undefined,
+			ro: state.view === 'reports' ? report.object : undefined,
+			rg: state.view === 'reports' ? report.groupBy : undefined,
+			t: state.drillTitle || undefined
 		};
 
 		var pruned = {};
@@ -243,6 +252,10 @@
 			state.query.order = data.d || 'DESC';
 			state.query.page = data.p || 1;
 			state.recordId = data.id || 0;
+			state.drillTitle = data.t || '';
+
+			if (data.ro) { report.object = data.ro; }
+			if (data.rg) { report.groupBy = data.rg; }
 		} catch (e) {
 			// A hash we cannot parse is not worth failing the page over.
 		}
@@ -291,6 +304,25 @@
 		var stage = stageByName(name);
 
 		return !!(stage && Number(stage.is_closed) && !Number(stage.is_won));
+	}
+
+	function weekdayOptions() {
+		var days = (state.boot && state.boot.weekdays) || {};
+
+		return Object.keys(days).map(function (key) { return { value: key, label: days[key] }; });
+	}
+
+	/**
+	 * A schedule's timing in one readable line.
+	 */
+	function scheduleSummary(row) {
+		var days = (state.boot && state.boot.weekdays) || {};
+		var at = ' at ' + (row.send_time || '08:00');
+
+		if (row.frequency === 'daily') { return 'Every day' + at; }
+		if (row.frequency === 'weekly') { return 'Every ' + (days[row.day_of_week] || 'Monday') + at; }
+
+		return 'Day ' + (row.day_of_month || 1) + ' of the month' + at;
 	}
 
 	function ownerOptions() {
@@ -493,6 +525,72 @@
 					{ title: 'Notes', fields: [
 						{ key: 'next_step', label: 'Next step', wide: true },
 						{ key: 'description', label: 'Notes', type: 'textarea', wide: true }
+					] }
+				];
+			}
+		},
+
+		schedules: {
+			label: 'Scheduled Report',
+			plural: 'Scheduled Reports',
+			title: function (row) { return row.name || 'Scheduled report'; },
+			kicker: function (row) { return row.report_type === 'dashboard' ? 'Dashboard' : 'Report'; },
+			highlights: function (row) {
+				return [
+					{ label: 'Sends', value: scheduleSummary(row) },
+					{ label: 'To', value: row.recipients },
+					{ label: 'Last sent', value: formatDateTime(row.last_sent) },
+					{ label: 'Status', value: Number(row.is_active) ? 'Active' : 'Paused' }
+				];
+			},
+			columns: [
+				{ key: 'name', label: 'Name', strong: true },
+				{ key: 'report_type', label: 'Type', badge: true },
+				{ key: 'frequency', label: 'When', render: function (row) { return scheduleSummary(row); } },
+				{ key: 'recipients', label: 'Recipients' },
+				{ key: 'is_active', label: 'Status', render: function (row) { return Number(row.is_active) ? 'Active' : 'Paused'; } },
+				{ key: 'last_sent', label: 'Last sent', date: true }
+			],
+			filters: function () {
+				return [
+					{ key: 'report_type', label: 'Type', options: [
+						{ value: '', label: 'Any type' },
+						{ value: 'dashboard', label: 'Dashboard' },
+						{ value: 'report', label: 'Report' }
+					] },
+					{ key: 'is_active', label: 'Status', options: [
+						{ value: '', label: 'All' },
+						{ value: '1', label: 'Active' },
+						{ value: '0', label: 'Paused' }
+					] }
+				];
+			},
+			fields: function () {
+				return [
+					{ fields: [
+						{ key: 'name', label: 'Name', required: true, wide: true },
+						{ key: 'recipients', label: 'Recipients', wide: true,
+							note: 'Email addresses or WordPress usernames, separated by commas.' },
+						{ key: 'frequency', label: 'Frequency', options: options(state.boot.frequencies || []) },
+						{ key: 'send_time', label: 'Send at', type: 'time' },
+						{ key: 'day_of_week', label: 'Day of week',
+							options: weekdayOptions(), showWhen: 'frequency', showWhenValue: 'weekly' },
+						{ key: 'day_of_month', label: 'Day of month', type: 'number',
+							showWhen: 'frequency', showWhenValue: 'monthly' },
+						{ key: 'is_active', label: 'Active', type: 'checkbox' },
+						{ key: 'attach_csv', label: 'Attach CSV', type: 'checkbox' }
+					] },
+					{ title: 'What is sent', fields: [
+						{ key: 'report_type', label: 'Type', options: [
+							{ value: 'dashboard', label: 'Dashboard' },
+							{ value: 'report', label: 'Report' }
+						] },
+						{ key: 'object', label: 'Report on',
+							options: [{ value: '', label: '—' }].concat(['accounts', 'contacts', 'opportunities', 'activities'].map(function (key) {
+								return { value: key, label: objects[key].plural };
+							})),
+							showWhen: 'report_type', showWhenValue: 'report' },
+						{ key: 'group_by', label: 'Grouped by', showWhen: 'report_type', showWhenValue: 'report' }
 					] }
 				];
 			}
@@ -1486,6 +1584,14 @@
 			status
 		]);
 
+		if (!isNew && object === 'schedules') {
+			actions.appendChild(el('button.pcm-btn', {
+				type: 'button',
+				text: 'Send now',
+				onclick: function (event) { sendScheduleNow(record, event.target, status); }
+			}));
+		}
+
 		if (!isNew) {
 			actions.appendChild(el('button.pcm-btn.pcm-btn-danger.pcm-crm-delete', {
 				type: 'button',
@@ -1643,6 +1749,7 @@
 		if (field.showWhen) {
 			wrap.dataset.showWhen = field.showWhen;
 			if (field.showWhenLost) { wrap.dataset.showWhenLost = '1'; }
+			if (field.showWhenValue) { wrap.dataset.showWhenValue = field.showWhenValue; }
 			wrap.hidden = !conditionMet(wrap.dataset, values);
 		}
 
@@ -1692,6 +1799,10 @@
 		// A losing stage is identified by its flags, not its name, so a
 		// renamed or added losing stage still reveals the reason field.
 		if (data.showWhenLost) { return stageIsLost(values[data.showWhen]); }
+
+		// Depends on another field holding a particular value — a weekday
+		// only matters on a weekly schedule.
+		if (data.showWhenValue) { return String(values[data.showWhen] || '') === data.showWhenValue; }
 
 		return !!Number(values[data.showWhen]);
 	}
@@ -2236,9 +2347,107 @@
 		return el('span.pcm-crm-muted', { text: label });
 	}
 
+	/**
+	 * Open the Reports screen on a slice of the data.
+	 *
+	 * The dashboard's own filters are carried through unchanged and the
+	 * clicked dimension is added to them, so a drill-down always shows the
+	 * records the number was counted from — a chart that reports one figure
+	 * and drills into another is worse than one you cannot click at all.
+	 *
+	 * Delivered as a page load with a hash rather than an in-page view swap,
+	 * so the result is a real URL: linkable, bookmarkable, and survives the
+	 * back button.
+	 */
+	function drillTo(object, extraFilters, options) {
+		options = options || {};
+
+		var filters = Object.assign({}, state.query.filters, extraFilters || {});
+
+		// Filters on the object's parent do not survive a change of object —
+		// an account.industry filter means nothing on the activities table.
+		if (object !== 'opportunities') {
+			Object.keys(filters).forEach(function (key) {
+				if (key.indexOf('.') !== -1) { delete filters[key]; }
+			});
+		}
+
+		var payload = {
+			s: state.query.search || undefined,
+			f: Object.keys(filters).length ? filters : undefined,
+			ro: object,
+			rg: options.groupBy || defaultGroupBy(object),
+			t: options.title || undefined
+		};
+
+		Object.keys(payload).forEach(function (key) {
+			if (payload[key] === undefined) { delete payload[key]; }
+		});
+
+		window.location.href = cfg.adminUrl + '?page=pcm-crm-reports#' + encodeURIComponent(JSON.stringify(payload));
+	}
+
+	function defaultGroupBy(object) {
+		return {
+			accounts: 'type',
+			contacts: 'lead_source',
+			opportunities: 'stage_name',
+			activities: 'activity_type'
+		}[object] || '';
+	}
+
+	/**
+	 * The first and last moment of a YYYY-MM month, for drilling into a bar of
+	 * a monthly chart.
+	 */
+	function monthRange(month) {
+		var parts = month.split('-');
+		var last = new Date(Number(parts[0]), Number(parts[1]), 0).getDate();
+
+		return { min: month + '-01 00:00:00', max: month + '-' + String(last).padStart(2, '0') + ' 23:59:59' };
+	}
+
 	/* ---------------------------------------------------------------------
 	   Dashboard
 	   --------------------------------------------------------------------- */
+
+	/**
+	 * A line naming the screen and its filters, for the printed page only.
+	 *
+	 * A printout with no record of what it was filtered to is a page of
+	 * numbers about nothing, and the filter controls themselves do not print.
+	 */
+	function printHead(title) {
+		var applied = builtFilters(state.view === 'reports' ? report.object : 'opportunities')
+			.map(function (entry) {
+				var field = findField(state.view === 'reports' ? report.object : 'opportunities', entry.key);
+				return (field ? field.group + ' ' + field.label : entry.key) + ' ' +
+					operatorLabel(field, entry.filter.op) + ' ' + valueLabel(field, entry.filter);
+			});
+
+		if (state.query.search) { applied.unshift('Search: ' + state.query.search); }
+
+		return el('div.pcm-crm-print-head', {}, [
+			el('strong', { text: title }),
+			el('div', { text: 'Printed ' + formatDateTime(new Date().toISOString().slice(0, 19).replace('T', ' ')) }),
+			applied.length ? el('div', { text: 'Filtered by: ' + applied.join('; ') }) : null
+		]);
+	}
+
+	function headerActions(title, scheduleType) {
+		return [
+			el('button.pcm-btn.pcm-btn-quiet', {
+				type: 'button',
+				text: 'Print',
+				onclick: function () { window.print(); }
+			}),
+			el('button.pcm-btn.pcm-btn-quiet', {
+				type: 'button',
+				text: 'Schedule',
+				onclick: function () { openScheduleForm(scheduleType, title); }
+			})
+		];
+	}
 
 	function renderDashboard() {
 		// Scoped to opportunities, which is what most of this screen counts.
@@ -2249,6 +2458,9 @@
 			{ key: 'owner_id', label: 'Owner', options: ownerOptions() },
 			{ key: 'created_date', label: 'Created', range: 'date' }
 		], loadDashboard, [], 'opportunities');
+
+		clear(dom.actions);
+		headerActions('CRM Dashboard', 'dashboard').forEach(function (node) { dom.actions.appendChild(node); });
 
 		loadDashboard();
 	}
@@ -2261,46 +2473,95 @@
 
 			setCount('');
 
+			var stalledCutoff = new Date();
+			stalledCutoff.setDate(stalledCutoff.getDate() - Number(tiles.stallDays || 30));
+			var stalledMax = stalledCutoff.toISOString().slice(0, 10) + ' 23:59:59';
+
 			var grid = el('div.pcm-crm-tiles', {}, [
-				tile('Open pipeline', money(tiles.openValue), tiles.openCount + ' open ' + (tiles.openCount === 1 ? 'deal' : 'deals')),
-				tile('Weighted', money(tiles.weightedValue), 'Discounted by stage probability'),
-				tile('Won', money(tiles.wonValue), tiles.wonCount + ' closed won'),
-				tile('Win rate', tiles.winRate + '%', 'Of everything closed'),
-				tile('Sales cycle', tiles.cycleDays + (tiles.cycleDays === 1 ? ' day' : ' days'), 'Average, created to won'),
+				tile('Open pipeline', money(tiles.openValue), tiles.openCount + ' open ' + (tiles.openCount === 1 ? 'deal' : 'deals'), false,
+					function () { drillTo('opportunities', { is_closed: '0' }, { title: 'Open pipeline' }); }),
+				tile('Weighted', money(tiles.weightedValue), 'Discounted by stage probability', false,
+					function () { drillTo('opportunities', { is_closed: '0' }, { title: 'Open pipeline (weighted)' }); }),
+				tile('Won', money(tiles.wonValue), tiles.wonCount + ' closed won', false,
+					function () { drillTo('opportunities', { is_won: '1' }, { title: 'Closed won' }); }),
+				tile('Win rate', tiles.winRate + '%', 'Of everything closed', false,
+					function () { drillTo('opportunities', { is_closed: '1' }, { title: 'Everything closed' }); }),
+				tile('Sales cycle', tiles.cycleDays + (tiles.cycleDays === 1 ? ' day' : ' days'), 'Average, created to won', false,
+					function () { drillTo('opportunities', { is_won: '1' }, { title: 'Won deals, by cycle' }); }),
 				tile('Stalled', String(tiles.stalledCount),
-					'No stage change in ' + tiles.stallDays + '+ days', tiles.stalledCount > 0),
-				tile('Accounts', String(tiles.accountCount), tiles.contactCount + ' contacts'),
-				tile('Overdue', String(tiles.overdueCount), 'Activities past due', tiles.overdueCount > 0)
+					'No stage change in ' + tiles.stallDays + '+ days', tiles.stalledCount > 0,
+					function () {
+						drillTo('opportunities', { is_closed: '0', stage_entered_date: { max: stalledMax } },
+							{ title: 'Stalled ' + tiles.stallDays + '+ days' });
+					}),
+				tile('Accounts', String(tiles.accountCount), tiles.contactCount + ' contacts', false,
+					function () { drillTo('accounts', {}, { title: 'Accounts' }); }),
+				tile('Overdue', String(tiles.overdueCount), 'Activities past due', tiles.overdueCount > 0,
+					function () {
+						drillTo('activities', { is_completed: '0', due_date: { max: today() } }, { title: 'Overdue activities' });
+					})
 			]);
 
 			var charts_ = el('div.pcm-crm-charts', {}, [
-				chartCard('Pipeline by stage', charts.funnel(data.charts.pipelineByStage)),
+				chartCard('Pipeline by stage', charts.funnel(data.charts.pipelineByStage, {
+					onSelect: function (row) {
+						drillTo('opportunities', { stage_name: row.value, is_closed: '0' }, { title: row.value });
+					}
+				})),
 				chartCard('Created and won by month',
-					charts.columns(data.charts.byMonth, [{ key: 'created' }, { key: 'won' }]),
+					charts.columns(data.charts.byMonth, [{ key: 'created' }, { key: 'won' }], {
+						onSelect: function (row) {
+							drillTo('opportunities', { created_date: monthRange(row.month) },
+								{ title: 'Created in ' + row.label });
+						}
+					}),
 					legend([{ label: 'Created' }, { label: 'Won' }])),
-				chartCard('Value by lead source', charts.bar(data.charts.byLeadSource)),
+				chartCard('Value by lead source', charts.bar(data.charts.byLeadSource, {
+					onSelect: function (row) {
+						drillTo('opportunities', { lead_source: row.value }, { title: row.value || 'No lead source', groupBy: 'stage_name' });
+					}
+				})),
 				chartCard('Activity by type', charts.donut(data.charts.activityByType, {
 					metric: 'count',
-					centerLabel: 'activities'
+					centerLabel: 'activities',
+					onSelect: function (row) {
+						drillTo('activities', { activity_type: row.value }, { title: row.value || 'Activities' });
+					}
 				}), legend(data.charts.activityByType.map(function (row) {
 					return { label: (row.value || 'Unspecified') + ' (' + row.count + ')' };
 				}))),
-				chartCard('Average days in stage', charts.days(data.charts.avgDaysByStage)),
+				chartCard('Average days in stage', charts.days(data.charts.avgDaysByStage, {
+					onSelect: function (row) {
+						drillTo('opportunities', { stage_name: row.value }, { title: row.value });
+					}
+				})),
 				chartCard('Stage conversion', conversionTable(data.charts.conversion))
 			]);
 
 			clear(dom.body);
+			dom.body.appendChild(printHead('CRM Dashboard'));
 			dom.body.appendChild(grid);
 			dom.body.appendChild(charts_);
 		}).catch(showError);
 	}
 
-	function tile(label, value, note, alert) {
-		return el('div.pcm-crm-tile' + (alert ? '.pcm-crm-tile-alert' : ''), {}, [
+	function tile(label, value, note, alert, onSelect) {
+		var children = [
 			el('p.pcm-crm-tile-label', { text: label }),
 			el('div.pcm-crm-tile-value', { text: value }),
 			note ? el('div.pcm-crm-tile-note', { text: note }) : null
-		]);
+		];
+
+		if (!onSelect) {
+			return el('div.pcm-crm-tile' + (alert ? '.pcm-crm-tile-alert' : ''), {}, children);
+		}
+
+		// A button, so the drill-down is reachable by keyboard and announced
+		// as an action rather than as a number someone might click.
+		return el('button.pcm-crm-tile.pcm-crm-tile-link' + (alert ? '.pcm-crm-tile-alert' : ''), {
+			type: 'button',
+			onclick: onSelect
+		}, children);
 	}
 
 	function chartCard(title, svgNode, legendNode) {
@@ -2337,7 +2598,10 @@
 		var body = el('tbody');
 
 		rows.forEach(function (row) {
-			body.appendChild(el('tr', { style: 'cursor:default' }, [
+			body.appendChild(el('tr', {
+				title: 'Show deals currently in ' + row.stage,
+				onclick: function () { drillTo('opportunities', { stage_name: row.stage }, { title: row.stage }); }
+			}, [
 				el('td.pcm-crm-strong', { text: row.stage }),
 				el('td', {}, [el('span.pcm-crm-muted', { text: '→ ' + (row.next || 'Won') })]),
 				el('td.pcm-crm-num', { text: String(row.deals) }),
@@ -2368,8 +2632,6 @@
 	/* ---------------------------------------------------------------------
 	   Reports
 	   --------------------------------------------------------------------- */
-
-	var report = { object: 'opportunities', groupBy: 'stage_name' };
 
 	function renderReports() {
 		var groupOptions = {
@@ -2426,6 +2688,26 @@
 		}
 
 		build();
+
+		clear(dom.actions);
+
+		// A drilled report says what slice it is showing, with a way back to
+		// the whole set — otherwise a filtered report and an empty one look
+		// identical.
+		if (state.drillTitle) {
+			dom.actions.appendChild(el('span.pcm-crm-drill', {}, [
+				'Showing: ' + state.drillTitle,
+				el('a.pcm-crm-drill-clear', {
+					href: cfg.adminUrl + '?page=pcm-crm-reports',
+					title: 'Clear this drill-down',
+					text: '×'
+				})
+			]));
+		}
+
+		headerActions(state.drillTitle || objects[report.object].plural, 'report')
+			.forEach(function (node) { dom.actions.appendChild(node); });
+
 		loadReport();
 	}
 
@@ -2440,6 +2722,9 @@
 			setCount('<strong>' + data.total + '</strong> rows' + (data.sum ? ' · <strong>' + money(data.sum) + '</strong>' : ''));
 
 			clear(dom.body);
+			dom.body.appendChild(printHead(
+				(state.drillTitle ? state.drillTitle + ' — ' : '') + objects[report.object].plural
+			));
 
 			if (data.groups.length) {
 				var rows = data.groups.map(function (row) {
@@ -2497,6 +2782,52 @@
 		return value;
 	}
 
+	/**
+	 * Schedule the view currently on screen.
+	 *
+	 * The filters are captured as they stand and stored with the schedule, so
+	 * what arrives on Monday is the view that was scheduled — not whatever the
+	 * dashboard happens to be filtered to when the cron runs.
+	 */
+	function openScheduleForm(type, title) {
+		var filters = Object.assign({}, state.query.filters);
+
+		openDrawer('schedules', 0, {
+			prefill: {
+				name: title,
+				report_type: type,
+				object: type === 'report' ? report.object : '',
+				group_by: type === 'report' ? report.groupBy : '',
+				filters: JSON.stringify(filters),
+				recipients: '',
+				frequency: 'weekly',
+				send_time: '08:00',
+				day_of_week: 1,
+				day_of_month: 1,
+				attach_csv: 1,
+				is_active: 1
+			}
+		});
+	}
+
+	/**
+	 * Send a schedule now, from its own record.
+	 */
+	function sendScheduleNow(record, button, status) {
+		button.disabled = true;
+		status.textContent = 'Sending…';
+
+		api('/schedules/' + record.id + '/send', { method: 'POST' }).then(function (result) {
+			status.textContent = result.sent
+				? 'Sent to ' + result.recipients.join(', ')
+				: 'The server would not send it. Check the site’s mail configuration.';
+			button.disabled = false;
+		}).catch(function (error) {
+			status.textContent = error.message;
+			button.disabled = false;
+		});
+	}
+
 	/* ---------------------------------------------------------------------
 	   Boot
 	   --------------------------------------------------------------------- */
@@ -2514,6 +2845,13 @@
 		else if (state.view === 'reports') { renderReports(); }
 		else if (objects[state.view]) { renderList(state.view); }
 		else { clear(dom.body, el('p', { text: 'Unknown screen.' })); }
+
+		if (state.view === 'schedules') {
+			dom.actions.appendChild(el('span.pcm-crm-muted', {
+				style: 'align-self:center;font-size:0.82rem',
+				text: 'Create one from the Dashboard or a Report using its Schedule button.'
+			}));
+		}
 
 		// A record id in the hash — a link from the notification email, or a
 		// reloaded page — opens straight onto that record.

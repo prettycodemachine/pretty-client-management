@@ -937,3 +937,100 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 @media (prefers-reduced-motion: reduce) {
   .pcm-crm * { transition: none !important; }
 }
+
+/* ==========================================================================
+   Chart interaction
+   ========================================================================== */
+.pcm-chart-hit { transition: opacity 0.12s ease; }
+.pcm-chart-hit:hover { opacity: 0.78; }
+.pcm-chart-hit:focus-visible { outline: 2px solid var(--pcm-blue-deep); outline-offset: 2px; }
+
+/* A tile that drills through is a button, so it needs the surrounding tile's
+   look back — a button resets none of it on its own. */
+.pcm-crm .pcm-crm-tile-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.pcm-crm .pcm-crm-tile-link:hover { background: var(--pcm-paper-tint); }
+.pcm-crm .pcm-crm-tile-link:focus-visible { outline: 2px solid var(--pcm-blue-deep); outline-offset: 2px; }
+
+/* The line saying which slice of the data a drilled report is showing. */
+.pcm-crm-drill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 999px;
+  background: var(--pcm-paper-tint);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--pcm-ink);
+}
+.pcm-crm-drill-clear { color: var(--pcm-accent-deep); text-decoration: none; font-size: 1.05rem; line-height: 1; }
+
+/* ==========================================================================
+   Print
+
+   wp-admin is not built to print — the menu, toolbar and footer all come out
+   on the page. The CRM stylesheet only loads on CRM screens, so hiding them
+   here cannot affect any other admin page.
+   ========================================================================== */
+@media print {
+  #adminmenumain, #adminmenuback, #adminmenuwrap,
+  #wpadminbar, #wpfooter, .notice, .update-nag,
+  .pcm-crm-head-actions, .pcm-crm-filter-actions,
+  .pcm-crm-builder button, .pcm-crm-builder-panel,
+  .pcm-crm-drawer, .pcm-crm-scrim { display: none !important; }
+
+  html.wp-toolbar { padding-top: 0 !important; }
+  #wpcontent, #wpbody-content { margin-left: 0 !important; padding: 0 !important; }
+  body { background: #fff !important; }
+
+  .pcm-crm { margin: 0 !important; }
+  .pcm-crm-filters {
+    position: static;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid #999;
+    padding: 0 0 8px;
+  }
+  /* The applied filters still print, as chips — a printed dashboard with no
+     record of what it was filtered to is a page of numbers about nothing. */
+  .pcm-crm-filter { display: none; }
+  .pcm-crm-chip { border-width: 1px; }
+
+  .pcm-crm-tiles { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .pcm-crm-charts { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+  /* Nothing should be cut in half by a page break. */
+  .pcm-crm-tile, .pcm-crm-card, .pcm-crm-chart, .pcm-crm-table-wrap {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border-width: 1px !important;
+  }
+
+  .pcm-crm-table-wrap { overflow: visible !important; }
+  .pcm-crm-table { font-size: 10pt; }
+  .pcm-crm-table tbody tr:hover { background: none; }
+
+  a[href]::after { content: ""; }
+}
+
+/* What the print header says, and only when printing. */
+.pcm-crm-print-head { display: none; }
+@media print {
+  .pcm-crm-print-head {
+    display: block;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #000;
+    font-size: 11pt;
+  }
+  .pcm-crm-print-head strong { font-size: 14pt; }
+}

@@ -29,6 +29,7 @@ function pcm_crm_menu() {
 		'pcm-crm-pipeline'      => array( __( 'Pipeline', 'pcm-crm' ), 'pcm_crm_render_pipeline' ),
 		'pcm-crm-activities'    => array( __( 'Activities', 'pcm-crm' ), 'pcm_crm_render_activities' ),
 		'pcm-crm-reports'       => array( __( 'Reports', 'pcm-crm' ), 'pcm_crm_render_reports' ),
+		'pcm-crm-schedules'     => array( __( 'Scheduled Reports', 'pcm-crm' ), 'pcm_crm_render_schedules' ),
 		'pcm-crm-settings'      => array( __( 'Settings', 'pcm-crm' ), 'pcm_crm_render_settings' ),
 	);
 
@@ -143,6 +144,25 @@ function pcm_crm_render_pipeline() {
 
 function pcm_crm_render_activities() {
 	pcm_crm_screen( 'activities', __( 'Activities', 'pcm-crm' ) );
+}
+
+function pcm_crm_render_schedules() {
+	pcm_crm_screen( 'schedules', __( 'Scheduled Reports', 'pcm-crm' ), pcm_crm_cron_note() );
+}
+
+/**
+ * Say plainly how delivery actually happens.
+ *
+ * WordPress's cron only runs when someone visits the site, so on a quiet
+ * install a schedule fires late — which looks like a bug unless it is said
+ * out loud where the schedules are managed.
+ */
+function pcm_crm_cron_note() {
+	if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+		return __( 'WordPress cron is disabled here, so delivery depends on a server cron calling wp-cron.php.', 'pcm-crm' );
+	}
+
+	return __( 'Delivery runs on WordPress cron, which fires on site visits — a quiet site may send a little late.', 'pcm-crm' );
 }
 
 function pcm_crm_render_reports() {

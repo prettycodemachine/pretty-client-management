@@ -138,6 +138,12 @@ class PCM_CRM_Model {
 			case 'longtext':
 				return sanitize_textarea_field( (string) $pcm_value );
 
+			// JSON, stored verbatim. Written only by the app, read back through
+			// json_decode, which fails safely on anything malformed — running
+			// it through a text sanitiser would take the structure apart.
+			case 'raw':
+				return is_scalar( $pcm_value ) ? (string) $pcm_value : wp_json_encode( $pcm_value );
+
 			default:
 				return sanitize_text_field( (string) $pcm_value );
 		}
