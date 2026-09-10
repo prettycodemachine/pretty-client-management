@@ -16,6 +16,23 @@ check( 'strips legal suffix', pcm_crm_account_key( 'Acme Inc.' ), 'acme' );
 check( 'collapses whitespace', pcm_crm_account_key( "  Green   Mountain  LLC " ), 'green mountain' );
 check( 'different orgs stay different', pcm_crm_account_key( 'Acme' ) === pcm_crm_account_key( 'Acorn' ), false );
 
+echo "\n--- the rendered form ---\n";
+$form = pcm_crm_contact_form_shortcode();
+
+// The theme styles this markup, and cached pages post to these input names, so
+// the shipped form has to keep producing both unchanged.
+check( 'keeps the theme’s form class', false !== strpos( $form, 'class="contact-form"' ), true );
+check( 'carries the nonce', false !== strpos( $form, 'pcm_contact_nonce' ), true );
+check( 'carries the honeypot', false !== strpos( $form, 'name="pcm_hp"' ), true );
+check( 'keeps the original input names',
+	false !== strpos( $form, 'name="pcm_first_name"' ) && false !== strpos( $form, 'name="pcm_org"' ), true );
+check( 'renders a textarea for a paragraph field', false !== strpos( $form, '<textarea id="pcm_message"' ), true );
+check( 'renders a select for a dropdown', false !== strpos( $form, '<select id="pcm_interest"' ), true );
+check( 'pairs the two half-width fields into a row', substr_count( $form, 'class="field-row"' ), 1 );
+// An unclosed div would swallow the rest of the page layout.
+check( 'every div is closed', substr_count( $form, '<div' ), substr_count( $form, '</div>' ) );
+check( 'required survives to the markup', substr_count( $form, ' required' ) >= 6, true );
+
 echo "\n--- email tokens ---\n";
 // Values are keyed by the builder's field keys now, not by fixed names.
 $fields = array( 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'org' => 'Analytical & Co', 'email' => 'a@b.c', 'interest' => 'AI Enablement' );

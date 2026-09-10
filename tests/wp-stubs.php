@@ -97,11 +97,13 @@ function rest_url( $n ) { return 'https://example.com/wp-json/' . $n; }
 function add_menu_page() {} function add_submenu_page() {} function wp_nonce_url( $u ) { return $u; }
 function checked() {} function selected() {} function submit_button() {} function settings_fields() {}
 function settings_errors() {} function wp_editor() {} function wp_get_current_user() { return (object) array( 'user_email' => 'a@b.c' ); }
-function esc_attr_e( $s ) { echo $s; } function antispambot( $s ) { return $s; }
+function esc_attr_e( $s ) { echo $s; }
+function esc_textarea( $s ) { return htmlspecialchars( (string) $s, ENT_QUOTES ); }
+function wp_get_attachment_image() { return ''; } function antispambot( $s ) { return $s; }
 function wp_die() {} function nocache_headers() {} function flush_rewrite_rules() {}
 function wp_mail() { return true; } function remove_filter() {}
 function wp_verify_nonce() { return true; } function wp_safe_redirect() {}
-function wp_get_referer() { return ''; } function wp_nonce_field() {}
+function wp_get_referer() { return ''; } function wp_nonce_field( $a = -1, $n = "_wpnonce" ) { echo '<input type="hidden" name="' . $n . '" value="nonce">'; }
 function shortcode_exists() { return true; } function do_shortcode( $s ) { return $s; }
 function wp_unslash( $v ) { return $v; }
 
