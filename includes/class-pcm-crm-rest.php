@@ -40,10 +40,32 @@ class PCM_CRM_REST {
 		return pcm_crm_user_can();
 	}
 
+	/**
+	 * The object and id a route captured.
+	 *
+	 * Read from the URL parameters specifically, never through the request's
+	 * array access. WordPress merges the JSON body *ahead* of URL parameters,
+	 * so a record with a field of the same name shadows the route's own —
+	 * which is exactly what happened: creating a schedule sent an `object`
+	 * field of its own, and the collection route stopped knowing it was
+	 * looking at schedules. The captures are prefixed for the same reason.
+	 */
+	protected static function route_object( WP_REST_Request $pcm_request ) {
+		$pcm_url = $pcm_request->get_url_params();
+
+		return isset( $pcm_url['pcm_object'] ) ? (string) $pcm_url['pcm_object'] : '';
+	}
+
+	protected static function route_id( WP_REST_Request $pcm_request ) {
+		$pcm_url = $pcm_request->get_url_params();
+
+		return isset( $pcm_url['pcm_id'] ) ? (int) $pcm_url['pcm_id'] : 0;
+	}
+
 	public static function register_routes() {
 		$pcm_slugs = implode( '|', array_keys( self::models() ) );
 
-		register_rest_route( self::NS, '/(?P<object>' . $pcm_slugs . ')', array(
+		register_rest_route( self::NS, '/(?P<pcm_object>' . $pcm_slugs . ')', array(
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( __CLASS__, 'list_items' ),
@@ -56,7 +78,7 @@ class PCM_CRM_REST {
 			),
 		) );
 
-		register_rest_route( self::NS, '/(?P<object>' . $pcm_slugs . ')/(?P<id>\d+)', array(
+		register_rest_route( self::NS, '/(?P<pcm_object>' . $pcm_slugs . ')/(?P<pcm_id>\d+)', array(
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( __CLASS__, 'get_item' ),
@@ -103,7 +125,7 @@ class PCM_CRM_REST {
 			'permission_callback' => array( __CLASS__, 'permission' ),
 		) );
 
-		register_rest_route( self::NS, '/schedules/(?P<id>\d+)/send', array(
+		register_rest_route( self::NS, '/schedules/(?P<pcm_id>\d+)/send', array(
 			'methods'             => WP_REST_Server::CREATABLE,
 			'callback'            => array( __CLASS__, 'send_schedule' ),
 			'permission_callback' => array( __CLASS__, 'permission' ),
@@ -116,7 +138,7 @@ class PCM_CRM_REST {
 		) );
 
 		// Related lists for a record's detail drawer, in one round trip.
-		register_rest_route( self::NS, '/related/(?P<object>accounts|contacts|opportunities)/(?P<id>\d+)', array(
+		register_rest_route( self::NS, '/related/(?P<pcm_object>accounts|contacts|opportunities)/(?P<pcm_id>\d+)', array(
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => array( __CLASS__, 'related' ),
 			'permission_callback' => array( __CLASS__, 'permission' ),
@@ -159,7 +181,7 @@ class PCM_CRM_REST {
 	   ----------------------------------------------------------------------- */
 
 	public static function list_items( WP_REST_Request $pcm_request ) {
-		$pcm_model = self::model( $pcm_request['object'] );
+		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
 			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
@@ -177,8 +199,8 @@ class PCM_CRM_REST {
 	}
 
 	public static function get_item( WP_REST_Request $pcm_request ) {
-		$pcm_model = self::model( $pcm_request['object'] );
-		$pcm_item  = $pcm_model ? $pcm_model->get( (int) $pcm_request['id'] ) : null;
+		$pcm_model = self::model( self::route_object( $pcm_request ) );
+		$pcm_item  = $pcm_model ? $pcm_model->get( self::route_id( $pcm_request ) ) : null;
 
 		if ( ! $pcm_item ) {
 			return new WP_Error( 'pcm_crm_not_found', __( 'Record not found.', 'pcm-crm' ), array( 'status' => 404 ) );
@@ -190,7 +212,7 @@ class PCM_CRM_REST {
 	}
 
 	public static function create_item( WP_REST_Request $pcm_request ) {
-		$pcm_model = self::model( $pcm_request['object'] );
+		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
 			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
@@ -208,13 +230,13 @@ class PCM_CRM_REST {
 	}
 
 	public static function update_item( WP_REST_Request $pcm_request ) {
-		$pcm_model = self::model( $pcm_request['object'] );
+		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
 			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
 		}
 
-		$pcm_result = $pcm_model->update( (int) $pcm_request['id'], (array) $pcm_request->get_json_params() );
+		$pcm_result = $pcm_model->update( self::route_id( $pcm_request ), (array) $pcm_request->get_json_params() );
 
 		if ( is_wp_error( $pcm_result ) ) {
 			return $pcm_result;
@@ -226,13 +248,13 @@ class PCM_CRM_REST {
 	}
 
 	public static function delete_item( WP_REST_Request $pcm_request ) {
-		$pcm_model = self::model( $pcm_request['object'] );
+		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
 			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
 		}
 
-		return rest_ensure_response( array( 'deleted' => $pcm_model->delete( (int) $pcm_request['id'] ) ) );
+		return rest_ensure_response( array( 'deleted' => $pcm_model->delete( self::route_id( $pcm_request ) ) ) );
 	}
 
 	/* -----------------------------------------------------------------------
@@ -309,8 +331,8 @@ class PCM_CRM_REST {
 	}
 
 	public static function related( WP_REST_Request $pcm_request ) {
-		$pcm_object = $pcm_request['object'];
-		$pcm_id     = (int) $pcm_request['id'];
+		$pcm_object = self::route_object( $pcm_request );
+		$pcm_id     = self::route_id( $pcm_request );
 		$pcm_out    = array();
 
 		if ( 'accounts' === $pcm_object ) {
@@ -366,6 +388,7 @@ class PCM_CRM_REST {
 			'priorities'        => pcm_crm_priorities(),
 			'interests'         => pcm_crm_interest_options(),
 			'owners'            => pcm_crm_owner_choices(),
+			'users'             => pcm_crm_user_directory(),
 			'currency'          => pcm_crm_currency_symbol(),
 			'stallDays'         => pcm_crm_stall_days(),
 			'frequencies'       => pcm_crm_frequencies(),
@@ -474,7 +497,7 @@ class PCM_CRM_REST {
 	 * not a reasonable way to find out.
 	 */
 	public static function send_schedule( WP_REST_Request $pcm_request ) {
-		$pcm_schedule = pcm_crm_schedules()->get( (int) $pcm_request['id'] );
+		$pcm_schedule = pcm_crm_schedules()->get( self::route_id( $pcm_request ) );
 
 		if ( ! $pcm_schedule ) {
 			return new WP_Error( 'pcm_crm_not_found', __( 'That schedule no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
@@ -582,6 +605,38 @@ function pcm_crm_owner_options() {
 
 	foreach ( pcm_crm_owner_choices() as $pcm_owner ) {
 		$pcm_out[] = array( 'value' => (string) $pcm_owner['id'], 'label' => $pcm_owner['name'] );
+	}
+
+	return $pcm_out;
+}
+
+/**
+ * Everyone who could be sent a report.
+ *
+ * Wider than the owner list on purpose: a report often goes to someone who
+ * reads it and never touches the CRM. Capped, because a site with thousands of
+ * subscribers should not ship them all to the browser — beyond that, the free
+ * text field takes an address directly.
+ */
+function pcm_crm_user_directory() {
+	$pcm_users = get_users( array(
+		'number'  => (int) apply_filters( 'pcm_crm_user_directory_limit', 200 ),
+		'orderby' => 'display_name',
+		'order'   => 'ASC',
+	) );
+
+	$pcm_out = array();
+
+	foreach ( $pcm_users as $pcm_user ) {
+		if ( ! is_email( $pcm_user->user_email ) ) {
+			continue;
+		}
+
+		$pcm_out[] = array(
+			'id'    => (int) $pcm_user->ID,
+			'name'  => pcm_crm_user_label( $pcm_user ),
+			'email' => $pcm_user->user_email,
+		);
 	}
 
 	return $pcm_out;

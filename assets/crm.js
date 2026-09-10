@@ -306,6 +306,46 @@
 		return !!(stage && Number(stage.is_closed) && !Number(stage.is_won));
 	}
 
+	/**
+	 * What a schedule actually sends, in words.
+	 *
+	 * Inherited from the screen it was created on rather than asked for — a
+	 * dashboard schedule made from the dashboard could only ever be the
+	 * dashboard, and offering the choice again invited it to be answered
+	 * wrongly.
+	 */
+	function scheduleContents(row) {
+		if (row.report_type !== 'report') { return 'Dashboard'; }
+
+		var object = objects[row.object] ? objects[row.object].plural : row.object;
+		var grouped = row.group_by ? ' grouped by ' + row.group_by.replace(/_id$/, '').replace(/_/g, ' ') : '';
+
+		return object + grouped;
+	}
+
+	/**
+	 * Recipients are stored as a comma-separated mix of user ids and plain
+	 * addresses; this renders them as names where it can.
+	 */
+	function recipientSummary(raw) {
+		return parseRecipients(raw).map(function (entry) {
+			return entry.user ? entry.user.name : entry.email;
+		}).join(', ');
+	}
+
+	function parseRecipients(raw) {
+		var users = (state.boot && state.boot.users) || [];
+
+		return String(raw || '').split(/[,;\s]+/).filter(Boolean).map(function (token) {
+			if (/^\d+$/.test(token)) {
+				var match = users.filter(function (u) { return String(u.id) === token; })[0];
+				return { id: token, user: match || null, email: match ? match.email : token };
+			}
+
+			return { email: token, user: null };
+		});
+	}
+
 	function weekdayOptions() {
 		var days = (state.boot && state.boot.weekdays) || {};
 
@@ -537,17 +577,18 @@
 			kicker: function (row) { return row.report_type === 'dashboard' ? 'Dashboard' : 'Report'; },
 			highlights: function (row) {
 				return [
+					{ label: 'Contents', value: scheduleContents(row) },
 					{ label: 'Sends', value: scheduleSummary(row) },
-					{ label: 'To', value: row.recipients },
+					{ label: 'To', value: recipientSummary(row.recipients) },
 					{ label: 'Last sent', value: formatDateTime(row.last_sent) },
 					{ label: 'Status', value: Number(row.is_active) ? 'Active' : 'Paused' }
 				];
 			},
 			columns: [
 				{ key: 'name', label: 'Name', strong: true },
-				{ key: 'report_type', label: 'Type', badge: true },
+				{ key: 'report_type', label: 'Sends', render: function (row) { return scheduleContents(row); } },
 				{ key: 'frequency', label: 'When', render: function (row) { return scheduleSummary(row); } },
-				{ key: 'recipients', label: 'Recipients' },
+				{ key: 'recipients', label: 'Recipients', render: function (row) { return recipientSummary(row.recipients); } },
 				{ key: 'is_active', label: 'Status', render: function (row) { return Number(row.is_active) ? 'Active' : 'Paused'; } },
 				{ key: 'last_sent', label: 'Last sent', date: true }
 			],
@@ -569,8 +610,7 @@
 				return [
 					{ fields: [
 						{ key: 'name', label: 'Name', required: true, wide: true },
-						{ key: 'recipients', label: 'Recipients', wide: true,
-							note: 'Email addresses or WordPress usernames, separated by commas.' },
+						{ key: 'recipients', label: 'Recipients', wide: true, type: 'recipients' },
 						{ key: 'frequency', label: 'Frequency', options: options(state.boot.frequencies || []) },
 						{ key: 'send_time', label: 'Send at', type: 'time' },
 						{ key: 'day_of_week', label: 'Day of week',
@@ -579,18 +619,6 @@
 							showWhen: 'frequency', showWhenValue: 'monthly' },
 						{ key: 'is_active', label: 'Active', type: 'checkbox' },
 						{ key: 'attach_csv', label: 'Attach CSV', type: 'checkbox' }
-					] },
-					{ title: 'What is sent', fields: [
-						{ key: 'report_type', label: 'Type', options: [
-							{ value: 'dashboard', label: 'Dashboard' },
-							{ value: 'report', label: 'Report' }
-						] },
-						{ key: 'object', label: 'Report on',
-							options: [{ value: '', label: '—' }].concat(['accounts', 'contacts', 'opportunities', 'activities'].map(function (key) {
-								return { value: key, label: objects[key].plural };
-							})),
-							showWhen: 'report_type', showWhenValue: 'report' },
-						{ key: 'group_by', label: 'Grouped by', showWhen: 'report_type', showWhenValue: 'report' }
 					] }
 				];
 			}
@@ -1713,6 +1741,14 @@
 		});
 		var control;
 
+		if (field.type === 'recipients') {
+			wrap.classList.add('pcm-crm-field-wide');
+			wrap.appendChild(el('label', { text: field.label }));
+			wrap.appendChild(recipientsControl(values));
+
+			return wrap;
+		}
+
 		if (field.options || field.lookup) {
 			control = el('select', { id: id, onchange: onInput });
 
@@ -1824,6 +1860,65 @@
 
 		var input = dom.drawer.querySelector('#pcm-crm-field-probability');
 		if (input) { input.value = values.probability; }
+	}
+
+	/**
+	 * Choose recipients from the WordPress users, or type an address.
+	 *
+	 * Users are stored as their ids rather than their addresses, so a schedule
+	 * follows someone who changes their email instead of quietly going to the
+	 * old one. Anyone without an account is still reachable through the free
+	 * text field beside it.
+	 */
+	function recipientsControl(values) {
+		var parsed = parseRecipients(values.recipients);
+		var chosen = parsed.filter(function (e) { return e.user; }).map(function (e) { return String(e.id); });
+		var extra = parsed.filter(function (e) { return !e.user; }).map(function (e) { return e.email; }).join(', ');
+
+		var users = (state.boot && state.boot.users) || [];
+		var list = el('div.pcm-crm-recipients');
+
+		function sync() {
+			var ids = Array.prototype.slice.call(list.querySelectorAll('input:checked')).map(function (box) { return box.value; });
+			var typed = extraInput.value.split(/[,;]+/).map(function (v) { return v.trim(); }).filter(Boolean);
+
+			values.recipients = ids.concat(typed).join(',');
+		}
+
+		users.forEach(function (user) {
+			var id = 'pcm-crm-rcpt-' + user.id;
+
+			list.appendChild(el('label.pcm-crm-recipient', { for: id }, [
+				el('input', {
+					id: id,
+					type: 'checkbox',
+					value: String(user.id),
+					checked: chosen.indexOf(String(user.id)) !== -1,
+					onchange: sync
+				}),
+				el('span', {}, [
+					el('span.pcm-crm-recipient-name', { text: user.name }),
+					el('span.pcm-crm-recipient-email', { text: user.email })
+				])
+			]));
+		});
+
+		if (!users.length) {
+			list.appendChild(el('p.pcm-crm-related-empty', { text: 'No WordPress users with an email address.' }));
+		}
+
+		var extraInput = el('input', {
+			type: 'text',
+			value: extra,
+			placeholder: 'Other addresses, separated by commas',
+			oninput: sync
+		});
+
+		return el('div', {}, [
+			list,
+			el('span.pcm-crm-field-note', { text: 'Pick people, and add anyone without an account below.' }),
+			extraInput
+		]);
 	}
 
 	function relatedToControl(field, values) {

@@ -746,6 +746,41 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 }
 .pcm-crm-field-note { font-size: 0.76rem; color: var(--pcm-body); }
 
+/* Recipient picker ---------------------------------------------------------- */
+.pcm-crm-recipients {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 4px 12px;
+  /* Capped and scrollable: a site with fifty users should not push the rest
+     of the form off the modal. */
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background: #fff;
+}
+.pcm-crm-recipient {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+.pcm-crm-recipient:hover { background: var(--pcm-paper-tint); }
+.pcm-crm-recipient input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  min-width: 17px;
+  margin: 0;
+  accent-color: var(--pcm-accent-deep);
+}
+.pcm-crm-recipient-name { display: block; font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-recipient-email { display: block; font-size: 0.76rem; color: var(--pcm-body); overflow-wrap: anywhere; }
+
 /* Read-only stamps: shown as text, not as a disabled input, which would look
    editable-but-broken rather than simply not editable. */
 .pcm-crm-field-static { gap: 3px; }

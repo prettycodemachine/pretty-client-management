@@ -72,7 +72,12 @@ function plugin_dir_path( $f ) { return dirname( $f ) . '/'; }
 function plugin_dir_url() { return 'https://example.com/plugin/'; }
 function add_query_arg( $k, $v = null, $u = null ) { return is_array($k) ? $u : $u . '?' . $k . '=' . $v; }
 function get_role() { return null; } function get_users() { return array(); }
-function get_user_by( $field, $value ) { return null; }
+function get_user_by( $field, $value ) {
+	foreach ( (array) ( isset( $GLOBALS['pcm_test_users'] ) ? $GLOBALS['pcm_test_users'] : array() ) as $id => $user ) {
+		if ( 'login' === $field && isset( $user->user_login ) && $user->user_login === $value ) { return $user; }
+	}
+	return null;
+}
 function wp_delete_file( $f ) { @unlink( $f ); }
 function get_temp_dir() { return sys_get_temp_dir() . '/'; }
 function trailingslashit( $p ) { return rtrim( $p, '/' ) . '/'; }
@@ -99,22 +104,35 @@ function wp_get_referer() { return ''; } function wp_nonce_field() {}
 function shortcode_exists() { return true; } function do_shortcode( $s ) { return $s; }
 function wp_unslash( $v ) { return $v; }
 
-class WP_Error { public $msg; function __construct( $c = '', $m = '' ) { $this->msg = $m; } }
+class WP_Error {
+	public $code; public $msg;
+	function __construct( $c = '', $m = '' ) { $this->code = $c; $this->msg = $m; }
+	function get_error_code() { return $this->code; }
+	function get_error_message() { return $this->msg; }
+}
 function is_wp_error( $t ) { return $t instanceof WP_Error; }
 class WP_REST_Server { const READABLE = 'GET'; const CREATABLE = 'POST'; const DELETABLE = 'DELETE'; }
 function register_rest_route() {} function rest_ensure_response( $v ) { return $v; }
 /**
- * Enough of WP_REST_Request to call a controller directly: URL parameters are
- * reached through ArrayAccess, query parameters through get_param().
+ * Enough of WP_REST_Request to call a controller directly.
+ *
+ * The parameter precedence matters and is copied from WordPress: JSON body
+ * first, then URL. A record with a field named like a route capture therefore
+ * shadows it here exactly as it does in production — which is how the schedule
+ * bug got past a stub that consulted URL parameters first.
  */
 class WP_REST_Request implements ArrayAccess {
 	private $url = array();
 	private $params = array();
 	function __construct( $url = array(), $params = array() ) { $this->url = $url; $this->params = $params; }
-	function get_param( $k ) { return isset( $this->params[$k] ) ? $this->params[$k] : null; }
+	function get_url_params() { return $this->url; }
 	function get_json_params() { return $this->params; }
-	#[\ReturnTypeWillChange] function offsetExists( $o ) { return isset( $this->url[$o] ); }
-	#[\ReturnTypeWillChange] function offsetGet( $o ) { return isset( $this->url[$o] ) ? $this->url[$o] : null; }
+	function get_param( $k ) {
+		if ( isset( $this->params[ $k ] ) ) { return $this->params[ $k ]; }
+		return isset( $this->url[ $k ] ) ? $this->url[ $k ] : null;
+	}
+	#[\ReturnTypeWillChange] function offsetExists( $o ) { return null !== $this->get_param( $o ); }
+	#[\ReturnTypeWillChange] function offsetGet( $o ) { return $this->get_param( $o ); }
 	#[\ReturnTypeWillChange] function offsetSet( $o, $v ) { $this->url[$o] = $v; }
 	#[\ReturnTypeWillChange] function offsetUnset( $o ) { unset( $this->url[$o] ); }
 }

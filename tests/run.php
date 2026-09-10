@@ -238,7 +238,7 @@ $real_wpdb = $GLOBALS['wpdb'];
 $GLOBALS['wpdb'] = new PCM_Related_WPDB();
 
 $related = function( $object ) {
-	return (array) PCM_CRM_REST::related( new WP_REST_Request( array( 'object' => $object, 'id' => 5 ) ) );
+	return (array) PCM_CRM_REST::related( new WP_REST_Request( array( 'pcm_object' => $object, 'pcm_id' => 5 ) ) );
 };
 
 check( 'an account exposes all three lists',
@@ -259,6 +259,30 @@ check( 'related activities carry their contact name',
 	isset( $rows['activities'][0]['_contact_name'] ), true );
 
 $GLOBALS['wpdb'] = $real_wpdb;
+
+echo "\n--- route parameters are not shadowed by the body ---\n";
+// WordPress merges the JSON body ahead of URL parameters. The schedules table
+// has a column called `object`, so creating one sent an `object` field that
+// shadowed the route's own capture and the collection route stopped knowing
+// which table it was writing to.
+$shadowing = new WP_REST_Request(
+	array( 'pcm_object' => 'schedules' ),
+	array( 'object' => '', 'name' => 'CRM Dashboard', 'report_type' => 'dashboard' )
+);
+
+check( 'the body does shadow a plain parameter read', $shadowing['object'], '' );
+check( 'but the route still resolves its own object',
+	is_wp_error( PCM_CRM_REST::create_item( $shadowing ) ), false );
+
+$shadow_id = new WP_REST_Request(
+	array( 'pcm_object' => 'schedules', 'pcm_id' => 7 ),
+	array( 'id' => 999, 'name' => 'Renamed' )
+);
+// The stub has no rows, so this reports "not found" — the point is that it
+// got as far as looking for one, rather than losing track of the object.
+$shadow_result = PCM_CRM_REST::update_item( $shadow_id );
+check( 'and a write still knows which table it is for',
+	is_wp_error( $shadow_result ) ? $shadow_result->get_error_code() : 'ok', 'pcm_crm_not_found' );
 
 echo "\n--- schedule due dates ---\n";
 $at = function( $str ) { return strtotime( $str ); };
@@ -308,6 +332,20 @@ check( 'duplicates are collapsed',
 	pcm_crm_schedule_recipients( 'a@b.com, a@b.com' ), array( 'a@b.com' ) );
 check( 'an unresolvable name is dropped rather than mailed',
 	pcm_crm_schedule_recipients( 'not-a-user' ), array() );
+
+// The picker stores user ids rather than addresses, so a schedule follows
+// someone who changes their email instead of going to the old one.
+$GLOBALS['pcm_test_users'] = array( 4 => (object) array(
+	'first_name' => 'Ada', 'last_name' => 'Lovelace', 'display_name' => 'Ada',
+	'user_login' => 'ada', 'user_email' => 'ada@example.org',
+) );
+check( 'a user id resolves to that user’s current address',
+	pcm_crm_schedule_recipients( '4' ), array( 'ada@example.org' ) );
+check( 'ids and plain addresses mix freely',
+	pcm_crm_schedule_recipients( '4, someone@else.com' ), array( 'ada@example.org', 'someone@else.com' ) );
+check( 'a username works too', pcm_crm_schedule_recipients( 'ada' ), array( 'ada@example.org' ) );
+check( 'an id with no user behind it is dropped', pcm_crm_schedule_recipients( '999' ), array() );
+$GLOBALS['pcm_test_users'] = array();
 check( 'nothing in, nothing out', pcm_crm_schedule_recipients( '' ), array() );
 
 echo "\n--- schedule storage ---\n";
