@@ -604,20 +604,10 @@
 					}
 				}];
 			},
-			filters: function () {
-				return [
-					{ key: 'report_type', label: 'Type', options: [
-						{ value: '', label: 'Any type' },
-						{ value: 'dashboard', label: 'Dashboard' },
-						{ value: 'report', label: 'Report' }
-					] },
-					{ key: 'is_active', label: 'Status', options: [
-						{ value: '', label: 'All' },
-						{ value: '1', label: 'Active' },
-						{ value: '0', label: 'Paused' }
-					] }
-				];
-			},
+			// No filter bar: a handful of subscriptions with a Cancel on each
+			// reads better than a search box over five rows, and a filter
+			// builder over them would be furniture.
+			noFilters: true,
 			fields: function () {
 				return [
 					{ fields: [
@@ -1200,12 +1190,19 @@
 	function renderList(object) {
 		var def = objects[object];
 
-		renderFilters(def.filters(), function () { loadList(object); }, [
-			el('a.pcm-btn.pcm-btn-quiet', {
-				href: exportUrl(object),
-				text: 'Export CSV'
-			})
-		], object);
+		if (def.noFilters) {
+			// Emptied rather than left as it was, or the previous screen's
+			// controls would still be sitting there. The bar hides itself when
+			// it has no children.
+			clear(dom.filters);
+		} else {
+			renderFilters(def.filters(), function () { loadList(object); }, [
+				el('a.pcm-btn.pcm-btn-quiet', {
+					href: exportUrl(object),
+					text: 'Export CSV'
+				})
+			], object);
+		}
 
 		clear(dom.actions);
 
