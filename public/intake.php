@@ -36,33 +36,48 @@ function pcm_crm_client_ip() {
 /**
  * Upsert the Account, the Contact and the Activity for one submission.
  *
+ * Driven entirely by each field's `map`, so adding a field in the builder and
+ * pointing it at a CRM column is all it takes for the value to land there.
+ *
  * Returns the ids it created or matched. Deliberately creates no Opportunity:
  * an inquiry is not a deal, and a pipeline full of unqualified rows is worse
  * than an empty one.
  */
-function pcm_crm_intake( array $pcm_fields ) {
-	$pcm_account_id = pcm_crm_upsert_account( $pcm_fields['org'], array(
-		'type'        => 'Prospect',
-		'industry'    => '',
-		'description' => '',
-	) );
+function pcm_crm_intake( array $pcm_values ) {
+	$pcm_mapped = pcm_crm_map_submission( $pcm_values );
 
-	$pcm_contact_id = pcm_crm_upsert_contact( array(
-		'account_id'       => $pcm_account_id,
-		'first_name'       => $pcm_fields['first'],
-		'last_name'        => $pcm_fields['last'],
-		'email'            => $pcm_fields['email'],
-		'lead_source'      => PCM_CRM_FORM_SOURCE,
-		// Carried onto the person so an opportunity opened for them later can
-		// inherit it. Without this the answer survives only in an activity's
-		// subject line, where nothing can filter or report on it.
-		'service_interest' => $pcm_fields['interest'],
-	) );
+	$pcm_account_id = 0;
 
-	// Subject names the interest so the activity list reads as a log of what
-	// people are asking for, not a column of identical "Website inquiry" rows.
+	if ( ! empty( $pcm_mapped['account']['name'] ) ) {
+		$pcm_account_id = pcm_crm_upsert_account(
+			$pcm_mapped['account']['name'],
+			array_merge( array( 'type' => 'Prospect' ), array_diff_key( $pcm_mapped['account'], array( 'name' => '' ) ) )
+		);
+	}
+
+	$pcm_contact_id = 0;
+
+	// An email is what a contact is matched on; without one there is no way to
+	// tell a returning visitor from a new one, so the submission is recorded
+	// and left unlinked rather than creating a duplicate person every time.
+	if ( ! empty( $pcm_mapped['contact']['email'] ) ) {
+		$pcm_contact_id = pcm_crm_upsert_contact( array_merge(
+			$pcm_mapped['contact'],
+			array(
+				'account_id'  => $pcm_account_id,
+				'lead_source' => PCM_CRM_FORM_SOURCE,
+			)
+		) );
+	}
+
+	// Subject names the interest where there is one, so the activity list
+	// reads as a log of what people are asking for rather than a column of
+	// identical rows.
+	$pcm_interest = isset( $pcm_mapped['contact']['service_interest'] ) ? $pcm_mapped['contact']['service_interest'] : '';
+	$pcm_subject  = $pcm_interest ? 'Web inquiry — ' . $pcm_interest : 'Web inquiry';
+
 	$pcm_activity_id = pcm_crm_log_activity( array(
-		'subject'       => 'Web inquiry — ' . $pcm_fields['interest'],
+		'subject'       => $pcm_subject,
 		'activity_type' => 'Web Form',
 		'status'        => 'Completed',
 		'priority'      => 'Normal',
@@ -70,7 +85,9 @@ function pcm_crm_intake( array $pcm_fields ) {
 		'who_id'        => $pcm_contact_id,
 		'what_id'       => $pcm_account_id,
 		'what_type'     => $pcm_account_id ? 'account' : '',
-		'description'   => $pcm_fields['message'],
+		'description'   => isset( $pcm_mapped['activity']['description'] )
+			? $pcm_mapped['activity']['description']
+			: pcm_crm_submission_summary( $pcm_values ),
 	) );
 
 	return array(
@@ -78,6 +95,54 @@ function pcm_crm_intake( array $pcm_fields ) {
 		'contact_id'  => $pcm_contact_id,
 		'activity_id' => $pcm_activity_id,
 	);
+}
+
+/**
+ * Sort a submission's values into the records they belong to.
+ */
+function pcm_crm_map_submission( array $pcm_values ) {
+	$pcm_mapped = array( 'contact' => array(), 'account' => array(), 'activity' => array() );
+
+	foreach ( pcm_crm_form_fields() as $pcm_field ) {
+		if ( empty( $pcm_field['map'] ) ) {
+			continue;
+		}
+
+		$pcm_value = isset( $pcm_values[ $pcm_field['key'] ] ) ? $pcm_values[ $pcm_field['key'] ] : '';
+
+		if ( '' === $pcm_value ) {
+			continue;
+		}
+
+		list( $pcm_object, $pcm_column ) = explode( '.', $pcm_field['map'], 2 );
+
+		if ( isset( $pcm_mapped[ $pcm_object ] ) ) {
+			$pcm_mapped[ $pcm_object ][ $pcm_column ] = $pcm_value;
+		}
+	}
+
+	return $pcm_mapped;
+}
+
+/**
+ * Everything submitted, as readable lines.
+ *
+ * Used as the activity body when no field is mapped to it, so a form built
+ * without a message field still leaves a record of what was actually said
+ * rather than an empty activity.
+ */
+function pcm_crm_submission_summary( array $pcm_values ) {
+	$pcm_lines = array();
+
+	foreach ( pcm_crm_form_fields() as $pcm_field ) {
+		$pcm_value = isset( $pcm_values[ $pcm_field['key'] ] ) ? $pcm_values[ $pcm_field['key'] ] : '';
+
+		if ( '' !== $pcm_value ) {
+			$pcm_lines[] = $pcm_field['label'] . ': ' . $pcm_value;
+		}
+	}
+
+	return implode( "\n", $pcm_lines );
 }
 
 /**

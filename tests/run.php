@@ -17,12 +17,56 @@ check( 'collapses whitespace', pcm_crm_account_key( "  Green   Mountain  LLC " )
 check( 'different orgs stay different', pcm_crm_account_key( 'Acme' ) === pcm_crm_account_key( 'Acorn' ), false );
 
 echo "\n--- email tokens ---\n";
-$fields = array( 'first' => 'Ada', 'last' => 'Lovelace', 'org' => 'Analytical & Co', 'email' => 'a@b.c', 'interest' => 'AI Enablement' );
-check( 'fills full name', pcm_crm_fill_tokens( 'Hi {{FULL NAME}}', $fields ), 'Hi Ada Lovelace' );
+// Values are keyed by the builder's field keys now, not by fixed names.
+$fields = array( 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'org' => 'Analytical & Co', 'email' => 'a@b.c', 'interest' => 'AI Enablement' );
+check( 'fills a field token', pcm_crm_fill_tokens( 'Hi {{FIRST NAME}}', $fields ), 'Hi Ada' );
+check( 'composes full name from two fields', pcm_crm_fill_tokens( 'Hi {{FULL NAME}}', $fields ), 'Hi Ada Lovelace' );
 check( 'underscored spelling works', pcm_crm_fill_tokens( '{{FIRST_NAME}}', $fields ), 'Ada' );
+// A template saved before the form was configurable must keep working.
+check( 'the legacy organization token still resolves',
+	pcm_crm_fill_tokens( '{{ORGANIZATION}}', $fields ), 'Analytical &amp; Co' );
+check( 'so does the legacy interest token',
+	pcm_crm_fill_tokens( '{{INTEREST}}', $fields ), 'AI Enablement' );
 check( 'escapes injected markup',
-	pcm_crm_fill_tokens( '{{ORGANIZATION}}', array( 'first' => '', 'last' => '', 'org' => '<script>x</script>', 'email' => '', 'interest' => '' ) ),
+	pcm_crm_fill_tokens( '{{ORGANIZATION}}', array( 'org' => '<script>x</script>' ) ),
 	'&lt;script&gt;x&lt;/script&gt;' );
+check( 'a token with no value left behind resolves to nothing',
+	pcm_crm_fill_tokens( '[{{EMAIL}}]', array() ), '[]' );
+
+echo "\n--- form builder ---\n";
+check( 'the shipped form keeps its original input names',
+	pcm_crm_field_input_name( pcm_crm_default_form_fields()[0] ), 'pcm_first_name' );
+check( 'tokens are derived from field keys',
+	pcm_crm_field_token( array( 'key' => 'first_name' ) ), '{{FIRST NAME}}' );
+check( 'every field offers a token',
+	count( pcm_crm_tokens() ) >= count( pcm_crm_default_form_fields() ), true );
+
+$saved = pcm_crm_sanitize_form_fields( array(
+	array( 'label' => 'Your name', 'type' => 'text', 'required' => 1, 'map' => 'contact.first_name' ),
+	array( 'label' => '', 'type' => 'text' ),
+	array( 'label' => 'Budget', 'type' => 'nonsense', 'map' => 'contact.forecast_category' ),
+) );
+check( 'a key is derived from the label when none is given', $saved[0]['key'], 'your_name' );
+check( 'a field with no label is dropped', count( $saved ), 2 );
+check( 'an unknown type falls back to text', $saved[1]['type'], 'text' );
+check( 'a map to a column not on the list is refused', $saved[1]['map'], '' );
+
+$dupes = pcm_crm_sanitize_form_fields( array(
+	array( 'label' => 'Name', 'key' => 'name' ),
+	array( 'label' => 'Name again', 'key' => 'name' ),
+) );
+// Two fields sharing a key would post into one input name and the second
+// would silently win.
+check( 'duplicate keys are made unique', $dupes[0]['key'] === $dupes[1]['key'], false );
+
+check( 'saving an empty form falls back to the shipped one',
+	count( pcm_crm_sanitize_form_fields( array() ) ), count( pcm_crm_default_form_fields() ) );
+
+$interest_field = array( 'key' => 'interest', 'type' => 'select', 'source' => 'interests' );
+check( 'a sourced dropdown draws from the offerings',
+	pcm_crm_field_options( $interest_field ), array_values( pcm_crm_interest_options() ) );
+check( 'a hand-written dropdown splits on newlines',
+	pcm_crm_field_options( array( 'type' => 'select', 'options' => "One\nTwo\n" ) ), array( 'One', 'Two' ) );
 
 echo "\n--- email body formatting ---\n";
 $formatted = pcm_crm_format_body( "Dear Ada,\n\nThanks for getting in touch.\n\nTalk soon,\nJason" );

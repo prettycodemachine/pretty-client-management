@@ -31,7 +31,7 @@ function pcm_crm_contact_form_shortcode( $pcm_atts = array() ) {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only status message
 	$pcm_status = isset( $_GET['pcm_status'] ) ? sanitize_text_field( wp_unslash( $_GET['pcm_status'] ) ) : '';
 
-	$pcm_options = pcm_crm_interest_options();
+	$pcm_fields = pcm_crm_form_fields();
 
 	ob_start();
 	?>
@@ -47,39 +47,33 @@ function pcm_crm_contact_form_shortcode( $pcm_atts = array() ) {
 			<input type="hidden" name="action" value="pcm_contact_form">
 			<?php wp_nonce_field( 'pcm_contact_form', 'pcm_contact_nonce' ); ?>
 
-			<div class="field-row">
-				<div class="field">
-					<label for="pcm_first_name">First name</label>
-					<input type="text" id="pcm_first_name" name="pcm_first_name" autocomplete="given-name" required>
-				</div>
-				<div class="field">
-					<label for="pcm_last_name">Last name</label>
-					<input type="text" id="pcm_last_name" name="pcm_last_name" autocomplete="family-name" required>
-				</div>
-			</div>
-			<div class="field">
-				<label for="pcm_org">Organization</label>
-				<input type="text" id="pcm_org" name="pcm_org" autocomplete="organization" required>
-			</div>
-			<div class="field">
-				<label for="pcm_interest">What are you interested in?</label>
-				<select id="pcm_interest" name="pcm_interest" required>
-					<option value="">Choose one&hellip;</option>
-					<?php foreach ( $pcm_options as $pcm_slug => $pcm_label ) : ?>
-						<option value="<?php echo esc_attr( $pcm_label ); ?>" <?php selected( $pcm_interest, $pcm_slug ); ?>>
-							<?php echo esc_html( $pcm_label ); ?>
-						</option>
-					<?php endforeach; ?>
-				</select>
-			</div>
-			<div class="field">
-				<label for="pcm_email">Email</label>
-				<input type="email" id="pcm_email" name="pcm_email" autocomplete="email" required>
-			</div>
-			<div class="field">
-				<label for="pcm_message">What are you looking for help with?</label>
-				<textarea id="pcm_message" name="pcm_message" rows="5" required></textarea>
-			</div>
+			<?php
+			// Consecutive half-width fields share a row. Tracked while walking
+			// the list rather than declared, so reordering fields in the
+			// builder cannot leave a row half open.
+			$pcm_open_row = false;
+
+			foreach ( $pcm_fields as $pcm_index => $pcm_field ) {
+				$pcm_half = ! empty( $pcm_field['half'] );
+				$pcm_next = isset( $pcm_fields[ $pcm_index + 1 ] ) ? $pcm_fields[ $pcm_index + 1 ] : null;
+
+				if ( $pcm_half && ! $pcm_open_row ) {
+					echo '<div class="field-row">';
+					$pcm_open_row = true;
+				}
+
+				pcm_crm_render_form_field( $pcm_field, $pcm_interest );
+
+				if ( $pcm_open_row && ( ! $pcm_half || ! $pcm_next || empty( $pcm_next['half'] ) ) ) {
+					echo '</div>';
+					$pcm_open_row = false;
+				}
+			}
+
+			if ( $pcm_open_row ) {
+				echo '</div>';
+			}
+			?>
 
 			<!-- Honeypot field, hidden from real users. Never `required` — that
 			     would block every genuine submission. -->
@@ -88,13 +82,72 @@ function pcm_crm_contact_form_shortcode( $pcm_atts = array() ) {
 				<input type="text" id="pcm_hp" name="pcm_hp" tabindex="-1" autocomplete="off">
 			</div>
 
-			<button type="submit" class="btn btn-primary btn-send">Send message</button>
+			<button type="submit" class="btn btn-primary btn-send"><?php echo esc_html( pcm_crm_form_button_label() ); ?></button>
 		</form>
 
 	</div>
 	<?php
 	return ob_get_clean();
 }
+
+/**
+ * One field's markup.
+ *
+ * The class names are the theme's existing ones, so a form built here inherits
+ * the site's styling without the theme knowing anything about the builder.
+ */
+function pcm_crm_render_form_field( array $pcm_field, $pcm_interest ) {
+	$pcm_name     = pcm_crm_field_input_name( $pcm_field );
+	$pcm_required = ! empty( $pcm_field['required'] ) ? ' required' : '';
+	$pcm_auto     = ! empty( $pcm_field['autocomplete'] ) ? ' autocomplete="' . esc_attr( $pcm_field['autocomplete'] ) . '"' : '';
+
+	echo '<div class="field">';
+	printf( '<label for="%s">%s</label>', esc_attr( $pcm_name ), esc_html( $pcm_field['label'] ) );
+
+	if ( 'select' === $pcm_field['type'] ) {
+		printf( '<select id="%s" name="%s"%s>', esc_attr( $pcm_name ), esc_attr( $pcm_name ), $pcm_required ); // phpcs:ignore WordPress.Security.EscapeOutput -- literal
+		echo '<option value="">' . esc_html__( 'Choose one…', 'pcm-crm' ) . '</option>';
+
+		// The interest list is keyed by slug so a service card's ?interest=
+		// link can preselect its own option; a hand-written list has no slugs
+		// and simply never preselects.
+		$pcm_slugs = ( ! empty( $pcm_field['source'] ) && 'interests' === $pcm_field['source'] )
+			? pcm_crm_interest_options()
+			: array();
+
+		foreach ( pcm_crm_field_options( $pcm_field ) as $pcm_option ) {
+			$pcm_slug = array_search( $pcm_option, $pcm_slugs, true );
+
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $pcm_option ),
+				( $pcm_slug && $pcm_slug === $pcm_interest ) ? ' selected' : '',
+				esc_html( $pcm_option )
+			);
+		}
+
+		echo '</select>';
+	} elseif ( 'textarea' === $pcm_field['type'] ) {
+		printf(
+			'<textarea id="%s" name="%s" rows="5"%s></textarea>',
+			esc_attr( $pcm_name ),
+			esc_attr( $pcm_name ),
+			$pcm_required
+		);
+	} else {
+		printf(
+			'<input type="%s" id="%s" name="%s"%s%s>',
+			esc_attr( $pcm_field['type'] ),
+			esc_attr( $pcm_name ),
+			esc_attr( $pcm_name ),
+			$pcm_auto,
+			$pcm_required
+		);
+	}
+
+	echo '</div>';
+}
+
 add_shortcode( 'pcm_contact_form', 'pcm_crm_contact_form_shortcode' );
 
 /**
@@ -116,42 +169,67 @@ function pcm_crm_handle_contact_form() {
 		exit;
 	}
 
-	$pcm_fields = array(
-		'first'    => isset( $_POST['pcm_first_name'] ) ? sanitize_text_field( wp_unslash( $_POST['pcm_first_name'] ) ) : '',
-		'last'     => isset( $_POST['pcm_last_name'] ) ? sanitize_text_field( wp_unslash( $_POST['pcm_last_name'] ) ) : '',
-		'org'      => isset( $_POST['pcm_org'] ) ? sanitize_text_field( wp_unslash( $_POST['pcm_org'] ) ) : '',
-		'interest' => isset( $_POST['pcm_interest'] ) ? sanitize_text_field( wp_unslash( $_POST['pcm_interest'] ) ) : '',
-		'email'    => isset( $_POST['pcm_email'] ) ? sanitize_email( wp_unslash( $_POST['pcm_email'] ) ) : '',
-		'message'  => isset( $_POST['pcm_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['pcm_message'] ) ) : '',
-	);
+	$pcm_fields = pcm_crm_form_fields();
+	$pcm_values = array();
+	$pcm_valid  = true;
+
+	foreach ( $pcm_fields as $pcm_field ) {
+		$pcm_name = pcm_crm_field_input_name( $pcm_field );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified above
+		$pcm_raw  = isset( $_POST[ $pcm_name ] ) ? wp_unslash( $_POST[ $pcm_name ] ) : '';
+
+		$pcm_value = ( 'textarea' === $pcm_field['type'] )
+			? sanitize_textarea_field( $pcm_raw )
+			: sanitize_text_field( $pcm_raw );
+
+		if ( 'email' === $pcm_field['type'] ) {
+			$pcm_value = sanitize_email( $pcm_value );
+		}
+
+		// Every rule is re-checked here. The markup carries `required` and a
+		// type, but both are trivially bypassed by anything that is not a
+		// browser.
+		if ( ! empty( $pcm_field['required'] ) && '' === $pcm_value ) {
+			$pcm_valid = false;
+		}
+
+		if ( 'email' === $pcm_field['type'] && '' !== $pcm_value && ! is_email( $pcm_value ) ) {
+			$pcm_valid = false;
+		}
+
+		// A dropdown's value goes into the notification email and onto the
+		// record, so it must be one we actually offer rather than merely
+		// non-empty.
+		if ( 'select' === $pcm_field['type'] && '' !== $pcm_value ) {
+			$pcm_options = pcm_crm_field_options( $pcm_field );
+
+			if ( $pcm_options && ! in_array( $pcm_value, $pcm_options, true ) ) {
+				$pcm_valid = false;
+			}
+		}
+
+		$pcm_values[ $pcm_field['key'] ] = $pcm_value;
+	}
 
 	// Honeypot: log it as spam so the volume is visible, then report success
 	// without sending or creating anything. Telling a bot it failed only
 	// teaches it to try again differently.
 	if ( ! empty( $_POST['pcm_hp'] ) ) {
-		pcm_crm_log_submission( $pcm_fields, true );
+		pcm_crm_log_submission( $pcm_values, true );
 		wp_safe_redirect( add_query_arg( 'pcm_status', 'sent', $pcm_redirect ) );
 		exit;
 	}
 
-	// Every field is required. The markup says so too, but the browser's
-	// required attribute is trivially bypassed, so it is enforced here. The
-	// interest must be one we actually offer, not merely non-empty — the value
-	// is posted as a label and goes straight into the notification email.
-	if (
-		'' === $pcm_fields['first'] || '' === $pcm_fields['last'] || '' === $pcm_fields['org'] ||
-		'' === $pcm_fields['message'] || ! is_email( $pcm_fields['email'] ) ||
-		! in_array( $pcm_fields['interest'], pcm_crm_interest_options(), true )
-	) {
+	if ( ! $pcm_valid ) {
 		wp_safe_redirect( add_query_arg( 'pcm_status', 'error', $pcm_redirect ) );
 		exit;
 	}
 
-	$pcm_submission_id = pcm_crm_log_submission( $pcm_fields );
-	$pcm_records       = pcm_crm_safe_intake( $pcm_fields, $pcm_submission_id );
+	$pcm_submission_id = pcm_crm_log_submission( $pcm_values );
+	$pcm_records       = pcm_crm_safe_intake( $pcm_values, $pcm_submission_id );
 
-	$pcm_sent = pcm_crm_send_notification( $pcm_fields, $pcm_records['contact_id'] );
-	$pcm_auto = pcm_crm_send_autoresponder( $pcm_fields );
+	$pcm_sent = pcm_crm_send_notification( $pcm_values, $pcm_records['contact_id'] );
+	$pcm_auto = pcm_crm_send_autoresponder( $pcm_values );
 
 	if ( $pcm_submission_id ) {
 		pcm_crm_submissions()->update( $pcm_submission_id, array(
@@ -160,10 +238,11 @@ function pcm_crm_handle_contact_form() {
 		) );
 	}
 
-	do_action( 'pcm_crm_form_submitted', $pcm_fields, $pcm_records );
+	do_action( 'pcm_crm_form_submitted', $pcm_values, $pcm_records );
 
 	wp_safe_redirect( add_query_arg( 'pcm_status', $pcm_sent ? 'sent' : 'error', $pcm_redirect ) );
 	exit;
 }
+
 add_action( 'admin_post_nopriv_pcm_contact_form', 'pcm_crm_handle_contact_form' );
 add_action( 'admin_post_pcm_contact_form', 'pcm_crm_handle_contact_form' );

@@ -18,8 +18,11 @@ function pcm_crm_activities() {
 				'activity_type' => array( 'type' => 'text', 'sf' => 'Type', 'label' => 'Type', 'options' => 'pcm_crm_activity_types' ),
 				'status'        => array( 'type' => 'text', 'sf' => 'Status', 'label' => 'Status', 'options' => 'pcm_crm_activity_statuses' ),
 				'priority'      => array( 'type' => 'text', 'sf' => 'Priority', 'label' => 'Priority', 'options' => 'pcm_crm_priorities' ),
-				'activity_date' => array( 'type' => 'datetime', 'sf' => 'ActivityDate', 'label' => 'Logged Date' ),
-				'due_date'      => array( 'type' => 'date', 'sf' => 'ReminderDateTime', 'label' => 'Due Date' ),
+				// Salesforce's Task.ActivityDate *is* the due date; there is no
+				// standard field for when something was logged, so that one
+				// travels as a custom field rather than as the wrong standard.
+				'activity_date' => array( 'type' => 'datetime', 'sf' => 'Activity_Logged_Date__c', 'label' => 'Logged Date' ),
+				'due_date'      => array( 'type' => 'date', 'sf' => 'ActivityDate', 'label' => 'Due Date' ),
 				'who_id'        => array( 'type' => 'id',   'sf' => 'WhoId', 'label' => 'Contact' ),
 				'what_id'       => array( 'type' => 'id',   'sf' => 'WhatId', 'label' => 'Related Record' ),
 				'what_type'     => array( 'type' => 'text', 'label' => 'Related To' ),

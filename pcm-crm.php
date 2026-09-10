@@ -38,6 +38,7 @@ define( 'PCM_CRM_FORM_SOURCE', 'Contact Form' );
 
 require_once PCM_CRM_DIR . 'includes/capabilities.php';
 require_once PCM_CRM_DIR . 'includes/picklists.php';
+require_once PCM_CRM_DIR . 'includes/form-builder.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-schema.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-model.php';
 require_once PCM_CRM_DIR . 'includes/model-account.php';

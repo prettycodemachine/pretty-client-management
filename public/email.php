@@ -228,6 +228,18 @@ function pcm_crm_email_wrapper( $pcm_content ) {
  * a broken image.
  */
 function pcm_crm_email_logo_url() {
+	// An uploaded logo wins: it is the one someone chose here, on the screen
+	// that shows what the email looks like.
+	$pcm_id = absint( get_option( 'pcm_crm_email_logo', 0 ) );
+
+	if ( $pcm_id ) {
+		$pcm_src = wp_get_attachment_image_src( $pcm_id, 'medium' );
+
+		if ( $pcm_src ) {
+			return set_url_scheme( $pcm_src[0], 'https' );
+		}
+	}
+
 	if ( function_exists( 'pcm_asset' ) ) {
 		return set_url_scheme( pcm_asset( 'images/logo.png' ), 'https' );
 	}
@@ -248,32 +260,59 @@ function pcm_crm_email_logo_url() {
 /**
  * Replace the {{TOKEN}} placeholders.
  *
- * Both spaced and underscored spellings are accepted, because the settings
- * screen documents the spaced form but the underscored one is the reflex.
+ * Tokens are derived from the form's own fields, so one cannot name a field
+ * that does not exist. The legacy spellings are kept because they are what any
+ * reply template saved before the form became configurable still contains, and
+ * silently blanking someone's saved copy would be the worst way to introduce a
+ * form builder.
+ *
  * Values are escaped before substitution, so a submitted name cannot inject
  * markup into the email.
  */
-function pcm_crm_fill_tokens( $pcm_text, array $pcm_fields ) {
-	$pcm_first = isset( $pcm_fields['first'] ) ? $pcm_fields['first'] : '';
-	$pcm_last  = isset( $pcm_fields['last'] ) ? $pcm_fields['last'] : '';
+function pcm_crm_fill_tokens( $pcm_text, array $pcm_values ) {
+	$pcm_map = array();
 
-	$pcm_map = array(
-		'{{FIRST NAME}}'   => $pcm_first,
-		'{{FIRST_NAME}}'   => $pcm_first,
-		'{{LAST NAME}}'    => $pcm_last,
-		'{{LAST_NAME}}'    => $pcm_last,
-		'{{FULL NAME}}'    => trim( $pcm_first . ' ' . $pcm_last ),
-		'{{FULL_NAME}}'    => trim( $pcm_first . ' ' . $pcm_last ),
-		'{{ORGANIZATION}}' => isset( $pcm_fields['org'] ) ? $pcm_fields['org'] : '',
-		'{{EMAIL}}'        => isset( $pcm_fields['email'] ) ? $pcm_fields['email'] : '',
-		'{{INTEREST}}'     => isset( $pcm_fields['interest'] ) ? $pcm_fields['interest'] : '',
+	foreach ( pcm_crm_form_fields() as $pcm_field ) {
+		$pcm_value = isset( $pcm_values[ $pcm_field['key'] ] ) ? $pcm_values[ $pcm_field['key'] ] : '';
+
+		$pcm_map[ pcm_crm_field_token( $pcm_field ) ] = $pcm_value;
+
+		// Underscored spelling too: the screen documents the spaced form but
+		// the underscored one is the reflex.
+		$pcm_map[ '{{' . strtoupper( $pcm_field['key'] ) . '}}' ] = $pcm_value;
+	}
+
+	$pcm_first = pcm_crm_field_with_map( 'contact.first_name' );
+	$pcm_last  = pcm_crm_field_with_map( 'contact.last_name' );
+
+	$pcm_first_value = $pcm_first && isset( $pcm_values[ $pcm_first['key'] ] ) ? $pcm_values[ $pcm_first['key'] ] : '';
+	$pcm_last_value  = $pcm_last && isset( $pcm_values[ $pcm_last['key'] ] ) ? $pcm_values[ $pcm_last['key'] ] : '';
+
+	$pcm_map['{{FULL NAME}}'] = trim( $pcm_first_value . ' ' . $pcm_last_value );
+	$pcm_map['{{FULL_NAME}}'] = $pcm_map['{{FULL NAME}}'];
+
+	// Templates written against the original fixed form.
+	$pcm_legacy = array(
+		'{{FIRST NAME}}'   => 'contact.first_name',
+		'{{FIRST_NAME}}'   => 'contact.first_name',
+		'{{LAST NAME}}'    => 'contact.last_name',
+		'{{LAST_NAME}}'    => 'contact.last_name',
+		'{{ORGANIZATION}}' => 'account.name',
+		'{{EMAIL}}'        => 'contact.email',
+		'{{INTEREST}}'     => 'contact.service_interest',
 	);
 
-	return strtr( $pcm_text, array_map( 'esc_html', $pcm_map ) );
-}
+	foreach ( $pcm_legacy as $pcm_token => $pcm_target ) {
+		if ( isset( $pcm_map[ $pcm_token ] ) ) {
+			continue;
+		}
 
-function pcm_crm_tokens() {
-	return array( '{{FIRST NAME}}', '{{LAST NAME}}', '{{FULL NAME}}', '{{ORGANIZATION}}', '{{EMAIL}}', '{{INTEREST}}' );
+		$pcm_field = pcm_crm_field_with_map( $pcm_target );
+
+		$pcm_map[ $pcm_token ] = ( $pcm_field && isset( $pcm_values[ $pcm_field['key'] ] ) ) ? $pcm_values[ $pcm_field['key'] ] : '';
+	}
+
+	return strtr( $pcm_text, array_map( 'esc_html', $pcm_map ) );
 }
 
 /**
@@ -301,13 +340,26 @@ function pcm_crm_send_autoresponder( array $pcm_fields ) {
 
 /**
  * The internal notification, with a link straight to the new CRM record.
+ *
+ * Every field is listed rather than a fixed handful, so a field added in the
+ * builder appears in the email without anyone remembering to add it here.
  */
-function pcm_crm_send_notification( array $pcm_fields, $pcm_contact_id = 0 ) {
-	$pcm_name = trim( $pcm_fields['first'] . ' ' . $pcm_fields['last'] );
+function pcm_crm_send_notification( array $pcm_values, $pcm_contact_id = 0 ) {
+	$pcm_mapped = pcm_crm_map_submission( $pcm_values );
 
-	$pcm_message  = "Interested in: {$pcm_fields['interest']}\n\n";
-	$pcm_message .= "Name: {$pcm_name}\nOrganization: {$pcm_fields['org']}\nEmail: {$pcm_fields['email']}\n\n";
-	$pcm_message .= "Message:\n{$pcm_fields['message']}\n";
+	$pcm_name = trim(
+		( isset( $pcm_mapped['contact']['first_name'] ) ? $pcm_mapped['contact']['first_name'] : '' ) . ' ' .
+		( isset( $pcm_mapped['contact']['last_name'] ) ? $pcm_mapped['contact']['last_name'] : '' )
+	);
+
+	$pcm_interest = isset( $pcm_mapped['contact']['service_interest'] ) ? $pcm_mapped['contact']['service_interest'] : '';
+	$pcm_email    = isset( $pcm_mapped['contact']['email'] ) ? $pcm_mapped['contact']['email'] : '';
+
+	$pcm_subject = 'New inquiry';
+	if ( $pcm_interest ) { $pcm_subject .= ' — ' . $pcm_interest; }
+	if ( $pcm_name ) { $pcm_subject .= ' — ' . $pcm_name; }
+
+	$pcm_message = pcm_crm_submission_summary( $pcm_values ) . "\n";
 
 	if ( $pcm_contact_id ) {
 		$pcm_message .= "\nOpen in the CRM: " . set_url_scheme(
@@ -316,10 +368,7 @@ function pcm_crm_send_notification( array $pcm_fields, $pcm_contact_id = 0 ) {
 		) . "\n";
 	}
 
-	return wp_mail(
-		pcm_crm_contact_recipient(),
-		'New inquiry — ' . $pcm_fields['interest'] . ' — ' . $pcm_name,
-		$pcm_message,
-		array( 'Reply-To: ' . $pcm_fields['email'] )
-	);
+	$pcm_headers = $pcm_email ? array( 'Reply-To: ' . $pcm_email ) : array();
+
+	return wp_mail( pcm_crm_contact_recipient(), $pcm_subject, $pcm_message, $pcm_headers );
 }

@@ -924,6 +924,97 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 }
 
 /* Settings screen ----------------------------------------------------------- */
+/* The tabs are links here rather than buttons — each is a real URL, so a tab
+   is bookmarkable and survives a save. They reuse the record modal's tab look. */
+.pcm-crm-settings .pcm-crm-tabs { margin-bottom: 22px; }
+.pcm-crm-settings .pcm-crm-tab { text-decoration: none; }
+
+.pcm-crm-embed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background: var(--pcm-paper-tint);
+  max-width: 420px;
+}
+.pcm-crm-embed code { font-size: 0.95rem; font-weight: 700; color: var(--pcm-ink); background: none; }
+
+/* Form builder rows */
+.pcm-crm-field-row {
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background: var(--pcm-paper);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.pcm-crm-field-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pcm-crm-field-handle { color: var(--pcm-gray); cursor: default; }
+.pcm-crm-field-label { flex: 1 1 200px; min-width: 160px; }
+.pcm-crm-field-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.pcm-crm-field-move { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.pcm-crm-field-move .button-link { font-size: 1.05rem; text-decoration: none; }
+.pcm-crm-field-remove { color: var(--pcm-accent-deep); }
+.pcm-crm-field-row-body { margin-top: 8px; }
+.pcm-crm-field-options { display: block; max-width: 420px; }
+.pcm-crm-field-options textarea { width: 100%; }
+
+/* Merge field buttons */
+.pcm-crm-tokens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.pcm-crm-token {
+  border: 2px solid var(--pcm-ink);
+  border-radius: 999px;
+  background: var(--pcm-paper-tint);
+  padding: 4px 12px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--pcm-ink);
+  cursor: pointer;
+}
+.pcm-crm-token:hover { background: var(--pcm-blue); }
+
+/* Email logo */
+.pcm-crm-logo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 90px;
+  max-width: 320px;
+  padding: 12px;
+  border: 2px dashed var(--pcm-gray);
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 8px;
+}
+.pcm-crm-logo-preview img { max-width: 220px; height: auto; }
+
+/* Export tab */
+.pcm-crm-export-table, .pcm-crm-mapping-table {
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  max-width: 720px;
+}
+.pcm-crm-mapping-table code { background: none; font-size: 0.85rem; }
+/* Standard fields map themselves; custom ones have to be created first, so the
+   difference is worth seeing at a glance rather than reading for. */
+.pcm-crm-api-standard { color: var(--pcm-body); }
+.pcm-crm-api-custom { color: var(--pcm-accent-deep); font-weight: 700; }
+.pcm-crm-steps { max-width: 760px; line-height: 1.7; }
+.pcm-crm-steps li { margin-bottom: 10px; }
+
 .pcm-crm-settings .form-table th { font-family: var(--font-display); color: var(--pcm-ink); }
 .pcm-crm-attachment-list { list-style: none; margin: 0 0 10px; padding: 0; }
 .pcm-crm-attachment {
