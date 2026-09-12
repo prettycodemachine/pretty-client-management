@@ -610,6 +610,29 @@ check( 'no history yet reports zero rather than dividing by zero',
 $GLOBALS['wpdb'] = $real_wpdb;
 check( 'the won stage is found by its flag', pcm_crm_won_stage_name(), 'Closed Won' );
 
+echo "\n--- recycle bin ---\n";
+check( 'the four record objects have a bin',
+	array_keys( pcm_crm_recyclable_objects() ),
+	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
+// Deleting a template is a configuration change, not something to fish back
+// out of a bin.
+check( 'machinery is not binned', isset( pcm_crm_recyclable_objects()['templates'] ), false );
+
+$bin_where = pcm_crm_contacts()->where( array(
+	'filters'         => array( 'is_deleted' => 1 ),
+	'include_deleted' => true,
+) );
+check( 'the bin asks for deleted rows specifically',
+	false !== strpos( $bin_where, 'is_deleted' ), true );
+// Every other list must keep excluding them.
+check( 'and a normal list still excludes them',
+	false !== strpos( pcm_crm_contacts()->where( array() ), 'is_deleted = 0' ), true );
+
+check( 'models can purge as well as delete', method_exists( 'PCM_CRM_Model', 'purge' ), true );
+check( 'and empty a whole bin', method_exists( 'PCM_CRM_Model', 'purge_all' ), true );
+check( 'purging a deal takes its stage history with it',
+	has_filter( 'pcm_crm_before_purge', 'pcm_crm_purge_stage_history' ), true );
+
 echo "\n--- orphaned stage history ---\n";
 // A history row whose deal is gone is not evidence about anything, and
 // conversion counts distinct deals straight out of that table — so an orphan

@@ -99,6 +99,31 @@ class PCM_CRM_REST {
 			),
 		) );
 
+		// The recycle bin.
+		register_rest_route( self::NS, '/recycle-bin', array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => array( __CLASS__, 'recycle_bin' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
+		register_rest_route( self::NS, '/(?P<pcm_object>' . $pcm_slugs . ')/(?P<pcm_id>\d+)/restore', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => array( __CLASS__, 'restore_item' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
+		register_rest_route( self::NS, '/(?P<pcm_object>' . $pcm_slugs . ')/(?P<pcm_id>\d+)/purge', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => array( __CLASS__, 'purge_item' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
+		register_rest_route( self::NS, '/(?P<pcm_object>' . $pcm_slugs . ')/empty-bin', array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => array( __CLASS__, 'empty_bin' ),
+			'permission_callback' => array( __CLASS__, 'permission' ),
+		) );
+
 		// Everything the app needs to render pickers and picklists, in one
 		// call at boot rather than a request per dropdown.
 		register_rest_route( self::NS, '/bootstrap', array(
@@ -183,6 +208,9 @@ class PCM_CRM_REST {
 		$pcm_filters = $pcm_request->get_param( 'filters' );
 
 		$pcm_args = array(
+			// The recycle bin is the only caller that wants deleted rows, and
+			// it has to ask: every other list would be wrong to show them.
+			'include_deleted' => (bool) $pcm_request->get_param( 'include_deleted' ),
 			'filters'  => is_array( $pcm_filters ) ? $pcm_filters : array(),
 			'search'   => (string) $pcm_request->get_param( 'search' ),
 			'page'     => max( 1, (int) $pcm_request->get_param( 'page' ) ),
@@ -458,6 +486,58 @@ class PCM_CRM_REST {
 	   App data
 	   ----------------------------------------------------------------------- */
 
+	/**
+	 * How much is in the bin, per object.
+	 */
+	public static function recycle_bin( WP_REST_Request $pcm_request ) {
+		$pcm_out = array();
+
+		foreach ( pcm_crm_recyclable_objects() as $pcm_slug => $pcm_label ) {
+			$pcm_model = self::model( $pcm_slug );
+
+			$pcm_out[] = array(
+				'object' => $pcm_slug,
+				'label'  => $pcm_label,
+				'count'  => $pcm_model ? $pcm_model->count( array(
+					'filters'         => array( 'is_deleted' => 1 ),
+					'include_deleted' => true,
+				) ) : 0,
+			);
+		}
+
+		return rest_ensure_response( $pcm_out );
+	}
+
+	public static function restore_item( WP_REST_Request $pcm_request ) {
+		$pcm_model = self::model( self::route_object( $pcm_request ) );
+
+		if ( ! $pcm_model ) {
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+		}
+
+		return rest_ensure_response( array( 'restored' => $pcm_model->restore( self::route_id( $pcm_request ) ) ) );
+	}
+
+	public static function purge_item( WP_REST_Request $pcm_request ) {
+		$pcm_model = self::model( self::route_object( $pcm_request ) );
+
+		if ( ! $pcm_model ) {
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+		}
+
+		return rest_ensure_response( array( 'purged' => $pcm_model->purge( self::route_id( $pcm_request ) ) ) );
+	}
+
+	public static function empty_bin( WP_REST_Request $pcm_request ) {
+		$pcm_model = self::model( self::route_object( $pcm_request ) );
+
+		if ( ! $pcm_model ) {
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+		}
+
+		return rest_ensure_response( array( 'purged' => $pcm_model->purge_all() ) );
+	}
+
 	public static function bootstrap( WP_REST_Request $pcm_request ) {
 		return rest_ensure_response( array(
 			'stages'            => pcm_crm_stages(),
@@ -473,6 +553,7 @@ class PCM_CRM_REST {
 			'users'             => pcm_crm_user_directory(),
 			'currency'          => pcm_crm_currency_symbol(),
 			'stallDays'         => pcm_crm_stall_days(),
+			'recyclable'        => pcm_crm_recyclable_objects(),
 			'frequencies'       => pcm_crm_frequencies(),
 			'emailVariables'    => pcm_crm_email_variables(),
 			'templates'         => pcm_crm_template_choices(),
@@ -820,6 +901,22 @@ function pcm_crm_sequence_choices() {
 	}
 
 	return $pcm_out;
+}
+
+/**
+ * The objects whose deleted records the bin shows.
+ *
+ * The four Salesforce-shaped ones. Templates, sequences and schedules are
+ * machinery — deleting one is a configuration change, not something to fish
+ * back out of a bin.
+ */
+function pcm_crm_recyclable_objects() {
+	return array(
+		'accounts'      => __( 'Accounts', 'pcm-crm' ),
+		'contacts'      => __( 'Contacts', 'pcm-crm' ),
+		'opportunities' => __( 'Opportunities', 'pcm-crm' ),
+		'activities'    => __( 'Activities', 'pcm-crm' ),
+	);
 }
 
 function pcm_crm_currency_symbol() {

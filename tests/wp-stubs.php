@@ -24,7 +24,14 @@ define( 'OBJECT', 'OBJECT' );
 $GLOBALS['options'] = array();
 $GLOBALS['filters'] = array();
 
-function add_action() {} function add_filter( $h, $cb, $p = 10, $a = 1 ) { $GLOBALS['filters'][$h][] = array($cb,$a); }
+function add_action( $h = '', $cb = null, $p = 10, $a = 1 ) { $GLOBALS['filters'][$h][] = array($cb,$a); }
+function add_filter( $h, $cb, $p = 10, $a = 1 ) { $GLOBALS['filters'][$h][] = array($cb,$a); }
+function has_filter( $h, $cb = false ) {
+	if ( empty( $GLOBALS['filters'][$h] ) ) { return false; }
+	if ( false === $cb ) { return true; }
+	foreach ( $GLOBALS['filters'][$h] as $hooked ) { if ( $hooked[0] === $cb ) { return true; } }
+	return false;
+}
 function apply_filters( $h, $v ) { return $v; }
 function do_action() {} function add_shortcode() {} function register_activation_hook() {}
 function register_deactivation_hook() {} function register_setting() {}

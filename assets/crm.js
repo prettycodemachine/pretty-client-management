@@ -193,6 +193,7 @@
 		boot: null,
 		schema: null,
 		drillTitle: '',
+		binObject: '',
 		query: { search: '', filters: {}, orderby: '', order: 'DESC', page: 1, per_page: 25 },
 		recordId: 0,
 		creating: null
@@ -1251,10 +1252,12 @@
 		}).catch(showError);
 	}
 
-	function buildTable(object, def, items) {
+	function buildTable(object, def, items, overrideActions) {
 		var head = el('tr');
 
-		var actions = def.rowActions ? def.rowActions() : null;
+		// A view can supply its own row actions — the recycle bin's Restore and
+		// Delete forever belong to the bin, not to the object.
+		var actions = overrideActions || (def.rowActions ? def.rowActions() : null);
 
 		def.columns.forEach(function (column) {
 			var sorted = state.query.orderby === column.key;
@@ -1285,13 +1288,16 @@
 		var body = el('tbody');
 
 		items.forEach(function (row) {
-			var tr = el('tr', {
-				tabindex: '0',
-				onclick: function () { openDrawer(object, row.id); },
-				onkeydown: function (event) {
-					if (event.key === 'Enter') { openDrawer(object, row.id); }
-				}
-			});
+			// A deleted record has no editor to open — restore it first.
+			var tr = overrideActions
+				? el('tr', { style: 'cursor:default' })
+				: el('tr', {
+					tabindex: '0',
+					onclick: function () { openDrawer(object, row.id); },
+					onkeydown: function (event) {
+						if (event.key === 'Enter') { openDrawer(object, row.id); }
+					}
+				});
 
 			def.columns.forEach(function (column) { tr.appendChild(cell(column, row)); });
 
@@ -3044,6 +3050,120 @@
 	}
 
 	/* ---------------------------------------------------------------------
+	   Recycle bin
+	   --------------------------------------------------------------------- */
+
+	/**
+	 * Deleted records, per object, with a way back.
+	 *
+	 * The CRM soft-deletes the way Salesforce does, which is only defensible
+	 * if there is somewhere to see what was deleted and undo it. Without this
+	 * screen a deleted record was simply gone from every view while still
+	 * sitting in the table.
+	 */
+	function renderRecycleBin() {
+		clear(dom.filters);
+		clear(dom.actions);
+
+		api('/recycle-bin').then(function (counts) {
+			var total = counts.reduce(function (sum, row) { return sum + row.count; }, 0);
+
+			if (!state.binObject) {
+				// Open on something with contents rather than on an empty tab
+				// that says nothing is here when something is.
+				var populated = counts.filter(function (row) { return row.count > 0; })[0];
+				state.binObject = populated ? populated.object : counts[0].object;
+			}
+
+			var pills = el('div.pcm-crm-object-switch');
+
+			counts.forEach(function (row) {
+				pills.appendChild(el('button.pcm-crm-object-pill' + (row.object === state.binObject ? '.is-active' : ''), {
+					type: 'button',
+					onclick: function () { state.binObject = row.object; renderRecycleBin(); }
+				}, [
+					row.label,
+					el('span.pcm-crm-tab-count', { text: String(row.count) })
+				]));
+			});
+
+			clear(dom.filters, pills);
+
+			if (!total) {
+				clear(dom.body, el('div.pcm-crm-empty', {}, [
+					el('h3', { text: 'The bin is empty' }),
+					el('p', { text: 'Records you delete in the CRM appear here, and can be put back.' })
+				]));
+				return;
+			}
+
+			loadRecycleBin();
+		}).catch(showError);
+	}
+
+	function loadRecycleBin() {
+		var object = state.binObject;
+		var def = objects[object];
+
+		api('/' + object, {
+			query: {
+				filters: { is_deleted: '1' },
+				include_deleted: 1,
+				orderby: 'last_modified_date',
+				order: 'DESC',
+				per_page: 100
+			}
+		}).then(function (data) {
+			clear(dom.body);
+
+			if (!data.items.length) {
+				dom.body.appendChild(el('div.pcm-crm-empty', {}, [
+					el('p', { text: 'Nothing deleted in ' + def.plural.toLowerCase() + '.' })
+				]));
+				return;
+			}
+
+			dom.body.appendChild(buildTable(object, def, data.items, [
+				{
+					label: 'Restore',
+					title: 'Put this record back',
+					run: function (row, reload) {
+						api('/' + object + '/' + row.id + '/restore', { method: 'POST' })
+							.then(function () { renderRecycleBin(); })
+							.catch(showError);
+					}
+				},
+				{
+					label: 'Delete forever',
+					danger: true,
+					run: function (row) {
+						if (!window.confirm('Permanently delete “' + def.title(row) + '”? This cannot be undone.')) { return; }
+
+						api('/' + object + '/' + row.id + '/purge', { method: 'POST' })
+							.then(function () { renderRecycleBin(); })
+							.catch(showError);
+					}
+				}
+			]));
+
+			dom.body.appendChild(el('div.pcm-crm-form-actions', {}, [
+				el('button.pcm-btn.pcm-btn-danger', {
+					type: 'button',
+					text: 'Empty ' + def.plural.toLowerCase() + ' bin',
+					onclick: function () {
+						if (!window.confirm('Permanently delete all ' + data.items.length + ' deleted ' + def.plural.toLowerCase() + '? This cannot be undone.')) { return; }
+
+						api('/' + object + '/empty-bin', { method: 'POST' })
+							.then(function () { renderRecycleBin(); })
+							.catch(showError);
+					}
+				}),
+				el('span.pcm-crm-muted', { text: 'Restoring puts a record back exactly as it was, with its related records intact.' })
+			]));
+		}).catch(showError);
+	}
+
+	/* ---------------------------------------------------------------------
 	   Dashboard
 	   --------------------------------------------------------------------- */
 
@@ -3484,6 +3604,7 @@
 		if (state.view === 'pipeline') { loadPipeline(); }
 		else if (state.view === 'dashboard') { loadDashboard(); }
 		else if (state.view === 'reports') { loadReport(); }
+		else if (state.view === 'recycle') { renderRecycleBin(); }
 		else if (objects[state.view]) { loadList(state.view); }
 	}
 
@@ -3491,6 +3612,7 @@
 		if (state.view === 'dashboard') { renderDashboard(); }
 		else if (state.view === 'pipeline') { renderPipeline(); }
 		else if (state.view === 'reports') { renderReports(); }
+		else if (state.view === 'recycle') { renderRecycleBin(); }
 		else if (objects[state.view]) { renderList(state.view); }
 		else { clear(dom.body, el('p', { text: 'Unknown screen.' })); }
 

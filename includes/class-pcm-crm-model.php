@@ -724,6 +724,49 @@ class PCM_CRM_Model {
 		return false !== $pcm_ok;
 	}
 
+	/**
+	 * Remove a row for good.
+	 *
+	 * Separate from delete() on purpose: the UI's delete is the recycle bin,
+	 * and this is the thing the bin does when someone empties it. Nothing
+	 * calls it by accident because nothing calls it except the bin.
+	 */
+	public function purge( $pcm_id ) {
+		global $wpdb;
+
+		$pcm_id = absint( $pcm_id );
+
+		if ( ! $pcm_id ) {
+			return false;
+		}
+
+		do_action( 'pcm_crm_before_purge', $this->object, $pcm_id );
+
+		$pcm_ok = $wpdb->delete( $this->table, array( 'id' => $pcm_id ), array( '%d' ) );
+
+		return false !== $pcm_ok;
+	}
+
+	/**
+	 * Empty the bin for this object.
+	 */
+	public function purge_all() {
+		global $wpdb;
+
+		$pcm_deleted = $this->find( array(
+			'filters'         => array( 'is_deleted' => 1 ),
+			'include_deleted' => true,
+			'per_page'        => 0,
+		) );
+
+		foreach ( $pcm_deleted as $pcm_row ) {
+			do_action( 'pcm_crm_before_purge', $this->object, $pcm_row['id'] );
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+		return (int) $wpdb->query( "DELETE FROM {$this->table} WHERE is_deleted = 1" );
+	}
+
 	public function restore( $pcm_id ) {
 		global $wpdb;
 

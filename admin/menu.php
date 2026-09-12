@@ -32,6 +32,7 @@ function pcm_crm_menu() {
 		'pcm-crm-templates'     => array( __( 'Email Templates', 'pcm-crm' ), 'pcm_crm_render_templates' ),
 		'pcm-crm-sequences'     => array( __( 'Sequences', 'pcm-crm' ), 'pcm_crm_render_sequences' ),
 		'pcm-crm-schedules'     => array( __( 'Scheduled Reports', 'pcm-crm' ), 'pcm_crm_render_schedules' ),
+		'pcm-crm-recycle-bin'   => array( __( 'Recycle Bin', 'pcm-crm' ), 'pcm_crm_render_recycle_bin' ),
 		'pcm-crm-settings'      => array( __( 'Settings', 'pcm-crm' ), 'pcm_crm_render_settings' ),
 	);
 
@@ -146,6 +147,14 @@ function pcm_crm_render_pipeline() {
 
 function pcm_crm_render_activities() {
 	pcm_crm_screen( 'activities', __( 'Activities', 'pcm-crm' ) );
+}
+
+function pcm_crm_render_recycle_bin() {
+	pcm_crm_screen(
+		'recycle',
+		__( 'Recycle Bin', 'pcm-crm' ),
+		__( 'Deleting a record in the CRM marks it deleted rather than removing it. This is where those go.', 'pcm-crm' )
+	);
 }
 
 function pcm_crm_render_templates() {

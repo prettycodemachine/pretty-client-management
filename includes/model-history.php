@@ -222,3 +222,21 @@ function pcm_crm_stage_history_for( $pcm_opportunity_id ) {
 
 	return $pcm_rows;
 }
+
+/**
+ * Stage history goes with the deal when the deal goes for good.
+ *
+ * Leaving it behind is what produced the orphaned rows that inflated the
+ * conversion figures, so the cleanup belongs at the moment of deletion rather
+ * than in a tidy-up someone has to remember to run.
+ */
+function pcm_crm_purge_stage_history( $pcm_object, $pcm_id ) {
+	global $wpdb;
+
+	if ( 'opportunity' !== $pcm_object ) {
+		return;
+	}
+
+	$wpdb->delete( PCM_CRM_Schema::history(), array( 'opportunity_id' => absint( $pcm_id ) ), array( '%d' ) );
+}
+add_action( 'pcm_crm_before_purge', 'pcm_crm_purge_stage_history', 10, 2 );

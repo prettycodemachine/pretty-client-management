@@ -974,7 +974,13 @@ function pcm_crm_render_samples_tab() {
 						<td><?php echo esc_html( number_format_i18n( $pcm_count['real'] ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( $pcm_count['test'] ) ); ?></td>
 						<td class="<?php echo $pcm_count['deleted'] ? '' : 'pcm-crm-muted'; ?>">
-							<?php echo esc_html( $pcm_count['deleted'] ? number_format_i18n( $pcm_count['deleted'] ) : '—' ); ?>
+							<?php if ( $pcm_count['deleted'] ) : ?>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=pcm-crm-recycle-bin' ) ); ?>">
+									<?php echo esc_html( number_format_i18n( $pcm_count['deleted'] ) ); ?>
+								</a>
+							<?php else : ?>
+								&mdash;
+							<?php endif; ?>
 						</td>
 					</tr>
 				<?php endforeach; ?>
@@ -982,7 +988,13 @@ function pcm_crm_render_samples_tab() {
 		</table>
 
 		<p class="description">
-			<?php esc_html_e( 'Deleting a record in the CRM marks it deleted rather than removing the row, the way Salesforce\'s recycle bin does. Those rows are counted separately here because they are not live data — nothing in the CRM shows them.', 'pcm-crm' ); ?>
+			<?php
+			printf(
+				/* translators: %s: link to the Recycle Bin screen */
+				esc_html__( 'Deleting a record marks it deleted rather than removing the row, the way Salesforce\'s recycle bin does. Those are counted separately because they are not live data — and they can be restored or removed for good in the %s.', 'pcm-crm' ),
+				'<a href="' . esc_url( admin_url( 'admin.php?page=pcm-crm-recycle-bin' ) ) . '">' . esc_html__( 'Recycle Bin', 'pcm-crm' ) . '</a>'
+			);
+			?>
 		</p>
 	</div>
 
