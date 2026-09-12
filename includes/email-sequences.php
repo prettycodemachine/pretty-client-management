@@ -95,6 +95,34 @@ function pcm_crm_enrollment_statuses() {
 	return array( 'active', 'completed', 'stopped' );
 }
 
+/**
+ * A template needs a name and a subject; a sequence needs a name.
+ *
+ * Refused on save rather than allowed through as a blank row. The screen that
+ * produced one of those had rendered no fields at all, and a record made of
+ * nothing is a worse symptom than an error message — it looks like it worked.
+ */
+function pcm_crm_validate_outreach( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) {
+	if ( is_wp_error( $pcm_error ) || ! in_array( $pcm_object, array( 'template', 'sequence' ), true ) ) {
+		return $pcm_error;
+	}
+
+	$pcm_model    = 'template' === $pcm_object ? pcm_crm_templates() : pcm_crm_sequences();
+	$pcm_existing = $pcm_id ? $pcm_model->get( $pcm_id ) : array();
+	$pcm_merged   = array_merge( (array) $pcm_existing, $pcm_row );
+
+	if ( '' === trim( (string) ( isset( $pcm_merged['name'] ) ? $pcm_merged['name'] : '' ) ) ) {
+		return new WP_Error( 'pcm_crm_name_required', __( 'Give it a name.', 'pcm-crm' ), array( 'status' => 400 ) );
+	}
+
+	if ( 'template' === $pcm_object && '' === trim( (string) ( isset( $pcm_merged['subject'] ) ? $pcm_merged['subject'] : '' ) ) ) {
+		return new WP_Error( 'pcm_crm_subject_required', __( 'A template needs a subject line.', 'pcm-crm' ), array( 'status' => 400 ) );
+	}
+
+	return $pcm_error;
+}
+add_filter( 'pcm_crm_validate', 'pcm_crm_validate_outreach', 10, 4 );
+
 /* ---------------------------------------------------------------------------
    Merge variables
    --------------------------------------------------------------------------- */

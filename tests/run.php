@@ -379,6 +379,22 @@ check( 'a submitted value cannot inject markup',
 	pcm_crm_fill_variables( '{{contact.first_name}}', array( 'contact' => array( 'first_name' => '<b>x</b>' ) ) ),
 	'&lt;b&gt;x&lt;/b&gt;' );
 
+echo "\n--- outreach records need their essentials ---\n";
+// A record made of nothing is a worse symptom than an error: it looks like it
+// worked, and the list then shows a row of dashes.
+check( 'a template with no name is refused',
+	is_wp_error( pcm_crm_validate_outreach( null, 'template', array( 'subject' => 'Hello' ), 0 ) ), true );
+check( 'a template with no subject is refused',
+	is_wp_error( pcm_crm_validate_outreach( null, 'template', array( 'name' => 'Intro' ), 0 ) ), true );
+check( 'a complete template is allowed',
+	is_wp_error( pcm_crm_validate_outreach( null, 'template', array( 'name' => 'Intro', 'subject' => 'Hello' ), 0 ) ), false );
+check( 'a sequence needs only a name',
+	is_wp_error( pcm_crm_validate_outreach( null, 'sequence', array( 'name' => 'Follow up' ), 0 ) ), false );
+check( 'and is refused without one',
+	is_wp_error( pcm_crm_validate_outreach( null, 'sequence', array( 'description' => 'x' ), 0 ) ), true );
+check( 'other objects are not subject to the rule',
+	is_wp_error( pcm_crm_validate_outreach( null, 'account', array(), 0 ) ), false );
+
 echo "\n--- sequence steps ---\n";
 check( 'steps decode from JSON',
 	count( pcm_crm_sequence_steps( array( 'steps' => '[{"template_id":3,"delay_days":2}]' ) ) ), 1 );

@@ -1618,8 +1618,13 @@
 		layoutFor(object).forEach(function (group) {
 			var grid = el('div.pcm-crm-fields');
 
-			group.fields.forEach(function (name) {
-				var field = fieldDefinition(object, name);
+			// A layout section holds field *names*, to be looked up in the
+			// schema. An object that declares its own form — templates,
+			// sequences, schedules — holds the definitions themselves. Both
+			// shapes arrive here, and assuming only the first left those three
+			// forms rendering nothing at all.
+			group.fields.forEach(function (entry) {
+				var field = ( typeof entry === 'string' ) ? fieldDefinition(object, entry) : entry;
 
 				if (field) { grid.appendChild(fieldControl(field, values)); }
 			});
