@@ -119,6 +119,38 @@
 		return !activity.is_completed && activity.due_date && activity.due_date < today();
 	}
 
+	/**
+	 * The current theme's colours, read from the CSS rather than duplicated.
+	 *
+	 * The stylesheet is the single source of truth for a palette; asking the
+	 * browser what it resolved means a new theme needs no JS change at all,
+	 * and a chart can never disagree with the interface around it.
+	 */
+	function themeColors() {
+		if (!dom.root || !window.getComputedStyle) { return {}; }
+
+		var styles = window.getComputedStyle(dom.root);
+		var read = function (name) { return String(styles.getPropertyValue(name) || '').trim(); };
+
+		var ramp = [];
+		for (var i = 1; i <= 8; i++) {
+			var color = read('--pcm-chart-' + i);
+			if (color) { ramp.push(color); }
+		}
+
+		return {
+			ink: read('--pcm-ink'),
+			body: read('--pcm-body'),
+			muted: read('--pcm-gray'),
+			track: read('--pcm-paper-tint'),
+			grid: read('--pcm-gray-light'),
+			// Text sitting on a filled bar or slice: that is the fill colour's
+			// problem, not the page ground's.
+			onFill: read('--pcm-paper'),
+			palette: ramp.length ? ramp : undefined
+		};
+	}
+
 	/* ---------------------------------------------------------------------
 	   API
 	   --------------------------------------------------------------------- */
