@@ -759,6 +759,10 @@ class PCM_CRM_Model {
 			'last_modified_by_id' => array( 'type' => 'id', 'sf' => 'PCM_Last_Modified_By__c', 'label' => 'Last Modified By', 'options' => 'pcm_crm_owner_options', 'readonly' => true ),
 			'last_modified_date'  => array( 'type' => 'datetime', 'sf' => 'LastModifiedDate', 'label' => 'Last Modified Date', 'readonly' => true ),
 			'is_deleted'          => array( 'type' => 'bool', 'readonly' => true, 'internal' => true ),
+			// Filterable on purpose: the point of the flag is being able to
+			// tell sample data from real records, which means being able to
+			// ask for one and not the other.
+			'is_test'             => array( 'type' => 'bool', 'label' => 'Test Data' ),
 		);
 	}
 }

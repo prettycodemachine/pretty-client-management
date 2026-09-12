@@ -92,6 +92,7 @@ function pcm_crm_settings_tabs() {
 		'export'   => __( 'Data Export', 'pcm-crm' ),
 		'fields'   => __( 'Fields & Layouts', 'pcm-crm' ),
 		'pipeline' => __( 'Pipeline', 'pcm-crm' ),
+		'samples'  => __( 'Sample Data', 'pcm-crm' ),
 	);
 }
 
@@ -171,6 +172,8 @@ function pcm_crm_render_settings() {
 			pcm_crm_render_export_tab();
 		} elseif ( 'fields' === $pcm_tab ) {
 			pcm_crm_render_fields_tab();
+		} elseif ( 'samples' === $pcm_tab ) {
+			pcm_crm_render_samples_tab();
 		} elseif ( 'pipeline' === $pcm_tab ) {
 			pcm_crm_render_pipeline_tab();
 		} else {
@@ -933,3 +936,184 @@ function pcm_crm_render_layout_chip( $pcm_object, $pcm_model, $pcm_name, $pcm_pl
 	</div>
 	<?php
 }
+
+/* ---------------------------------------------------------------------------
+   Sample data tab
+   --------------------------------------------------------------------------- */
+
+function pcm_crm_render_samples_tab() {
+	$pcm_counts  = pcm_crm_sample_data_counts();
+	$pcm_allowed = pcm_crm_seed_allowed();
+	$pcm_labels  = array(
+		'accounts'      => __( 'Accounts', 'pcm-crm' ),
+		'contacts'      => __( 'Contacts', 'pcm-crm' ),
+		'opportunities' => __( 'Opportunities', 'pcm-crm' ),
+		'activities'    => __( 'Activities', 'pcm-crm' ),
+		'history'       => __( 'Stage history', 'pcm-crm' ),
+	);
+	?>
+	<div class="pcm-crm-card">
+		<h2><?php esc_html_e( 'What is in the database', 'pcm-crm' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Every sample record carries a flag of its own, so the two sets never have to be told apart by eye. You can filter on “Test Data” anywhere the filter builder appears.', 'pcm-crm' ); ?>
+		</p>
+
+		<table class="pcm-crm-table pcm-crm-export-table">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Object', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Real', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Sample', 'pcm-crm' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $pcm_counts as $pcm_key => $pcm_count ) : ?>
+					<tr>
+						<td class="pcm-crm-strong"><?php echo esc_html( isset( $pcm_labels[ $pcm_key ] ) ? $pcm_labels[ $pcm_key ] : $pcm_key ); ?></td>
+						<td><?php echo esc_html( number_format_i18n( $pcm_count['real'] ) ); ?></td>
+						<td><?php echo esc_html( number_format_i18n( $pcm_count['test'] ) ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="pcm-crm-card">
+		<h2><?php esc_html_e( 'Create sample data', 'pcm-crm' ); ?></h2>
+
+		<?php if ( $pcm_allowed ) : ?>
+			<p class="description">
+				<?php esc_html_e( 'Around 28 accounts, 70 contacts, 80 opportunities with real stage histories, and several hundred activities — enough for the filters, the pipeline board and the dashboard to have something to show. Dates are relative to today, so the charts fill either way.', 'pcm-crm' ); ?>
+			</p>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="pcm_crm_samples">
+				<input type="hidden" name="task" value="create">
+				<?php wp_nonce_field( 'pcm_crm_samples', 'pcm_crm_samples_nonce' ); ?>
+				<?php submit_button( __( 'Create sample data', 'pcm-crm' ), 'primary', 'submit', false ); ?>
+				<?php if ( pcm_crm_has_sample_data() ) : ?>
+					<span class="description" style="margin-left:10px">
+						<?php esc_html_e( 'Sample data already exists — this would add a second set. Remove the first below.', 'pcm-crm' ); ?>
+					</span>
+				<?php endif; ?>
+			</form>
+		<?php else : ?>
+			<p class="description">
+				<?php
+				printf(
+					/* translators: %s: the site's host name */
+					esc_html__( 'This looks like production (%s), so sample data cannot be created here. Removing it is always allowed. Define PCM_CRM_ALLOW_SEED in wp-config.php if this really is a test site.', 'pcm-crm' ),
+					esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) )
+				);
+				?>
+			</p>
+		<?php endif; ?>
+	</div>
+
+	<div class="pcm-crm-card pcm-crm-card-accent">
+		<h2><?php esc_html_e( 'Remove sample data', 'pcm-crm' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Deletes every record flagged as a sample, permanently and without the recycle bin. Scoped entirely by that flag, so a real record entered alongside them is never in range however much it resembles one.', 'pcm-crm' ); ?>
+		</p>
+
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+			onsubmit="return confirm('<?php echo esc_js( __( 'Permanently delete every sample record? Real records are not touched.', 'pcm-crm' ) ); ?>');">
+			<input type="hidden" name="action" value="pcm_crm_samples">
+			<input type="hidden" name="task" value="delete">
+			<?php wp_nonce_field( 'pcm_crm_samples', 'pcm_crm_samples_nonce' ); ?>
+			<?php submit_button( __( 'Delete sample data', 'pcm-crm' ), 'delete', 'submit', false ); ?>
+		</form>
+	</div>
+
+	<div class="pcm-crm-card">
+		<h2><?php esc_html_e( 'Shipped templates and sequence', 'pcm-crm' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'The plugin comes with a handful of outreach templates and a three-step sequence for a new inbound lead. They are ordinary records — edit or delete them freely. Reinstalling only creates what is missing, matched by name, so anything you have renamed or rewritten is left alone.', 'pcm-crm' ); ?>
+		</p>
+
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="pcm_crm_samples">
+			<input type="hidden" name="task" value="content">
+			<?php wp_nonce_field( 'pcm_crm_samples', 'pcm_crm_samples_nonce' ); ?>
+			<?php submit_button( __( 'Install anything missing', 'pcm-crm' ), 'secondary', 'submit', false ); ?>
+		</form>
+	</div>
+	<?php
+}
+
+/**
+ * Create, remove, or install the shipped content.
+ */
+function pcm_crm_handle_samples() {
+	if (
+		! pcm_crm_user_can() ||
+		! isset( $_POST['pcm_crm_samples_nonce'] ) ||
+		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_samples_nonce'] ), 'pcm_crm_samples' )
+	) {
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+	}
+
+	$pcm_task = isset( $_POST['task'] ) ? sanitize_key( wp_unslash( $_POST['task'] ) ) : '';
+	$pcm_back = pcm_crm_settings_url( 'samples' );
+
+	if ( 'delete' === $pcm_task ) {
+		$pcm_removed = pcm_crm_delete_sample_data();
+
+		wp_safe_redirect( add_query_arg( array( 'pcm_samples' => 'deleted', 'count' => $pcm_removed ), $pcm_back ) );
+		exit;
+	}
+
+	if ( 'content' === $pcm_task ) {
+		$pcm_created = pcm_crm_install_sample_content();
+
+		wp_safe_redirect( add_query_arg( array(
+			'pcm_samples' => 'content',
+			'count'       => $pcm_created['templates'] + $pcm_created['sequences'],
+		), $pcm_back ) );
+		exit;
+	}
+
+	if ( ! pcm_crm_seed_allowed() ) {
+		wp_safe_redirect( add_query_arg( 'pcm_samples', 'refused', $pcm_back ) );
+		exit;
+	}
+
+	$pcm_counts = pcm_crm_create_sample_data();
+
+	wp_safe_redirect( add_query_arg( array(
+		'pcm_samples' => 'created',
+		'count'       => array_sum( $pcm_counts ),
+	), $pcm_back ) );
+	exit;
+}
+add_action( 'admin_post_pcm_crm_samples', 'pcm_crm_handle_samples' );
+
+function pcm_crm_samples_notice() {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only
+	$pcm_result = isset( $_GET['pcm_samples'] ) ? sanitize_key( wp_unslash( $_GET['pcm_samples'] ) ) : '';
+
+	if ( ! $pcm_result || ! pcm_crm_is_crm_screen() ) {
+		return;
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only
+	$pcm_count = isset( $_GET['count'] ) ? absint( $_GET['count'] ) : 0;
+
+	$pcm_messages = array(
+		'created' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Created %d sample records.', 'pcm-crm' ), $pcm_count ) ),
+		'deleted' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Removed %d sample records.', 'pcm-crm' ), $pcm_count ) ),
+		'content' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Installed %d templates and sequences. Anything already present was left alone.', 'pcm-crm' ), $pcm_count ) ),
+		'refused' => array( 'notice-error', __( 'Sample data cannot be created on this site.', 'pcm-crm' ) ),
+	);
+
+	if ( ! isset( $pcm_messages[ $pcm_result ] ) ) {
+		return;
+	}
+
+	printf(
+		'<div class="notice %s is-dismissible"><p>%s</p></div>',
+		esc_attr( $pcm_messages[ $pcm_result ][0] ),
+		esc_html( $pcm_messages[ $pcm_result ][1] )
+	);
+}
+add_action( 'admin_notices', 'pcm_crm_samples_notice' );

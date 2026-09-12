@@ -679,6 +679,40 @@ foreach ( $schema['opportunities']['fields'] as $field ) { if ( 'stage_name' ===
 check( 'a picklist field carries its options', count( $stage['options'] ), 6 );
 check( 'options are value/label pairs', $stage['options'][0]['value'], 'Qualification' );
 
+echo "\n--- sample content ---\n";
+$templates = pcm_crm_sample_templates();
+check( 'six templates ship', count( $templates ), 6 );
+check( 'the first reply is one of them', isset( $templates['inbound-first-reply'] ), true );
+check( 'and it greets by name',
+	false !== strpos( $templates['inbound-first-reply']['body'], '{{contact.first_name}}' ), true );
+check( 'every template has a subject',
+	count( array_filter( wp_list_pluck( $templates, 'subject' ) ) ), count( $templates ) );
+
+$sequences = pcm_crm_sample_sequences();
+check( 'a sequence ships for a new inbound lead', isset( $sequences['new-inbound-lead'] ), true );
+check( 'it is three steps', count( $sequences['new-inbound-lead']['steps'] ), 3 );
+check( 'the first goes out immediately', $sequences['new-inbound-lead']['steps'][0]['delay_days'], 0 );
+
+// Every step must name a template that actually ships, or the sequence stops
+// itself on its first run.
+$missing = array();
+foreach ( $sequences as $sequence ) {
+	foreach ( $sequence['steps'] as $step ) {
+		if ( ! isset( $templates[ $step['template'] ] ) ) { $missing[] = $step['template']; }
+	}
+}
+check( 'every step points at a template that exists', $missing, array() );
+
+echo "\n--- the test data flag ---\n";
+foreach ( array( 'accounts', 'contacts', 'opportunities', 'activities' ) as $slug ) {
+	check( $slug . ' carry the flag', PCM_CRM_REST::model( $slug )->has_field( 'is_test' ), true );
+}
+check( 'it is filterable, which is the point of having it',
+	in_array( 'is_test', wp_list_pluck( ( (array) PCM_CRM_REST::schema( new WP_REST_Request() ) )['contacts']['fields'], 'key' ), true ), true );
+check( 'history is in scope for removal too',
+	isset( pcm_crm_sample_tables()['history'] ), true );
+check( 'and so are all four objects', count( pcm_crm_sample_tables() ), 5 );
+
 echo "\n--- demo data guard ---\n";
 $allowed = function( $host ) {
 	$GLOBALS['pcm_test_host'] = $host;

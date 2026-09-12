@@ -17,7 +17,7 @@ class PCM_CRM_Schema {
 	 * differs, so an rsync deploy (which never fires the activation hook)
 	 * still picks the change up on the next page load.
 	 */
-	const VERSION = '1.6.0';
+	const VERSION = '1.7.0';
 
 	const OPTION = 'pcm_crm_db_version';
 
@@ -61,6 +61,7 @@ class PCM_CRM_Schema {
 		}
 
 		self::backfill_history();
+		self::backfill_test_flags();
 
 		update_option( self::OPTION, self::VERSION );
 	}
@@ -100,6 +101,54 @@ class PCM_CRM_Schema {
 		// forecast close date is the best available stand-in.
 		// phpcs:ignore WordPress.DB.PreparedSQL -- table name is internal
 		$wpdb->query( "UPDATE {$pcm_opps} SET closed_date = close_date WHERE is_closed = 1 AND closed_date = '0000-00-00 00:00:00' AND close_date IS NOT NULL" );
+	}
+
+	/**
+	 * Flag whatever the old CLI seeder made.
+	 *
+	 * That set was tracked in an option rather than on the rows. Without this
+	 * it would be indistinguishable from real data the moment the option is
+	 * lost, and the new Delete button would leave it behind.
+	 */
+	private static function backfill_test_flags() {
+		global $wpdb;
+
+		$pcm_stored = get_option( 'pcm_crm_seed_ids', array() );
+
+		if ( ! is_array( $pcm_stored ) || ! $pcm_stored ) {
+			return;
+		}
+
+		$pcm_tables = array(
+			'accounts'      => self::accounts(),
+			'contacts'      => self::contacts(),
+			'opportunities' => self::opportunities(),
+			'activities'    => self::activities(),
+		);
+
+		foreach ( $pcm_tables as $pcm_key => $pcm_table ) {
+			$pcm_ids = isset( $pcm_stored[ $pcm_key ] ) ? array_filter( array_map( 'absint', $pcm_stored[ $pcm_key ] ) ) : array();
+
+			if ( ! $pcm_ids ) {
+				continue;
+			}
+
+			$pcm_in = implode( ',', $pcm_ids );
+
+			// phpcs:ignore WordPress.DB.PreparedSQL -- ids are cast to int above
+			$wpdb->query( "UPDATE {$pcm_table} SET is_test = 1 WHERE id IN ({$pcm_in})" );
+		}
+
+		// History hangs off the opportunities rather than being tracked itself.
+		$pcm_opp_ids = isset( $pcm_stored['opportunities'] ) ? array_filter( array_map( 'absint', $pcm_stored['opportunities'] ) ) : array();
+
+		if ( $pcm_opp_ids ) {
+			$pcm_in      = implode( ',', $pcm_opp_ids );
+			$pcm_history = self::history();
+
+			// phpcs:ignore WordPress.DB.PreparedSQL -- ids are cast to int above
+			$wpdb->query( "UPDATE {$pcm_history} SET is_test = 1 WHERE opportunity_id IN ({$pcm_in})" );
+		}
 	}
 
 	/**
@@ -150,10 +199,12 @@ class PCM_CRM_Schema {
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_account_name_key (name_key),
 			KEY pcm_account_owner (owner_id),
 			KEY pcm_account_deleted (is_deleted),
+			KEY pcm_account_test (is_test),
 			KEY pcm_account_sf (sf_id)
 		) {$pcm_charset};";
 
@@ -185,11 +236,13 @@ class PCM_CRM_Schema {
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_contact_email (email),
 			KEY pcm_contact_account (account_id),
 			KEY pcm_contact_owner (owner_id),
 			KEY pcm_contact_deleted (is_deleted),
+			KEY pcm_contact_test (is_test),
 			KEY pcm_contact_sf (sf_id)
 		) {$pcm_charset};";
 
@@ -221,6 +274,7 @@ class PCM_CRM_Schema {
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_opp_account (account_id),
 			KEY pcm_opp_contact (primary_contact_id),
@@ -230,6 +284,7 @@ class PCM_CRM_Schema {
 			KEY pcm_opp_closed (closed_date),
 			KEY pcm_opp_owner (owner_id),
 			KEY pcm_opp_deleted (is_deleted),
+			KEY pcm_opp_test (is_test),
 			KEY pcm_opp_sf (sf_id)
 		) {$pcm_charset};";
 
@@ -259,6 +314,7 @@ class PCM_CRM_Schema {
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_act_who (who_id),
 			KEY pcm_act_what (what_type,what_id),
@@ -266,6 +322,7 @@ class PCM_CRM_Schema {
 			KEY pcm_act_due (due_date),
 			KEY pcm_act_owner (owner_id),
 			KEY pcm_act_deleted (is_deleted),
+			KEY pcm_act_test (is_test),
 			KEY pcm_act_sf (sf_id)
 		) {$pcm_charset};";
 
@@ -292,11 +349,13 @@ class PCM_CRM_Schema {
 			is_won tinyint(1) NOT NULL DEFAULT 0,
 			created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_hist_opp (opportunity_id),
 			KEY pcm_hist_stage (stage_name),
 			KEY pcm_hist_entered (entered_date),
-			KEY pcm_hist_open (opportunity_id,exited_date)
+			KEY pcm_hist_open (opportunity_id,exited_date),
+			KEY pcm_hist_test (is_test)
 		) {$pcm_charset};";
 
 		/* Scheduled deliveries ----------------------------------------------- */
@@ -325,6 +384,7 @@ class PCM_CRM_Schema {
 			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_sched_active (is_active,is_deleted),
 			KEY pcm_sched_sent (last_sent)
@@ -343,6 +403,7 @@ class PCM_CRM_Schema {
 			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_tpl_active (is_active,is_deleted)
 		) {$pcm_charset};";
@@ -363,6 +424,7 @@ class PCM_CRM_Schema {
 			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_seq_active (is_active,is_deleted)
 		) {$pcm_charset};";
@@ -389,6 +451,7 @@ class PCM_CRM_Schema {
 			last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
+			is_test tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_enr_due (status,next_send_at),
 			KEY pcm_enr_contact (contact_id,status),

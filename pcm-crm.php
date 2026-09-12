@@ -63,6 +63,8 @@ require_once PCM_CRM_DIR . 'public/form.php';
 
 // Demo data. The file registers nothing unless WP-CLI is running, so it has no
 // web-facing surface, and the command itself refuses to run on production.
+require_once PCM_CRM_DIR . 'includes/sample-content.php';
+require_once PCM_CRM_DIR . 'includes/sample-data.php';
 require_once PCM_CRM_DIR . 'includes/cli-seed.php';
 
 /**
@@ -92,6 +94,10 @@ function pcm_crm_maybe_upgrade() {
 	}
 
 	PCM_CRM_Schema::install();
+
+	// A plugin updated by rsync never fires the activation hook, so the samples
+	// arrive on the same version check the tables do.
+	pcm_crm_maybe_install_sample_content();
 }
 add_action( 'plugins_loaded', 'pcm_crm_maybe_upgrade' );
 
@@ -102,6 +108,9 @@ function pcm_crm_activate() {
 	// Carry the theme's contact form settings over on first activation, so the
 	// live copy and recipient survive the move out of the theme.
 	pcm_crm_migrate_theme_options();
+
+	// An empty Templates screen is a feature nobody tries.
+	pcm_crm_maybe_install_sample_content();
 
 	flush_rewrite_rules();
 }

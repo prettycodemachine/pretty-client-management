@@ -505,6 +505,20 @@
 }
 .pcm-crm-kicker-link:hover { color: var(--pcm-ink); }
 
+/* A record that is not real, said plainly on the record. */
+.pcm-crm-test-badge {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--pcm-accent-deep);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .pcm-crm-drawer-close {
   border: 0;
   background: none;

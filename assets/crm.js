@@ -1494,6 +1494,10 @@
 		dom.drawer.appendChild(el('div.pcm-crm-modal-head', {}, [
 			el('div.pcm-crm-modal-heading', {}, [
 				kicker(def, record, isNew, options),
+				// Sample records are flagged in the database; saying so on the
+				// record itself means nobody has to remember which is which
+				// before acting on one.
+				Number(record.is_test) ? el('span.pcm-crm-test-badge', { text: 'Sample data' }) : null,
 				el('h2', { text: isNew ? 'New ' + def.label : def.title(record) })
 			]),
 			el('button.pcm-crm-drawer-close', {
