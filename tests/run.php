@@ -335,8 +335,14 @@ $shadowing = new WP_REST_Request(
 );
 
 check( 'the body does shadow a plain parameter read', $shadowing['object'], '' );
+// Asserted as "not the object being lost" rather than "no error at all": the
+// stub has no rows, so the insert cannot be read back and create_item reports
+// that. Losing the capture would report pcm_crm_unknown_object instead, which
+// is the failure this is watching for.
+$shadow_create = PCM_CRM_REST::create_item( $shadowing );
 check( 'but the route still resolves its own object',
-	is_wp_error( PCM_CRM_REST::create_item( $shadowing ) ), false );
+	is_wp_error( $shadow_create ) ? $shadow_create->get_error_code() : 'ok',
+	'pcm_crm_not_found' );
 
 $shadow_id = new WP_REST_Request(
 	array( 'pcm_object' => 'schedules', 'pcm_id' => 7 ),
@@ -609,6 +615,21 @@ check( 'no history yet reports zero rather than dividing by zero',
 
 $GLOBALS['wpdb'] = $real_wpdb;
 check( 'the won stage is found by its flag', pcm_crm_won_stage_name(), 'Closed Won' );
+
+echo "\n--- themes ---\n";
+check( 'five themes ship', count( pcm_crm_themes() ), 5 );
+check( 'including a neon one', isset( pcm_crm_themes()['neon'] ), true );
+check( 'the house palette is the default', pcm_crm_theme(), 'pcm' );
+
+update_option( 'pcm_crm_theme', 'neon' );
+check( 'a chosen theme sticks', pcm_crm_theme(), 'neon' );
+// An unknown value would put data-theme on the wrap with no rules behind it,
+// which is an unstyled screen rather than a fallback.
+update_option( 'pcm_crm_theme', 'nonsense' );
+check( 'an unknown theme falls back rather than rendering unstyled', pcm_crm_theme(), 'pcm' );
+check( 'and is refused on the way in', pcm_crm_sanitize_theme( 'nonsense' ), 'pcm' );
+check( 'a real one is accepted', pcm_crm_sanitize_theme( 'dark' ), 'dark' );
+delete_option( 'pcm_crm_theme' );
 
 echo "\n--- recycle bin ---\n";
 check( 'the four record objects have a bin',
@@ -950,6 +971,198 @@ check( 'history has an index for finding the open row',
 	strpos( $defs, 'pcm_hist_open (opportunity_id,exited_date)' ) !== false, true );
 check( 'opportunities can be sorted by when they entered their stage',
 	strpos( $defs, 'pcm_opp_entered (stage_entered_date)' ) !== false, true );
+
+/* ---------------------------------------------------------------------------
+   The object registry
+   --------------------------------------------------------------------------- */
+
+// Four hardcoded lists became one registry. These assertions are the guard for
+// that refactor: every one of them passed before it and must pass after, which
+// is the only way to know a pure restructuring stayed pure.
+echo "\n--- object registry ---\n";
+
+// Order is behaviour, not presentation: the generic REST routes build their slug
+// alternation from these keys.
+check( 'the same nine objects, in the same order', array_keys( PCM_CRM_REST::models() ), array(
+	'accounts', 'contacts', 'opportunities', 'activities', 'submissions',
+	'schedules', 'templates', 'sequences', 'enrollments',
+) );
+
+check( 'the four customisable objects are unchanged',
+	array_keys( pcm_crm_customisable_objects() ),
+	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
+
+check( 'and still carry their labels',
+	pcm_crm_customisable_objects()['opportunities'], 'Opportunities' );
+
+// Export order is the order a Data Loader run needs: a Contact cannot reference
+// an Account that does not exist yet.
+check( 'the exportable objects keep their dependency order',
+	array_keys( pcm_crm_exportable_objects() ),
+	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
+
+check( 'and their Salesforce names', pcm_crm_exportable_objects()['activities']['sf'], 'Task' );
+
+// What used to be the skip-list inside PCM_CRM_REST::schema(), inverted: an
+// allow-list, so a new object is invisible to the filter builder until it asks.
+check( 'the same four objects are reportable',
+	array_keys( pcm_crm_objects_where( 'reportable' ) ),
+	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
+
+check( 'machinery is not reportable', pcm_crm_object_is( 'templates', 'reportable' ), false );
+check( 'nor customisable', pcm_crm_object_is( 'schedules', 'customisable' ), false );
+check( 'nor exportable', pcm_crm_object_is( 'submissions', 'exportable' ), false );
+
+// The related gate the browser reads off the same registry.
+check( 'an account fetches its related lists', pcm_crm_object( 'accounts' )['related'], 'fetch' );
+check( 'an activity builds them from the record in hand', pcm_crm_object( 'activities' )['related'], 'local' );
+check( 'a template has none at all', pcm_crm_object( 'templates' )['related'], '' );
+
+check( 'an unknown slug is absent rather than an error', pcm_crm_object( 'nope' ), null );
+check( 'and reports no flags', pcm_crm_object_is( 'nope', 'reportable' ), false );
+check( 'and resolves to no model', pcm_crm_object_model( 'nope' ), null );
+check( 'a registered slug resolves to its model',
+	pcm_crm_object_model( 'accounts' ) === pcm_crm_accounts(), true );
+
+/* ---------------------------------------------------------------------------
+   Related-list providers
+   --------------------------------------------------------------------------- */
+
+echo "\n--- related providers ---\n";
+
+check( 'the same three objects have related lists',
+	array_keys( pcm_crm_related_providers() ),
+	array( 'accounts', 'contacts', 'opportunities' ) );
+
+check( 'an object with no provider returns nothing rather than failing',
+	pcm_crm_related_for( 'templates', 1 ), array() );
+
+// Several providers may register against one slug and their returns merge, which
+// is what lets a module add a list without touching the one that builds the
+// other three.
+pcm_crm_register_related( 'accounts', function ( $pcm_id ) {
+	return array( 'widgets' => array( array( 'id' => $pcm_id ) ) );
+} );
+
+check( 'a second provider on the same slug is kept',
+	count( pcm_crm_related_providers()['accounts'] ), 2 );
+
+$GLOBALS['pcm_crm_related']['accounts'] = array( 'pcm_crm_related_account' );
+
+/* ---------------------------------------------------------------------------
+   Merge-token prefixes
+   --------------------------------------------------------------------------- */
+
+echo "\n--- merge prefixes ---\n";
+
+// The picker and the substitution read one map now. Both sides are asserted
+// because the whole point was that they cannot drift apart.
+check( 'the prefix map is contact and account',
+	pcm_crm_merge_prefixes(), array( 'contact' => 'contacts', 'account' => 'accounts' ) );
+
+$pcm_prefixes = wp_list_pluck( pcm_crm_email_variables(), 'prefix' );
+check( 'the picker offers the same prefixes, plus the composed group',
+	$pcm_prefixes, array( 'contact', 'account', 'other' ) );
+
+// Opportunity was deliberately withdrawn: a contact has many and no send path
+// picks one, so the token could look right and go out with a hole in it.
+check( 'no opportunity prefix is offered', in_array( 'opportunity', $pcm_prefixes, true ), false );
+
+check( 'a value still fills',
+	pcm_crm_fill_variables( 'Hi {{contact.first_name}}', array( 'contact' => array( 'first_name' => 'Dana' ) ) ),
+	'Hi Dana' );
+
+check( 'and a token with nothing behind it still blanks',
+	pcm_crm_fill_variables( '[{{contact.nonsense}}]', array( 'contact' => array() ) ), '[]' );
+
+check( 'escaping still holds',
+	pcm_crm_fill_variables( '{{contact.first_name}}', array( 'contact' => array( 'first_name' => '<b>x</b>' ) ) ),
+	'&lt;b&gt;x&lt;/b&gt;' );
+
+// The seam a derived token rides: a meter or a remaining balance is not a column
+// on anything, so it cannot come from the prefix loop.
+pcm_test_add_filter( 'pcm_crm_merge_values', function ( $pcm_values ) {
+	$pcm_values['{{project.hours_remaining}}'] = '14';
+
+	return $pcm_values;
+} );
+
+check( 'a derived value can be added by filter',
+	pcm_crm_fill_variables( '{{project.hours_remaining}} left', array() ), '14 left' );
+
+pcm_test_reset_filters( 'pcm_crm_merge_values' );
+
+check( 'and is gone again with the filter',
+	pcm_crm_fill_variables( '[{{project.hours_remaining}}]', array() ), '[]' );
+
+check( 'a seed context passes through untouched with no listener',
+	pcm_crm_fill_context( array( 'project' => array( 'id' => 1 ) ) ),
+	array( 'project' => array( 'id' => 1 ) ) );
+
+/* ---------------------------------------------------------------------------
+   Duration parsing
+   --------------------------------------------------------------------------- */
+
+echo "\n--- duration parsing ---\n";
+
+check( 'plain decimal hours', pcm_crm_parse_hours( '1.5' ), 1.5 );
+check( 'a whole number', pcm_crm_parse_hours( '8' ), 8.0 );
+check( 'h:mm', pcm_crm_parse_hours( '1:30' ), 1.5 );
+check( 'a quarter hour', pcm_crm_parse_hours( '0:15' ), 0.25 );
+check( 'minutes only, half typed', pcm_crm_parse_hours( ':45' ), 0.75 );
+check( 'minutes past sixty normalise rather than fail', pcm_crm_parse_hours( '2:75' ), 3.25 );
+check( 'bare minutes', pcm_crm_parse_hours( '90m' ), 1.5 );
+check( 'hours and minutes', pcm_crm_parse_hours( '1h30m' ), 1.5 );
+check( 'with the m left off', pcm_crm_parse_hours( '1h30' ), 1.5 );
+check( 'with a space', pcm_crm_parse_hours( '1h 30' ), 1.5 );
+check( 'decimal hours with a unit', pcm_crm_parse_hours( '1.5h' ), 1.5 );
+check( 'an hour on its own is not read as 1.5', pcm_crm_parse_hours( '1h' ), 1.0 );
+check( 'rounded to two decimals', pcm_crm_parse_hours( '0.333' ), 0.33 );
+
+// Null, not zero: "no time recorded" is a different statement from "no time
+// taken", and a burn-down needs to tell them apart.
+check( 'blank is null', pcm_crm_parse_hours( '' ), null );
+check( 'null is null', pcm_crm_parse_hours( null ), null );
+check( 'unreadable is null, not a guess', pcm_crm_parse_hours( 'abc' ), null );
+check( 'negative time is refused rather than absolved', pcm_crm_parse_hours( '-2' ), null );
+check( 'an array is null rather than a warning', pcm_crm_parse_hours( array( 1 ) ), null );
+
+// Stricter than the decimal type on purpose: that one reads "1.2.3" as 1.2, and
+// an invoice built on a guess is worse than a rejected entry.
+check( 'a malformed decimal is refused, unlike the decimal type', pcm_crm_parse_hours( '1.2.3' ), null );
+
+check( 'and back out as a timesheet reads', pcm_crm_format_hours( 1.5 ), '1:30' );
+check( 'padding the minutes', pcm_crm_format_hours( 2.25 ), '2:15' );
+check( 'nothing formats as nothing', pcm_crm_format_hours( null ), '' );
+
+// The wiring, which is the part that actually breaks: the type has to be on the
+// field and the parser has to be reached. A %s format here would store '1.5' and
+// look correct right up until a SUM.
+$pcm_hours_model = new PCM_CRM_Model( 'hours_probe', 'probe', array(
+	'hours' => array( 'type' => 'hours', 'label' => 'Hours' ),
+) );
+
+check( 'the hours type reaches the parser through sanitize()',
+	$pcm_hours_model->sanitize( array( 'hours' => '1:30' ) ), array( 'hours' => 1.5 ) );
+
+// Required on the plugin's PHP 7.4 floor, a deprecation notice from 8.5 —
+// so asked for only where it does something.
+$pcm_reach = function ( $pcm_method ) {
+	$pcm_ref = new ReflectionMethod( 'PCM_CRM_Model', $pcm_method );
+
+	if ( PHP_VERSION_ID < 80100 ) { $pcm_ref->setAccessible( true ); }
+
+	return $pcm_ref;
+};
+
+$pcm_formats = $pcm_reach( 'formats' );
+check( 'and is stored as a float, not a string',
+	$pcm_formats->invoke( $pcm_hours_model, array( 'hours' => 1.5 ) ), array( '%f' ) );
+
+$pcm_cast = $pcm_reach( 'cast_row' );
+check( 'and comes back out of the database as a float',
+	$pcm_cast->invoke( $pcm_hours_model, array( 'id' => '1', 'hours' => '1.50' ) ),
+	array( 'id' => 1, 'hours' => 1.5 ) );
 
 echo "\n" . ( $fail ? "$fail FAILED\n" : "All checks passed\n" );
 exit( $fail ? 1 : 0 );

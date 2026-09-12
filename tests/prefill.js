@@ -31,8 +31,15 @@ const state = { boot: { stages: [
 	{ name: 'Closed Won', is_closed: 1 }
 ] } };
 
+// childProviders is a free variable in the lifted function — the registry a
+// module registers its own child types into — so it has to be supplied here the
+// way state is. Empty for the core cases below; a fake provider is registered
+// into it further down.
+const childProviders = {};
+
 // eslint-disable-next-line no-new-func
-const childTypes = new Function('state', src.slice(start, end) + '; return childTypes;')(state);
+const childTypes = new Function('state', 'childProviders',
+	src.slice(start, end) + '; return childTypes;')(state, childProviders);
 
 let failed = 0;
 function check(label, got, want) {
@@ -90,6 +97,30 @@ check('an activity has no children of its own', childTypes('activities', { id: 3
 const closeDate = byId(account, 'opportunities').prefill.close_date;
 check('a new deal gets a close date in the future', closeDate > new Date().toISOString().slice(0, 10), true);
 check('the close date is a plain ISO date', /^\d{4}-\d{2}-\d{2}$/.test(closeDate), true);
+
+// --- The provider registry -----------------------------------------------
+// A module adds child types by registering rather than by editing childTypes().
+// These assertions are the contract that makes that possible: a provider
+// answers for its own object, receives the shared locals rather than
+// recomputing them, and cannot change what core objects offer.
+childProviders.projects = function (record, helpers) {
+	return [
+		{ id: 'tasks', label: 'Task', prefill: { project_id: record.id } },
+		{ id: 'raid', label: 'Risk', prefill: { project_id: record.id, raid_type: 'Risk' } },
+		{ id: 'activities', label: 'Activity', prefill: helpers.activity({ what_type: 'project', what_id: record.id }) }
+	];
+};
+
+const project = childTypes('projects', { id: 12, name: 'Acme retainer' });
+check('a registered provider answers for its own object', project.map(c => c.id), ['tasks', 'raid', 'activities']);
+check('and every child carries the parent link', project.every(c => c.prefill.project_id === 12 || c.prefill.what_id === 12), true);
+check('a provider is handed the shared activity builder', byId(project, 'activities').prefill.activity_type, 'Call');
+check('and the shared open-stage local', typeof childProviders.projects({ id: 1 }, { firstStage: 'Onboarding', closeDate: '', activity: o => o }), 'object');
+
+// Registering one provider must not change what anything else offers.
+check('core child types are untouched by a provider',
+	childTypes('accounts', { id: 42 }).map(c => c.id), ['contacts', 'opportunities', 'activities']);
+check('an unregistered object still has no children', childTypes('nothing', { id: 1 }), []);
 
 console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');
 process.exit(failed ? 1 : 0);

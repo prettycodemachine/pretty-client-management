@@ -63,6 +63,12 @@ class PCM_CRM_Schema {
 		self::backfill_history();
 		self::backfill_test_flags();
 
+		// Modules hang their own idempotent backfills here, beside the core
+		// ones, rather than editing this class. Fires after every table exists
+		// and before the version is stamped, so a listener that throws leaves
+		// the version behind and the whole install runs again next load.
+		do_action( 'pcm_crm_after_install' );
+
 		update_option( self::OPTION, self::VERSION );
 	}
 
@@ -479,6 +485,11 @@ class PCM_CRM_Schema {
 			KEY pcm_sub_created (created_date)
 		) {$pcm_charset};";
 
-		return $pcm_tables;
+		// Modules append their tables here. They are collected whether or not
+		// the module is switched on, which is deliberate: install() is keyed on
+		// one version option, so a table withheld at install time would never
+		// be created by a later switch-on that found the versions already
+		// equal. The switch governs behaviour, not storage.
+		return apply_filters( 'pcm_crm_table_definitions', $pcm_tables, $pcm_charset );
 	}
 }

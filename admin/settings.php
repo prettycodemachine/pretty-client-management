@@ -75,6 +75,12 @@ function pcm_crm_register_settings() {
 		'default'           => '',
 	) );
 
+	register_setting( 'pcm_crm_theme_settings', 'pcm_crm_theme', array(
+		'type'              => 'string',
+		'sanitize_callback' => 'pcm_crm_sanitize_theme',
+		'default'           => 'pcm',
+	) );
+
 	register_setting( 'pcm_crm_pipeline_settings', 'pcm_crm_stall_days', array(
 		'type'              => 'integer',
 		'sanitize_callback' => 'absint',
@@ -92,6 +98,7 @@ function pcm_crm_settings_tabs() {
 		'export'   => __( 'Data Export', 'pcm-crm' ),
 		'fields'   => __( 'Fields & Layouts', 'pcm-crm' ),
 		'pipeline' => __( 'Pipeline', 'pcm-crm' ),
+		'theme'    => __( 'Theme', 'pcm-crm' ),
 		'samples'  => __( 'Sample Data', 'pcm-crm' ),
 	);
 }
@@ -148,7 +155,7 @@ function pcm_crm_render_settings() {
 
 	$pcm_tab = pcm_crm_current_settings_tab();
 	?>
-	<div class="wrap pcm-crm pcm-crm-settings">
+	<div class="wrap pcm-crm pcm-crm-settings" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
 		<div class="pcm-crm-head">
 			<div>
 				<h1><?php esc_html_e( 'CRM Settings', 'pcm-crm' ); ?></h1>
@@ -172,6 +179,8 @@ function pcm_crm_render_settings() {
 			pcm_crm_render_export_tab();
 		} elseif ( 'fields' === $pcm_tab ) {
 			pcm_crm_render_fields_tab();
+		} elseif ( 'theme' === $pcm_tab ) {
+			pcm_crm_render_theme_tab();
 		} elseif ( 'samples' === $pcm_tab ) {
 			pcm_crm_render_samples_tab();
 		} elseif ( 'pipeline' === $pcm_tab ) {
@@ -469,15 +478,21 @@ function pcm_crm_render_field_row( $pcm_index, array $pcm_field ) {
  * The objects worth exporting, in the order Salesforce needs them loaded.
  *
  * Order matters and is the single most common way a Data Loader run goes
- * wrong: a Contact cannot reference an Account that does not exist yet.
+ * wrong: a Contact cannot reference an Account that does not exist yet. It is
+ * the object registry's registration order, which is why objects register in
+ * dependency order rather than alphabetically.
  */
 function pcm_crm_exportable_objects() {
-	return array(
-		'accounts'      => array( 'label' => __( 'Accounts', 'pcm-crm' ), 'sf' => 'Account' ),
-		'contacts'      => array( 'label' => __( 'Contacts', 'pcm-crm' ), 'sf' => 'Contact' ),
-		'opportunities' => array( 'label' => __( 'Opportunities', 'pcm-crm' ), 'sf' => 'Opportunity' ),
-		'activities'    => array( 'label' => __( 'Activities', 'pcm-crm' ), 'sf' => 'Task' ),
-	);
+	$pcm_out = array();
+
+	foreach ( pcm_crm_objects_where( 'exportable' ) as $pcm_slug => $pcm_object ) {
+		$pcm_out[ $pcm_slug ] = array(
+			'label' => $pcm_object['plural'],
+			'sf'    => $pcm_object['sf'],
+		);
+	}
+
+	return $pcm_out;
 }
 
 /**
@@ -1167,3 +1182,43 @@ function pcm_crm_samples_notice() {
 	);
 }
 add_action( 'admin_notices', 'pcm_crm_samples_notice' );
+
+/* ---------------------------------------------------------------------------
+   Theme tab
+   --------------------------------------------------------------------------- */
+
+function pcm_crm_render_theme_tab() {
+	$pcm_current = pcm_crm_theme();
+	?>
+	<form method="post" action="options.php" class="pcm-crm-card">
+		<?php settings_fields( 'pcm_crm_theme_settings' ); ?>
+
+		<h2><?php esc_html_e( 'Theme', 'pcm-crm' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Applies to every CRM screen, for everyone using the site. Each one is a palette rather than a different layout, so nothing moves — the charts follow along, and a printed page is always on white paper whichever you pick.', 'pcm-crm' ); ?>
+		</p>
+
+		<div class="pcm-crm-theme-grid">
+			<?php foreach ( pcm_crm_themes() as $pcm_slug => $pcm_theme ) : ?>
+				<label class="pcm-crm-theme<?php echo $pcm_slug === $pcm_current ? ' is-chosen' : ''; ?>">
+					<div class="pcm-crm-theme-head">
+						<input type="radio" name="pcm_crm_theme" value="<?php echo esc_attr( $pcm_slug ); ?>"
+							<?php checked( $pcm_slug, $pcm_current ); ?>>
+						<span class="pcm-crm-theme-name"><?php echo esc_html( $pcm_theme['label'] ); ?></span>
+					</div>
+
+					<div class="pcm-crm-theme-swatch">
+						<?php foreach ( $pcm_theme['swatch'] as $pcm_color ) : ?>
+							<span style="background: <?php echo esc_attr( $pcm_color ); ?>"></span>
+						<?php endforeach; ?>
+					</div>
+
+					<div class="pcm-crm-theme-note"><?php echo esc_html( $pcm_theme['description'] ); ?></div>
+				</label>
+			<?php endforeach; ?>
+		</div>
+
+		<?php submit_button( __( 'Save theme', 'pcm-crm' ) ); ?>
+	</form>
+	<?php
+}

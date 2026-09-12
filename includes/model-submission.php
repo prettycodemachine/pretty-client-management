@@ -34,3 +34,11 @@ function pcm_crm_submissions() {
 
 	return $pcm_model;
 }
+
+// Machinery rather than a record anyone reports on: no filter builder, no
+// custom fields, no export, no related tab.
+pcm_crm_register_object( 'submissions', array(
+	'model'  => 'pcm_crm_submissions',
+	'label'  => 'Submission',
+	'plural' => 'Submissions',
+) );

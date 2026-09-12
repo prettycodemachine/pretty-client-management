@@ -382,6 +382,26 @@
 	 * the first time someone rearranges one. Only objects outside that system,
 	 * like schedules, still declare their own.
 	 */
+	/**
+	 * Screens that are not a list of one object: dashboard, pipeline, reports,
+	 * recycle bin. A map rather than an if-chain so a module can register its
+	 * own without this file knowing the name.
+	 */
+	var views = {};
+
+	/**
+	 * Field types that build their own control. Each entry carries the two
+	 * things the three built-in ones all did by hand — force the field wide,
+	 * emit a label — as data, so an entry that wants neither can say so.
+	 */
+	var controls = {};
+
+	/** slug => function (record, helpers) returning related-list child types. */
+	var childProviders = {};
+
+	/** Callbacks waiting for /bootstrap and /schema. */
+	var readyQueue = [];
+
 	var objects = {
 		accounts: {
 			label: 'Account',
@@ -1438,18 +1458,20 @@
 
 			if (!id) { return; }
 
-			// Activities are a leaf: nothing hangs off one, so its section is
-			// built from the record's own parents rather than fetched.
-			if (object === 'activities') {
+			// Each object declares how its related section is built, because
+			// asking for a route that does not exist is a guaranteed 404 —
+			// which then showed up as an error tab on a record that simply has
+			// nothing hanging off it. 'local' is a leaf like an activity:
+			// nothing hangs off one, so its section comes from the record's own
+			// parents rather than a fetch.
+			var relatedMode = (objects[object] || {}).related;
+
+			if (relatedMode === 'local') {
 				renderRelated(object, record, {});
 				return;
 			}
 
-			// Only the three objects with children have a related route.
-			// Asking for one anywhere else is a guaranteed 404, which then
-			// showed up as an error tab on a record that simply has nothing
-			// hanging off it.
-			if (['accounts', 'contacts', 'opportunities'].indexOf(object) === -1) {
+			if (relatedMode !== 'fetch') {
 				return;
 			}
 
@@ -1803,6 +1825,12 @@
 	 * model, not a choice someone makes when arranging a form.
 	 */
 	function fieldHints(object, name) {
+		// An object that ships its own hints answers for itself; the map below
+		// is core's, not a default every object has to opt out of.
+		if (objects[object] && objects[object].hints) {
+			return objects[object].hints(name) || {};
+		}
+
 		var wide = {
 			accounts: ['name', 'billing_street', 'description'],
 			contacts: ['do_not_contact_reason', 'mailing_street', 'description'],
@@ -1875,26 +1903,12 @@
 			return relatedToControl(field, values);
 		}
 
-		if (field.type === 'email-body') {
-			wrap.classList.add('pcm-crm-field-wide');
-			wrap.appendChild(el('label', { text: field.label }));
-			wrap.appendChild(emailBodyControl(field, values));
+		var custom = controls[field.type] || controls[field.ui];
 
-			return wrap;
-		}
-
-		if (field.type === 'sequence-steps') {
-			wrap.classList.add('pcm-crm-field-wide');
-			wrap.appendChild(el('label', { text: field.label }));
-			wrap.appendChild(sequenceStepsControl(values));
-
-			return wrap;
-		}
-
-		if (field.type === 'recipients') {
-			wrap.classList.add('pcm-crm-field-wide');
-			wrap.appendChild(el('label', { text: field.label }));
-			wrap.appendChild(recipientsControl(values));
+		if (custom) {
+			if (custom.wide) { wrap.classList.add('pcm-crm-field-wide'); }
+			if (custom.label) { wrap.appendChild(el('label', { text: field.label })); }
+			wrap.appendChild(custom.build(field, values));
 
 			return wrap;
 		}
@@ -2363,6 +2377,16 @@
 				priority: 'Normal',
 				activity_date: new Date().toISOString().slice(0, 19).replace('T', ' ')
 			}, prefill);
+		}
+
+		// A registered provider answers for its own object, with the shared
+		// locals handed to it so it does not recompute them.
+		if (childProviders[object]) {
+			return childProviders[object](record, {
+				firstStage: firstStage,
+				closeDate: closeDate,
+				activity: activity
+			}) || [];
 		}
 
 		if (object === 'accounts') {
@@ -3030,7 +3054,16 @@
 		window.location.href = cfg.adminUrl + '?page=pcm-crm-reports#' + encodeURIComponent(JSON.stringify(payload));
 	}
 
+	/**
+	 * Served by /schema from the object registry, so an object states it beside
+	 * its own field map. The literals remain as a fallback for the moment
+	 * before /schema has landed.
+	 */
 	function defaultGroupBy(object) {
+		var schema = state.schema && state.schema[object];
+
+		if (schema && schema.groupBy) { return schema.groupBy; }
+
 		return {
 			accounts: 'type',
 			contacts: 'lead_source',
@@ -3413,25 +3446,35 @@
 	   --------------------------------------------------------------------- */
 
 	function renderReports() {
-		var groupOptions = {
-			accounts: ['type', 'industry', 'billing_state', 'owner_id'],
-			contacts: ['lead_source', 'account_id', 'title', 'owner_id'],
-			opportunities: ['stage_name', 'type', 'lead_source', 'forecast_category', 'owner_id'],
-			activities: ['activity_type', 'status', 'priority', 'owner_id']
-		};
+		// Whichever objects /schema says are reportable, with the columns each
+		// one offers. Built from the registry so a new object appears here by
+		// registering rather than by editing this file.
+		var groupOptions = {};
+
+		Object.keys(state.schema || {}).forEach(function (slug) {
+			var options = state.schema[slug].groupOptions || [];
+
+			if (options.length) { groupOptions[slug] = options; }
+		});
 
 		function build() {
 			var objectSelect = el('select', {
 				onchange: function (event) {
 					report.object = event.target.value;
-					report.groupBy = groupOptions[report.object][0];
+					report.groupBy = (groupOptions[report.object] || [''])[0];
 					state.query.filters = {};
 					state.query.page = 1;
 					renderReports();
 				}
 			});
 
-			Object.keys(objects).forEach(function (key) {
+			// Only what can actually be grouped. The dropdown used to list every
+			// object the app knows, including the three that are machinery —
+			// and picking one of those threw on groupOptions[object][0], since
+			// there were never any columns behind it.
+			Object.keys(groupOptions).forEach(function (key) {
+				if (!objects[key]) { return; }
+
 				objectSelect.appendChild(el('option', {
 					value: key, text: objects[key].plural, selected: report.object === key
 				}));
@@ -3441,7 +3484,7 @@
 				onchange: function (event) { report.groupBy = event.target.value; loadReport(); }
 			});
 
-			groupOptions[report.object].forEach(function (key) {
+			(groupOptions[report.object] || []).forEach(function (key) {
 				groupSelect.appendChild(el('option', {
 					value: key,
 					text: key.replace(/_id$/, '').replace(/_/g, ' ').replace(/^\w/, function (c) { return c.toUpperCase(); }),
@@ -3623,23 +3666,40 @@
 	   Boot
 	   --------------------------------------------------------------------- */
 
+	controls['email-body'] = {
+		wide: true,
+		label: true,
+		build: function (field, values) { return emailBodyControl(field, values); }
+	};
+	controls['sequence-steps'] = {
+		wide: true,
+		label: true,
+		build: function (field, values) { return sequenceStepsControl(values); }
+	};
+	controls.recipients = {
+		wide: true,
+		label: true,
+		build: function (field, values) { return recipientsControl(values); }
+	};
+
+	views.dashboard = { render: renderDashboard, load: loadDashboard };
+	views.pipeline = { render: renderPipeline, load: loadPipeline };
+	views.reports = { render: renderReports, load: loadReport };
+	views.recycle = { render: renderRecycleBin, load: renderRecycleBin };
+
 	function refreshView() {
-		if (state.view === 'pipeline') { loadPipeline(); }
-		else if (state.view === 'dashboard') { loadDashboard(); }
-		else if (state.view === 'reports') { loadReport(); }
-		else if (state.view === 'recycle') { renderRecycleBin(); }
+		var view = views[state.view];
+
+		if (view && view.load) { view.load(); }
 		else if (objects[state.view]) { loadList(state.view); }
 	}
 
 	function render() {
-		if (state.view === 'dashboard') { renderDashboard(); }
-		else if (state.view === 'pipeline') { renderPipeline(); }
-		else if (state.view === 'reports') { renderReports(); }
-		else if (state.view === 'recycle') { renderRecycleBin(); }
+		var view = views[state.view];
+
+		if (view) { view.render(); }
 		else if (objects[state.view]) { renderList(state.view); }
 		else { clear(dom.body, el('p', { text: 'Unknown screen.' })); }
-
-
 
 		// A record id in the hash — a link from the notification email, or a
 		// reloaded page — opens straight onto that record.
@@ -3667,13 +3727,75 @@
 			if (event.key === 'Escape' && !dom.drawer.hidden) { closeDrawer(); }
 		});
 
+		// Before anything draws, so the first chart is already on-theme.
+		if (charts && charts.setTheme) { charts.setTheme(themeColors()); }
+
 		Promise.all([api('/bootstrap'), api('/schema')]).then(function (results) {
 			state.boot = results[0];
 			state.schema = results[1];
 			cfg.currency = state.boot.currency || '$';
+
+			// Drained here rather than at registration: a module's filter bar
+			// needs a picklist out of state.boot, and this is the first moment
+			// there is one. Before render(), so a view registered from a
+			// callback is available to the screen that wants it.
+			while (readyQueue.length) { readyQueue.shift()(state); }
+
 			render();
 		}).catch(showError);
 	}
+
+	/**
+	 * The surface a module's script registers against.
+	 *
+	 * This file exposed nothing for a long time and that was the right default.
+	 * What is here is the minimum that lets a second script add a screen
+	 * without editing this one: the four registration points, and the helpers
+	 * carrying a contract a caller cannot re-derive — api()'s nonce handling,
+	 * buildQuery()'s PHP-compatible nesting of filters, openDrawer()'s modal
+	 * lifecycle. No DOM internals, no render functions, and state is readable
+	 * rather than a way in: everything that changes it is a helper above.
+	 *
+	 * A module script declares this one as a dependency, so it runs while the
+	 * document is still loading and its registrations land before init().
+	 */
+	window.PCM_CRM_App = {
+		registerObject: function (slug, def) { objects[slug] = def; },
+		registerView: function (name, handlers) { views[name] = handlers; },
+		registerControl: function (type, spec) { controls[type] = spec; },
+		registerChildTypes: function (slug, fn) { childProviders[slug] = fn; },
+		ready: function (fn) { readyQueue.push(fn); },
+		state: state,
+		helpers: {
+			el: el,
+			clear: clear,
+			api: api,
+			buildQuery: buildQuery,
+			money: money,
+			formatDate: formatDate,
+			formatDateTime: formatDateTime,
+			today: today,
+			options: options,
+			ownerOptions: ownerOptions,
+			openDrawer: openDrawer,
+			closeDrawer: closeDrawer,
+			refreshView: refreshView,
+			renderFilters: renderFilters,
+			drillTo: drillTo,
+			showError: showError,
+			tile: tile,
+			chartCard: chartCard,
+			legend: legend,
+			relatedList: relatedList,
+			pagination: pagination,
+			setCount: setCount,
+			loadList: loadList,
+			loadLookup: loadLookup,
+			lookupLabel: lookupLabel,
+			insertAtCursor: insertAtCursor,
+			exportUrl: exportUrl
+		}
+	};
 
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', init);

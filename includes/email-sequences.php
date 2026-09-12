@@ -138,10 +138,31 @@ add_filter( 'pcm_crm_validate', 'pcm_crm_validate_outreach', 10, 4 );
  * so an opportunity variable had no way to resolve to anything. Offering it
  * meant a template could look correct and go out with a hole in it.
  */
+/**
+ * Merge-token prefix => object slug.
+ *
+ * Read by both the token picker and the substitution, which each carried their
+ * own copy of this list. They could not disagree by accident before only
+ * because they happened to be written at the same moment; now they cannot
+ * disagree at all.
+ *
+ * A prefix belongs here only when the send path can say which record it means.
+ * That is why opportunity is absent: a contact has many, and neither the button
+ * on the record nor a sequence step picks one, so the token could look correct
+ * and go out with a hole in it. A module adding a prefix is asserting the same
+ * thing about its own object.
+ */
+function pcm_crm_merge_prefixes() {
+	return apply_filters( 'pcm_crm_merge_prefixes', array(
+		'contact' => 'contacts',
+		'account' => 'accounts',
+	) );
+}
+
 function pcm_crm_email_variables() {
 	$pcm_groups = array();
 
-	foreach ( array( 'contact' => 'contacts', 'account' => 'accounts' ) as $pcm_prefix => $pcm_object ) {
+	foreach ( pcm_crm_merge_prefixes() as $pcm_prefix => $pcm_object ) {
 		$pcm_model = PCM_CRM_REST::model( $pcm_object );
 
 		if ( ! $pcm_model ) {
@@ -194,7 +215,7 @@ function pcm_crm_email_variables() {
 function pcm_crm_fill_variables( $pcm_text, array $pcm_context ) {
 	$pcm_values = array();
 
-	foreach ( array( 'contact', 'account' ) as $pcm_prefix ) {
+	foreach ( array_keys( pcm_crm_merge_prefixes() ) as $pcm_prefix ) {
 		$pcm_record = isset( $pcm_context[ $pcm_prefix ] ) && is_array( $pcm_context[ $pcm_prefix ] ) ? $pcm_context[ $pcm_prefix ] : array();
 
 		foreach ( $pcm_record as $pcm_field => $pcm_value ) {
@@ -211,6 +232,11 @@ function pcm_crm_fill_variables( $pcm_text, array $pcm_context ) {
 	$pcm_values['{{sender.name}}'] = isset( $pcm_context['sender'] )
 		? $pcm_context['sender']
 		: pcm_crm_user_name( get_current_user_id() );
+
+	// Composed and derived tokens, for anything that is not a column: a meter,
+	// a remaining balance, a rolled-up count. Added before the escaping rather
+	// than after, so a listener cannot accidentally opt its values out of it.
+	$pcm_values = apply_filters( 'pcm_crm_merge_values', $pcm_values, $pcm_context );
 
 	$pcm_filled = strtr( $pcm_text, array_map( 'esc_html', $pcm_values ) );
 
@@ -237,10 +263,26 @@ function pcm_crm_email_context( $pcm_contact_id ) {
 
 	$pcm_account = $pcm_contact['account_id'] ? pcm_crm_accounts()->get( $pcm_contact['account_id'] ) : array();
 
-	return array(
+	return pcm_crm_fill_context( array(
 		'contact' => $pcm_contact,
 		'account' => $pcm_account ? $pcm_account : array(),
-	);
+	) );
+}
+
+/**
+ * Expand a seed of records into a full merge context.
+ *
+ * A send starts from whichever record the person was looking at, and a template
+ * written for one of them is written for all of them — someone composing a
+ * status report should not have to know that the send began on a project rather
+ * than a contact. Listeners fill in what they can reach from the seed.
+ *
+ * Kept separate from pcm_crm_email_context() rather than folded into it, because
+ * that one is rooted in a contact by contract: it returns null without one, and
+ * a project has no contact to start from.
+ */
+function pcm_crm_fill_context( array $pcm_seed ) {
+	return apply_filters( 'pcm_crm_fill_context', $pcm_seed );
 }
 
 /* ---------------------------------------------------------------------------
@@ -631,3 +673,21 @@ function pcm_crm_complete_enrollment( $pcm_enrollment_id ) {
 
 	return true;
 }
+
+pcm_crm_register_object( 'templates', array(
+	'model'  => 'pcm_crm_templates',
+	'label'  => 'Template',
+	'plural' => 'Templates',
+) );
+
+pcm_crm_register_object( 'sequences', array(
+	'model'  => 'pcm_crm_sequences',
+	'label'  => 'Sequence',
+	'plural' => 'Sequences',
+) );
+
+pcm_crm_register_object( 'enrollments', array(
+	'model'  => 'pcm_crm_enrollments',
+	'label'  => 'Enrollment',
+	'plural' => 'Enrollments',
+) );

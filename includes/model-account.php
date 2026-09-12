@@ -113,3 +113,15 @@ function pcm_crm_sync_account_key( $pcm_row, $pcm_object ) {
 }
 add_filter( 'pcm_crm_before_insert', 'pcm_crm_sync_account_key', 10, 2 );
 add_filter( 'pcm_crm_before_update', 'pcm_crm_sync_account_key', 10, 2 );
+
+pcm_crm_register_object( 'accounts', array(
+	'model'         => 'pcm_crm_accounts',
+	'label'         => 'Account',
+	'plural'        => 'Accounts',
+	'reportable'    => true,
+	'customisable'  => true,
+	'exportable'    => true,
+	'sf'            => 'Account',
+	'group_options' => array( 'type', 'industry', 'billing_state', 'owner_id' ),
+	'related'       => 'fetch',
+) );

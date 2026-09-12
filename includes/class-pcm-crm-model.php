@@ -118,6 +118,11 @@ class PCM_CRM_Model {
 				// pasted value does not silently become 12.
 				return (float) preg_replace( '/[^0-9.\-]/', '', (string) $pcm_value );
 
+			// Decimal hours, but parsed rather than stripped: see
+			// pcm_crm_parse_hours() for why "1:30" cannot go through 'decimal'.
+			case 'hours':
+				return pcm_crm_parse_hours( $pcm_value );
+
 			case 'bool':
 				return ( $pcm_value && 'false' !== $pcm_value && '0' !== $pcm_value ) ? 1 : 0;
 
@@ -160,7 +165,7 @@ class PCM_CRM_Model {
 
 			if ( in_array( $pcm_type, array( 'int', 'id', 'bool' ), true ) ) {
 				$pcm_formats[] = '%d';
-			} elseif ( 'decimal' === $pcm_type ) {
+			} elseif ( in_array( $pcm_type, array( 'decimal', 'hours' ), true ) ) {
 				$pcm_formats[] = '%f';
 			} else {
 				$pcm_formats[] = '%s';
@@ -239,6 +244,7 @@ class PCM_CRM_Model {
 					$pcm_row[ $pcm_key ] = (int) $pcm_value;
 					break;
 				case 'decimal':
+				case 'hours':
 					$pcm_row[ $pcm_key ] = (float) $pcm_value;
 					break;
 			}

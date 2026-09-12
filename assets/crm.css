@@ -20,10 +20,23 @@
   --pcm-body: #46464a;
   --pcm-paper: #ffffff;
   --pcm-paper-tint: #f4f8fc;
-  --pcm-gray: #aaaaaa;
+  /* Carries text — .pcm-crm-muted, empty states, chart labels — so it clears
+     4.5:1 rather than the 3:1 a border alone would need. */
+  --pcm-gray: #70747a;
   --pcm-gray-light: #e4e4e4;
   --pcm-line: rgba(42, 42, 46, 0.12);
   --pcm-green: #2f7d5d;
+
+  /* The categorical chart ramp. Tokens rather than constants in charts.js,
+     so a theme moves the charts with the rest of the interface. */
+  --pcm-chart-1: #3f6b96;
+  --pcm-chart-2: #c94040;
+  --pcm-chart-3: #7ba3c9;
+  --pcm-chart-4: #d56b6b;
+  --pcm-chart-5: #2f7d5d;
+  --pcm-chart-6: #8a6bab;
+  --pcm-chart-7: #d19b3d;
+  --pcm-chart-8: #5f8fa8;
 
   --font-display: "Baloo 2", "Trebuchet MS", sans-serif;
   --font-body: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1368,3 +1381,198 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-related-list li:last-child { border-bottom: 0; }
 .pcm-crm-related-list .primary { font-weight: 700; color: var(--pcm-ink); }
 .pcm-crm-related-list .secondary { color: var(--pcm-body); }
+
+/* ==========================================================================
+   Themes
+
+   A theme is a set of token overrides and nothing else. Every colour in this
+   stylesheet already reads from a custom property, and the charts read the
+   same ones at runtime, so a palette here moves the whole interface.
+
+   Contrast is checked for each: body text against its ground clears 4.5:1 and
+   headings clear more, because a theme that cannot be read is a theme nobody
+   keeps.
+   ========================================================================== */
+
+/* Paper — neutral greys, for when the data should be the loudest thing. */
+.pcm-crm[data-theme="paper"] {
+  --pcm-accent: #7b8794;
+  --pcm-accent-deep: #3d4450;
+  --pcm-accent-deeper: #23282f;
+  --pcm-blue: #cbd2d9;
+  --pcm-blue-deep: #3d4450;
+  --pcm-ink: #1f2933;
+  --pcm-ink-deep: #12181f;
+  --pcm-body: #4a5568;
+  --pcm-paper: #ffffff;
+  --pcm-paper-tint: #f5f7fa;
+  --pcm-gray: #69737d;
+  --pcm-gray-light: #e4e7eb;
+  --pcm-line: rgba(31, 41, 51, 0.14);
+  --pcm-green: #2f7d5d;
+
+  --pcm-chart-1: #3d4450;
+  --pcm-chart-2: #7b8794;
+  --pcm-chart-3: #9aa5b1;
+  --pcm-chart-4: #52606d;
+  --pcm-chart-5: #2f7d5d;
+  --pcm-chart-6: #616e7c;
+  --pcm-chart-7: #8c6d3f;
+  --pcm-chart-8: #34495e;
+}
+
+/* Dark — the grounds get darker as they get closer to the page, so a card
+   still reads as sitting above the background rather than cut into it. */
+.pcm-crm[data-theme="dark"] {
+  --pcm-accent: #e8998d;
+  --pcm-accent-deep: #f0a99c;
+  --pcm-accent-deeper: #f7c4ba;
+  --pcm-blue: #3a5570;
+  --pcm-blue-deep: #7fb3d5;
+  --pcm-ink: #eef2f7;
+  --pcm-ink-deep: #0e1116;
+  --pcm-body: #b7c2d0;
+  --pcm-paper: #232935;
+  --pcm-paper-tint: #1b1f27;
+  --pcm-gray: #93a1b2;
+  --pcm-gray-light: #39414f;
+  --pcm-line: rgba(238, 242, 247, 0.16);
+  --pcm-green: #6fcf9a;
+
+  --pcm-chart-1: #7fb3d5;
+  --pcm-chart-2: #e8998d;
+  --pcm-chart-3: #9ec9e8;
+  --pcm-chart-4: #c98d84;
+  --pcm-chart-5: #6fcf9a;
+  --pcm-chart-6: #b4a0e0;
+  --pcm-chart-7: #e0bd77;
+  --pcm-chart-8: #86b8c9;
+}
+
+/* Forest — deep green and warm sand. */
+.pcm-crm[data-theme="forest"] {
+  --pcm-accent: #b98a3e;
+  --pcm-accent-deep: #8a6420;
+  --pcm-accent-deeper: #5f4414;
+  --pcm-blue: #bcd8c5;
+  --pcm-blue-deep: #2f6f4e;
+  --pcm-ink: #1d2b22;
+  --pcm-ink-deep: #121b15;
+  --pcm-body: #44554a;
+  --pcm-paper: #fbfaf6;
+  --pcm-paper-tint: #f1f4ee;
+  --pcm-gray: #66766b;
+  --pcm-gray-light: #dfe5da;
+  --pcm-line: rgba(29, 43, 34, 0.14);
+  --pcm-green: #2f6f4e;
+
+  --pcm-chart-1: #2f6f4e;
+  --pcm-chart-2: #8a6420;
+  --pcm-chart-3: #6b9c7c;
+  --pcm-chart-4: #b98a3e;
+  --pcm-chart-5: #3d6b7a;
+  --pcm-chart-6: #7a5c86;
+  --pcm-chart-7: #a8563c;
+  --pcm-chart-8: #4f7a58;
+}
+
+/* Neon — magenta and cyan on deep violet. The glow is on borders and shadows
+   only: putting it behind text is what makes this kind of palette unreadable,
+   so the text colours here are the calmest thing in it. */
+.pcm-crm[data-theme="neon"] {
+  --pcm-accent: #ff4dd2;
+  --pcm-accent-deep: #ff6fdb;
+  --pcm-accent-deeper: #ff9ae7;
+  --pcm-blue: #4b2f7a;
+  --pcm-blue-deep: #22e0ff;
+  --pcm-ink: #f4ecff;
+  --pcm-ink-deep: #0c0718;
+  --pcm-body: #c3b4e0;
+  --pcm-paper: #221440;
+  --pcm-paper-tint: #160d2b;
+  --pcm-gray: #a795c9;
+  --pcm-gray-light: #3a2664;
+  --pcm-line: rgba(244, 236, 255, 0.18);
+  --pcm-green: #4dffb8;
+
+  --pcm-chart-1: #22e0ff;
+  --pcm-chart-2: #ff4dd2;
+  --pcm-chart-3: #b06bff;
+  --pcm-chart-4: #ffd93d;
+  --pcm-chart-5: #4dffb8;
+  --pcm-chart-6: #ff8a3d;
+  --pcm-chart-7: #6d8bff;
+  --pcm-chart-8: #ff5f7e;
+}
+
+/* The one flourish: cards and the record modal get a glow instead of the flat
+   offset shadow. Kept to containers, never to anything carrying text. */
+.pcm-crm[data-theme="neon"] .pcm-crm-card,
+.pcm-crm[data-theme="neon"] .pcm-crm-tile {
+  box-shadow: 0 0 0 1px rgba(34, 224, 255, 0.35), 0 0 18px rgba(255, 77, 210, 0.28);
+}
+.pcm-crm[data-theme="neon"] .pcm-crm-drawer {
+  box-shadow: 0 0 28px rgba(255, 77, 210, 0.4);
+}
+.pcm-crm[data-theme="neon"] .pcm-crm-head { border-bottom-color: var(--pcm-accent); }
+
+/* Dark grounds need their form controls dragging with them — the base rules
+   set a white background on inputs, which would be a white box in a dark UI. */
+.pcm-crm[data-theme="dark"] input,
+.pcm-crm[data-theme="dark"] select,
+.pcm-crm[data-theme="dark"] textarea,
+.pcm-crm[data-theme="neon"] input,
+.pcm-crm[data-theme="neon"] select,
+.pcm-crm[data-theme="neon"] textarea {
+  background-color: var(--pcm-paper-tint);
+  color: var(--pcm-ink);
+}
+.pcm-crm[data-theme="dark"] .pcm-crm-table-wrap,
+.pcm-crm[data-theme="neon"] .pcm-crm-table-wrap { background: var(--pcm-paper); }
+
+/* The select chevron is drawn in ink as a data URI, which a dark theme cannot
+   recolour — so it is redrawn light rather than left as a dark mark on a dark
+   control. */
+.pcm-crm[data-theme="dark"] select,
+.pcm-crm[data-theme="neon"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23eef2f7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* Print is always on white paper, whatever the screen theme. */
+@media print {
+  .pcm-crm[data-theme] {
+    --pcm-ink: #000000;
+    --pcm-ink-deep: #000000;
+    --pcm-body: #333333;
+    --pcm-paper: #ffffff;
+    --pcm-paper-tint: #ffffff;
+    --pcm-line: rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Theme picker ------------------------------------------------------------- */
+.pcm-crm-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.pcm-crm-theme {
+  display: block;
+  padding: 14px 16px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  background: var(--pcm-paper);
+  cursor: pointer;
+}
+.pcm-crm-theme.is-chosen { box-shadow: 5px 5px 0 var(--pcm-accent); }
+.pcm-crm-theme-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.pcm-crm-theme-name { font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-theme-note { font-size: 0.82rem; color: var(--pcm-body); }
+.pcm-crm-theme-swatch { display: flex; gap: 4px; margin-bottom: 8px; }
+.pcm-crm-theme-swatch span {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--pcm-line);
+}

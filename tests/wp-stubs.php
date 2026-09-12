@@ -32,7 +32,30 @@ function has_filter( $h, $cb = false ) {
 	foreach ( $GLOBALS['filters'][$h] as $hooked ) { if ( $hooked[0] === $cb ) { return true; } }
 	return false;
 }
-function apply_filters( $h, $v ) { return $v; }
+/**
+ * A pass-through, except for hooks a test has explicitly opted in.
+ *
+ * The plugin registers filters at load time, so honouring all of them here
+ * would quietly change what every other assertion in the suite is measuring.
+ * A test that needs to prove a seam actually reaches its listeners opts that
+ * one hook in with pcm_test_add_filter() and takes it out again afterwards.
+ */
+function apply_filters( $h, $v ) {
+	if ( empty( $GLOBALS['pcm_test_filters'][$h] ) ) { return $v; }
+
+	$args = array_slice( func_get_args(), 2 );
+
+	foreach ( $GLOBALS['pcm_test_filters'][$h] as $cb ) {
+		$v = call_user_func_array( $cb, array_merge( array( $v ), $args ) );
+	}
+
+	return $v;
+}
+
+$GLOBALS['pcm_test_filters'] = array();
+
+function pcm_test_add_filter( $h, $cb ) { $GLOBALS['pcm_test_filters'][$h][] = $cb; }
+function pcm_test_reset_filters( $h ) { unset( $GLOBALS['pcm_test_filters'][$h] ); }
 function do_action() {} function add_shortcode() {} function register_activation_hook() {}
 function register_deactivation_hook() {} function register_setting() {}
 function get_option( $k, $d = false ) { return isset( $GLOBALS['options'][$k] ) ? $GLOBALS['options'][$k] : $d; }

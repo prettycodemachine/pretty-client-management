@@ -29,11 +29,31 @@
 	}
 
 	/**
-	 * The categorical ramp: PCM's two brand hues plus tints of each, ordered so
-	 * neighbouring series never sit on adjacent tints of the same hue.
+	 * The colours the generators draw with.
+	 *
+	 * Defaults are the house palette; setTheme() replaces them with whatever
+	 * the current theme's custom properties say. Charts that carried their own
+	 * hex would stay brand-coloured on a dark theme — dark text on a dark
+	 * ground, which is the usual way a theme switch half-works.
 	 */
+	var theme = {
+		ink: '#2c2c2e',
+		body: '#46464a',
+		muted: '#aaaaaa',
+		track: '#f4f8fc',
+		grid: '#e4e4e4',
+		onFill: '#ffffff',
+		palette: ['#3f6b96', '#c94040', '#7ba3c9', '#d56b6b', '#2f7d5d', '#8a6bab', '#d19b3d', '#5f8fa8']
+	};
+
+	function setTheme(colors) {
+		Object.keys(colors || {}).forEach(function (key) {
+			if (colors[key]) { theme[key] = colors[key]; }
+		});
+	}
+
 	function palette() {
-		return ['#3f6b96', '#c94040', '#7ba3c9', '#d56b6b', '#2f7d5d', '#8a6bab', '#d19b3d', '#5f8fa8'];
+		return theme.palette;
 	}
 
 	function formatCurrency(value) {
@@ -105,11 +125,11 @@
 
 			chart.appendChild(text(row.value || '—', {
 				x: labelW - 10, y: y + 15, 'text-anchor': 'end',
-				'font-size': '12', 'font-weight': '700', fill: '#2c2c2e'
+				'font-size': '12', 'font-weight': '700', fill: theme.ink
 			}));
 
 			chart.appendChild(el('rect', {
-				x: labelW, y: y, width: W - labelW - 90, height: 22, rx: 5, fill: '#f4f8fc'
+				x: labelW, y: y, width: W - labelW - 90, height: 22, rx: 5, fill: theme.track
 			}));
 
 			// The whole row is the target, not just the drawn bar — a short
@@ -127,13 +147,13 @@
 				options.onSelect && function () { options.onSelect(row); }));
 
 			chart.appendChild(text(formatCurrency(row.total || 0) + '  ·  ' + (row.count || 0), {
-				x: W - 84, y: y + 15, 'font-size': '11', fill: '#46464a'
+				x: W - 84, y: y + 15, 'font-size': '11', fill: theme.body
 			}));
 		});
 
 		if (!rows.length) {
 			chart.appendChild(text(options.empty || 'No data', {
-				x: W / 2, y: 34, 'text-anchor': 'middle', 'font-size': '13', fill: '#aaaaaa'
+				x: W / 2, y: 34, 'text-anchor': 'middle', 'font-size': '13', fill: theme.muted
 			}));
 		}
 
@@ -170,15 +190,15 @@
 
 			chart.appendChild(text(row.count || 0, {
 				x: x + w / 2, y: y + 24, 'text-anchor': 'middle',
-				'font-size': '13', 'font-weight': '700', fill: '#ffffff'
+				'font-size': '13', 'font-weight': '700', fill: theme.onFill
 			}));
 
 			chart.appendChild(text(row.value, {
-				x: W - 150, y: y + 20, 'font-size': '12', 'font-weight': '700', fill: '#2c2c2e'
+				x: W - 150, y: y + 20, 'font-size': '12', 'font-weight': '700', fill: theme.ink
 			}));
 
 			chart.appendChild(text(formatCurrency(row.total || 0), {
-				x: W - 150, y: y + 33, 'font-size': '11', fill: '#46464a'
+				x: W - 150, y: y + 33, 'font-size': '11', fill: theme.body
 			}));
 		});
 
@@ -198,8 +218,8 @@
 		var sum = rows.reduce(function (acc, row) { return acc + (row[key] || 0); }, 0);
 
 		if (!sum) {
-			chart.appendChild(el('circle', { cx: cx, cy: cy, r: r, fill: 'none', stroke: '#e4e4e4', 'stroke-width': thickness }));
-			chart.appendChild(text('No data', { x: cx, y: cy + 5, 'text-anchor': 'middle', 'font-size': '13', fill: '#aaaaaa' }));
+			chart.appendChild(el('circle', { cx: cx, cy: cy, r: r, fill: 'none', stroke: theme.grid, 'stroke-width': thickness }));
+			chart.appendChild(text('No data', { x: cx, y: cy + 5, 'text-anchor': 'middle', 'font-size': '13', fill: theme.muted }));
 			return chart;
 		}
 
@@ -232,11 +252,11 @@
 
 		chart.appendChild(text(options.metric === 'count' ? sum : formatCurrency(sum), {
 			x: cx, y: cy + 2, 'text-anchor': 'middle',
-			'font-size': '20', 'font-weight': '700', fill: '#2c2c2e',
+			'font-size': '20', 'font-weight': '700', fill: theme.ink,
 			'font-family': '"Baloo 2", sans-serif'
 		}));
 		chart.appendChild(text(options.centerLabel || '', {
-			x: cx, y: cy + 20, 'text-anchor': 'middle', 'font-size': '11', fill: '#46464a'
+			x: cx, y: cy + 20, 'text-anchor': 'middle', 'font-size': '11', fill: theme.body
 		}));
 
 		return chart;
@@ -267,10 +287,10 @@
 		[0, 0.5, 1].forEach(function (t) {
 			var y = padT + plotH - t * plotH;
 			chart.appendChild(el('line', {
-				x1: padL, y1: y, x2: W - 10, y2: y, stroke: '#e4e4e4', 'stroke-width': '1'
+				x1: padL, y1: y, x2: W - 10, y2: y, stroke: theme.grid, 'stroke-width': '1'
 			}));
 			chart.appendChild(text(Math.round(max * t), {
-				x: padL - 6, y: y + 4, 'text-anchor': 'end', 'font-size': '10', fill: '#aaaaaa'
+				x: padL - 6, y: y + 4, 'text-anchor': 'end', 'font-size': '10', fill: theme.muted
 			}));
 		});
 
@@ -305,7 +325,7 @@
 			if (rows.length <= 8 || i % 2 === 0) {
 				chart.appendChild(text(row.label, {
 					x: gx + groupW / 2, y: H - 9, 'text-anchor': 'middle',
-					'font-size': '10', fill: '#46464a'
+					'font-size': '10', fill: theme.body
 				}));
 			}
 		});
@@ -335,10 +355,10 @@
 
 			chart.appendChild(text(row.value || '—', {
 				x: labelW - 10, y: y + 15, 'text-anchor': 'end',
-				'font-size': '12', 'font-weight': '700', fill: '#2c2c2e'
+				'font-size': '12', 'font-weight': '700', fill: theme.ink
 			}));
 
-			chart.appendChild(el('rect', { x: labelW, y: y, width: W - labelW - 110, height: 22, rx: 5, fill: '#f4f8fc' }));
+			chart.appendChild(el('rect', { x: labelW, y: y, width: W - labelW - 110, height: 22, rx: 5, fill: theme.track }));
 
 			var group = el('g', {});
 			group.appendChild(el('rect', { x: labelW, y: y, width: barW, height: 22, rx: 5, fill: colors[i % colors.length] }));
@@ -351,7 +371,7 @@
 			// as "0 days" would read as instant rather than as unknown.
 			chart.appendChild(text(
 				row.count ? (row.total + (row.total === 1 ? ' day' : ' days') + '  ·  ' + row.count) : 'no data yet',
-				{ x: W - 104, y: y + 15, 'font-size': '11', fill: row.count ? '#46464a' : '#aaaaaa' }
+				{ x: W - 104, y: y + 15, 'font-size': '11', fill: row.count ? theme.body : theme.muted }
 			));
 		});
 
@@ -359,6 +379,7 @@
 	}
 
 	window.PCM_CRM_Charts = {
+		setTheme: setTheme,
 		bar: barChart,
 		days: daysChart,
 		funnel: funnelChart,

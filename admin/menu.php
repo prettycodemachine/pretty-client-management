@@ -8,9 +8,18 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+/**
+ * Two menus, not one: the work and the setup.
+ *
+ * Salesforce draws exactly this line, and for the same reason — the screens
+ * you use every day and the screens you touch twice a year do not belong in
+ * one list. A menu where Contacts sits three items above Scheduled Reports
+ * makes both harder to find.
+ */
 function pcm_crm_menu() {
 	$pcm_cap = pcm_crm_user_can() ? PCM_CRM_CAP : 'manage_options';
 
+	/* The work ---------------------------------------------------------- */
 	add_menu_page(
 		__( 'CRM', 'pcm-crm' ),
 		__( 'CRM', 'pcm-crm' ),
@@ -21,7 +30,7 @@ function pcm_crm_menu() {
 		26
 	);
 
-	$pcm_pages = array(
+	$pcm_records = array(
 		'pcm-crm'               => array( __( 'Dashboard', 'pcm-crm' ), 'pcm_crm_render_dashboard' ),
 		'pcm-crm-accounts'      => array( __( 'Accounts', 'pcm-crm' ), 'pcm_crm_render_accounts' ),
 		'pcm-crm-contacts'      => array( __( 'Contacts', 'pcm-crm' ), 'pcm_crm_render_contacts' ),
@@ -29,15 +38,36 @@ function pcm_crm_menu() {
 		'pcm-crm-pipeline'      => array( __( 'Pipeline', 'pcm-crm' ), 'pcm_crm_render_pipeline' ),
 		'pcm-crm-activities'    => array( __( 'Activities', 'pcm-crm' ), 'pcm_crm_render_activities' ),
 		'pcm-crm-reports'       => array( __( 'Reports', 'pcm-crm' ), 'pcm_crm_render_reports' ),
-		'pcm-crm-templates'     => array( __( 'Email Templates', 'pcm-crm' ), 'pcm_crm_render_templates' ),
-		'pcm-crm-sequences'     => array( __( 'Sequences', 'pcm-crm' ), 'pcm_crm_render_sequences' ),
-		'pcm-crm-schedules'     => array( __( 'Scheduled Reports', 'pcm-crm' ), 'pcm_crm_render_schedules' ),
-		'pcm-crm-recycle-bin'   => array( __( 'Recycle Bin', 'pcm-crm' ), 'pcm_crm_render_recycle_bin' ),
-		'pcm-crm-settings'      => array( __( 'Settings', 'pcm-crm' ), 'pcm_crm_render_settings' ),
 	);
 
-	foreach ( $pcm_pages as $pcm_slug => $pcm_page ) {
+	foreach ( $pcm_records as $pcm_slug => $pcm_page ) {
 		add_submenu_page( 'pcm-crm', $pcm_page[0], $pcm_page[0], $pcm_cap, $pcm_slug, $pcm_page[1] );
+	}
+
+	/* The setup --------------------------------------------------------- */
+	add_menu_page(
+		__( 'CRM Setup', 'pcm-crm' ),
+		__( 'CRM Setup', 'pcm-crm' ),
+		$pcm_cap,
+		'pcm-crm-settings',
+		'pcm_crm_render_settings',
+		'dashicons-admin-generic',
+		27
+	);
+
+	// Page slugs are unchanged on purpose: a notification email links to
+	// page=pcm-crm-contacts and a drill-down to page=pcm-crm-reports, and
+	// moving a screen between menus must not break a link already sent.
+	$pcm_setup = array(
+		'pcm-crm-settings'    => array( __( 'Settings', 'pcm-crm' ), 'pcm_crm_render_settings' ),
+		'pcm-crm-templates'   => array( __( 'Email Templates', 'pcm-crm' ), 'pcm_crm_render_templates' ),
+		'pcm-crm-sequences'   => array( __( 'Sequences', 'pcm-crm' ), 'pcm_crm_render_sequences' ),
+		'pcm-crm-schedules'   => array( __( 'Scheduled Reports', 'pcm-crm' ), 'pcm_crm_render_schedules' ),
+		'pcm-crm-recycle-bin' => array( __( 'Recycle Bin', 'pcm-crm' ), 'pcm_crm_render_recycle_bin' ),
+	);
+
+	foreach ( $pcm_setup as $pcm_slug => $pcm_page ) {
+		add_submenu_page( 'pcm-crm-settings', $pcm_page[0], $pcm_page[0], $pcm_cap, $pcm_slug, $pcm_page[1] );
 	}
 }
 add_action( 'admin_menu', 'pcm_crm_menu' );
@@ -104,7 +134,7 @@ function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '' ) {
 		wp_die( esc_html__( 'You do not have access to the CRM.', 'pcm-crm' ) );
 	}
 	?>
-	<div class="wrap pcm-crm" data-view="<?php echo esc_attr( $pcm_view ); ?>">
+	<div class="wrap pcm-crm" data-view="<?php echo esc_attr( $pcm_view ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
 		<div class="pcm-crm-head">
 			<div>
 				<h1><?php echo esc_html( $pcm_title ); ?></h1>

@@ -53,10 +53,24 @@ function pcm_crm_contacts() {
 	return $pcm_model;
 }
 
+/**
+ * A contact's display name.
+ *
+ * Tolerates a partial row, because it is called on a merge context as well as
+ * on a record read back from the database — and a context is assembled from
+ * whatever the send path could reach, which is not always all three columns.
+ */
 function pcm_crm_contact_name( array $pcm_contact ) {
-	$pcm_name = trim( $pcm_contact['first_name'] . ' ' . $pcm_contact['last_name'] );
+	$pcm_first = isset( $pcm_contact['first_name'] ) ? $pcm_contact['first_name'] : '';
+	$pcm_last  = isset( $pcm_contact['last_name'] ) ? $pcm_contact['last_name'] : '';
 
-	return '' !== $pcm_name ? $pcm_name : $pcm_contact['email'];
+	$pcm_name = trim( $pcm_first . ' ' . $pcm_last );
+
+	if ( '' !== $pcm_name ) {
+		return $pcm_name;
+	}
+
+	return isset( $pcm_contact['email'] ) ? $pcm_contact['email'] : '';
 }
 
 function pcm_crm_find_contact_by_email( $pcm_email ) {
@@ -164,3 +178,15 @@ function pcm_crm_clear_dnc_reason( $pcm_row, $pcm_object ) {
 }
 add_filter( 'pcm_crm_before_insert', 'pcm_crm_clear_dnc_reason', 10, 2 );
 add_filter( 'pcm_crm_before_update', 'pcm_crm_clear_dnc_reason', 10, 2 );
+
+pcm_crm_register_object( 'contacts', array(
+	'model'         => 'pcm_crm_contacts',
+	'label'         => 'Contact',
+	'plural'        => 'Contacts',
+	'reportable'    => true,
+	'customisable'  => true,
+	'exportable'    => true,
+	'sf'            => 'Contact',
+	'group_options' => array( 'lead_source', 'account_id', 'title', 'owner_id' ),
+	'related'       => 'fetch',
+) );

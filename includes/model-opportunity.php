@@ -156,3 +156,15 @@ function pcm_crm_clear_lost_reason( $pcm_row, $pcm_object ) {
 }
 add_filter( 'pcm_crm_before_insert', 'pcm_crm_clear_lost_reason', 10, 2 );
 add_filter( 'pcm_crm_before_update', 'pcm_crm_clear_lost_reason', 10, 2 );
+
+pcm_crm_register_object( 'opportunities', array(
+	'model'         => 'pcm_crm_opportunities',
+	'label'         => 'Opportunity',
+	'plural'        => 'Opportunities',
+	'reportable'    => true,
+	'customisable'  => true,
+	'exportable'    => true,
+	'sf'            => 'Opportunity',
+	'group_options' => array( 'stage_name', 'type', 'lead_source', 'forecast_category', 'owner_id' ),
+	'related'       => 'fetch',
+) );

@@ -140,3 +140,17 @@ function pcm_crm_activities_for( $pcm_what_type, $pcm_id, $pcm_limit = 50 ) {
 		'per_page' => (int) $pcm_limit,
 	) );
 }
+
+pcm_crm_register_object( 'activities', array(
+	'model'         => 'pcm_crm_activities',
+	'label'         => 'Activity',
+	'plural'        => 'Activities',
+	'reportable'    => true,
+	'customisable'  => true,
+	'exportable'    => true,
+	'sf'            => 'Task',
+	'group_options' => array( 'activity_type', 'status', 'priority', 'owner_id' ),
+	// Built from the record in hand rather than fetched: an activity's only
+	// related records are the ones its own who_id and what_id already name.
+	'related'       => 'local',
+) );

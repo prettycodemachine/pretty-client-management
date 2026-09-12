@@ -22,14 +22,20 @@ const PCM_CRM_CUSTOM_PREFIX = 'cf_';
 
 /**
  * The objects that can carry custom fields.
+ *
+ * Read from the object registry rather than listed here, so an object declares
+ * the fact beside its own field map. The labels are the registry's plain
+ * strings, matching the convention the field map itself follows — a label is
+ * data, not a translated call site.
  */
 function pcm_crm_customisable_objects() {
-	return array(
-		'accounts'      => __( 'Accounts', 'pcm-crm' ),
-		'contacts'      => __( 'Contacts', 'pcm-crm' ),
-		'opportunities' => __( 'Opportunities', 'pcm-crm' ),
-		'activities'    => __( 'Activities', 'pcm-crm' ),
-	);
+	$pcm_out = array();
+
+	foreach ( pcm_crm_objects_where( 'customisable' ) as $pcm_slug => $pcm_object ) {
+		$pcm_out[ $pcm_slug ] = $pcm_object['plural'];
+	}
+
+	return $pcm_out;
 }
 
 /**

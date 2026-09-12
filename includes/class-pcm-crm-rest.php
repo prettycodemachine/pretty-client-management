@@ -18,19 +18,32 @@ class PCM_CRM_REST {
 
 	/**
 	 * object slug => model, for the generic collection routes.
+	 *
+	 * Resolved from the object registry, in registration order — the routes
+	 * build their slug alternation from these keys.
+	 *
+	 * Memoised, and not only for tidiness: model() is called once per custom
+	 * relationship field per row by expand_custom_relationships(), and every
+	 * accessor merges a custom-field map, which is a get_option. Rebuilding
+	 * the whole set for each of those was quietly the most repeated work in a
+	 * list request.
 	 */
 	public static function models() {
-		return array(
-			'accounts'      => pcm_crm_accounts(),
-			'contacts'      => pcm_crm_contacts(),
-			'opportunities' => pcm_crm_opportunities(),
-			'activities'    => pcm_crm_activities(),
-			'submissions'   => pcm_crm_submissions(),
-			'schedules'     => pcm_crm_schedules(),
-			'templates'     => pcm_crm_templates(),
-			'sequences'     => pcm_crm_sequences(),
-			'enrollments'   => pcm_crm_enrollments(),
-		);
+		static $pcm_models = null;
+
+		if ( null === $pcm_models ) {
+			$pcm_models = array();
+
+			foreach ( pcm_crm_objects() as $pcm_slug => $pcm_object ) {
+				$pcm_model = pcm_crm_object_model( $pcm_slug );
+
+				if ( $pcm_model ) {
+					$pcm_models[ $pcm_slug ] = $pcm_model;
+				}
+			}
+		}
+
+		return $pcm_models;
 	}
 
 	public static function model( $pcm_slug ) {
@@ -193,11 +206,18 @@ class PCM_CRM_REST {
 		) );
 
 		// Related lists for a record's detail drawer, in one round trip.
-		register_rest_route( self::NS, '/related/(?P<pcm_object>accounts|contacts|opportunities)/(?P<pcm_id>\d+)', array(
-			'methods'             => WP_REST_Server::READABLE,
-			'callback'            => array( __CLASS__, 'related' ),
-			'permission_callback' => array( __CLASS__, 'permission' ),
-		) );
+		$pcm_related_slugs = implode( '|', array_map( 'preg_quote', array_keys( pcm_crm_related_providers() ) ) );
+
+		// Guarded, because an implode of nothing gives an empty alternation —
+		// '(?P<pcm_object>)' matches the empty string and the route would answer
+		// for every object rather than none.
+		if ( '' !== $pcm_related_slugs ) {
+			register_rest_route( self::NS, '/related/(?P<pcm_object>' . $pcm_related_slugs . ')/(?P<pcm_id>\d+)', array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'related' ),
+				'permission_callback' => array( __CLASS__, 'permission' ),
+			) );
+		}
 	}
 
 	/* -----------------------------------------------------------------------
@@ -282,9 +302,18 @@ class PCM_CRM_REST {
 			return $pcm_id;
 		}
 
-		$pcm_expanded = self::expand( $pcm_model->object(), array( $pcm_model->get( $pcm_id ) ) );
+		$pcm_row = $pcm_model->get( $pcm_id );
 
-		return rest_ensure_response( $pcm_expanded[0] );
+		if ( ! $pcm_row ) {
+			return new WP_Error( 'pcm_crm_not_found', __( 'The record was saved but could not be read back.', 'pcm-crm' ), array( 'status' => 500 ) );
+		}
+
+		// Indexed rather than assumed: expand() now ends in a filter, so a
+		// listener returning the wrong shape would otherwise surface as an
+		// undefined offset rather than as its own mistake.
+		$pcm_expanded = self::expand( $pcm_model->object(), array( $pcm_row ) );
+
+		return rest_ensure_response( $pcm_expanded ? reset( $pcm_expanded ) : $pcm_row );
 	}
 
 	public static function update_item( WP_REST_Request $pcm_request ) {
@@ -327,7 +356,7 @@ class PCM_CRM_REST {
 	 * prefixed with an underscore to mark them as computed — the sanitiser
 	 * drops them on the way back in, so a save cannot write one by accident.
 	 */
-	protected static function expand( $pcm_object, array $pcm_items ) {
+	public static function expand( $pcm_object, array $pcm_items ) {
 		if ( ! $pcm_items ) {
 			return array();
 		}
@@ -398,7 +427,11 @@ class PCM_CRM_REST {
 			}
 		}
 
-		return array_values( $pcm_items );
+		// A whole page at once, deliberately, so a listener can answer with one
+		// grouped query rather than one query per row. Anything added here is
+		// underscore-prefixed by convention and so is dropped again by the
+		// model's sanitiser on the way back in — a save cannot write one.
+		return apply_filters( 'pcm_crm_expand_items', array_values( $pcm_items ), $pcm_object );
 	}
 
 	/**
@@ -441,52 +474,10 @@ class PCM_CRM_REST {
 	}
 
 	public static function related( WP_REST_Request $pcm_request ) {
-		$pcm_object = self::route_object( $pcm_request );
-		$pcm_id     = self::route_id( $pcm_request );
-		$pcm_out    = array();
-
-		if ( 'accounts' === $pcm_object ) {
-			$pcm_out['contacts'] = self::expand( 'contact', pcm_crm_contacts()->find( array(
-				'filters'  => array( 'account_id' => $pcm_id ),
-				'orderby'  => 'last_name',
-				'order'    => 'ASC',
-				'per_page' => 100,
-			) ) );
-
-			$pcm_out['opportunities'] = self::expand( 'opportunity', pcm_crm_opportunities()->find( array(
-				'filters'  => array( 'account_id' => $pcm_id ),
-				'orderby'  => 'close_date',
-				'order'    => 'ASC',
-				'per_page' => 100,
-			) ) );
-
-			$pcm_out['activities'] = self::expand( 'activity', pcm_crm_activities_for( 'account', $pcm_id ) );
-		}
-
-		if ( 'contacts' === $pcm_object ) {
-			$pcm_out['opportunities'] = self::expand( 'opportunity', pcm_crm_opportunities()->find( array(
-				'filters'  => array( 'primary_contact_id' => $pcm_id ),
-				'orderby'  => 'close_date',
-				'order'    => 'ASC',
-				'per_page' => 100,
-			) ) );
-
-			$pcm_out['activities'] = self::expand( 'activity', pcm_crm_activities_for( 'contact', $pcm_id ) );
-
-			$pcm_out['enrollments'] = self::expand( 'enrollment', pcm_crm_enrollments()->find( array(
-				'filters'  => array( 'contact_id' => $pcm_id ),
-				'orderby'  => 'created_date',
-				'order'    => 'DESC',
-				'per_page' => 50,
-			) ) );
-		}
-
-		if ( 'opportunities' === $pcm_object ) {
-			$pcm_out['activities'] = self::expand( 'activity', pcm_crm_activities_for( 'opportunity', $pcm_id ) );
-			$pcm_out['history']    = pcm_crm_stage_history_for( $pcm_id );
-		}
-
-		return rest_ensure_response( $pcm_out );
+		return rest_ensure_response( pcm_crm_related_for(
+			self::route_object( $pcm_request ),
+			self::route_id( $pcm_request )
+		) );
 	}
 
 	/* -----------------------------------------------------------------------
@@ -568,7 +559,7 @@ class PCM_CRM_REST {
 	}
 
 	public static function bootstrap( WP_REST_Request $pcm_request ) {
-		return rest_ensure_response( array(
+		return rest_ensure_response( apply_filters( 'pcm_crm_bootstrap', array(
 			'stages'            => pcm_crm_stages(),
 			'accountTypes'      => pcm_crm_account_types(),
 			'industries'        => pcm_crm_industries(),
@@ -588,7 +579,7 @@ class PCM_CRM_REST {
 			'templates'         => pcm_crm_template_choices(),
 			'sequences'         => pcm_crm_sequence_choices(),
 			'weekdays'          => pcm_crm_weekdays(),
-		) );
+		) ) );
 	}
 
 	/**
@@ -602,9 +593,11 @@ class PCM_CRM_REST {
 		$pcm_out = array();
 
 		foreach ( self::models() as $pcm_slug => $pcm_model ) {
-			// Only the Salesforce-shaped objects belong in the filter builder;
-			// the rest are machinery rather than records anyone reports on.
-			if ( in_array( $pcm_slug, array( 'submissions', 'schedules', 'templates', 'sequences', 'enrollments' ), true ) ) {
+			// Only the record-shaped objects belong in the filter builder; the
+			// rest are machinery rather than records anyone reports on. The
+			// registry says which is which, so this is an allow-list now and a
+			// new object is invisible here until it asks to be seen.
+			if ( ! pcm_crm_object_is( $pcm_slug, 'reportable' ) ) {
 				continue;
 			}
 
@@ -620,10 +613,22 @@ class PCM_CRM_REST {
 				);
 			}
 
+			$pcm_object = pcm_crm_object( $pcm_slug );
+
+			$pcm_group_options = $pcm_object ? (array) $pcm_object['group_options'] : array();
+
 			$pcm_out[ $pcm_slug ] = array(
 				'label'   => $pcm_model->object(),
 				'fields'  => self::field_list( $pcm_model, '' ),
 				'related' => $pcm_related,
+				// Which columns the report screen offers to group by, and which
+				// it opens on. Served from the registry rather than declared in
+				// the JS, for the same reason the layout is: an object should
+				// state this beside its own field map.
+				'groupOptions' => $pcm_group_options,
+				'groupBy'      => ( $pcm_object && $pcm_object['group_by'] )
+					? $pcm_object['group_by']
+					: ( $pcm_group_options ? reset( $pcm_group_options ) : '' ),
 				// The record form is built from this rather than from a list
 				// in the JS, which is what makes a layout editable at all.
 				'layout'  => pcm_crm_layout( $pcm_slug ),

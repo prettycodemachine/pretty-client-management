@@ -511,3 +511,9 @@ function pcm_crm_schedule_csv( array $pcm_schedule, array $pcm_args ) {
 
 	return $pcm_path;
 }
+
+pcm_crm_register_object( 'schedules', array(
+	'model'  => 'pcm_crm_schedules',
+	'label'  => 'Schedule',
+	'plural' => 'Schedules',
+) );
