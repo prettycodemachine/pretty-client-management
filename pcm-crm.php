@@ -44,6 +44,7 @@ require_once PCM_CRM_DIR . 'includes/class-pcm-crm-schema.php';
 require_once PCM_CRM_DIR . 'includes/custom-fields.php';
 require_once PCM_CRM_DIR . 'includes/duration.php';
 require_once PCM_CRM_DIR . 'includes/objects.php';
+require_once PCM_CRM_DIR . 'includes/modules.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-model.php';
 require_once PCM_CRM_DIR . 'includes/model-account.php';
 require_once PCM_CRM_DIR . 'includes/model-contact.php';
@@ -64,6 +65,11 @@ require_once PCM_CRM_DIR . 'admin/settings.php';
 require_once PCM_CRM_DIR . 'public/email.php';
 require_once PCM_CRM_DIR . 'public/intake.php';
 require_once PCM_CRM_DIR . 'public/form.php';
+
+// Last, so a module can register against everything above it — objects, related
+// lists, merge prefixes, settings tabs — without the core files knowing it
+// exists.
+pcm_crm_load_modules();
 
 // Demo data. The file registers nothing unless WP-CLI is running, so it has no
 // web-facing surface, and the command itself refuses to run on production.

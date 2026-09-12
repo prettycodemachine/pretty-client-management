@@ -52,7 +52,9 @@ function pcm_crm_menu() {
 		'pcm-crm-settings',
 		'pcm_crm_render_settings',
 		'dashicons-admin-generic',
-		27
+		// 28 rather than 27: the Projects module claims 27 when it is switched
+		// on, and setup belongs after the work whether it is or not.
+		28
 	);
 
 	// Page slugs are unchanged on purpose: a notification email links to

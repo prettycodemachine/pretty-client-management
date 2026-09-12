@@ -437,6 +437,10 @@
 	var objects = {
 		accounts: {
 			label: 'Account',
+			// 'fetch' has a /related route behind it; 'local' builds its section
+			// from the record itself. An object declaring neither has no related
+			// section at all, which is what templates and schedules want.
+			related: 'fetch',
 			plural: 'Accounts',
 			title: function (row) { return row.name; },
 			kicker: function (row) { return row.type || 'Account'; },
@@ -468,6 +472,7 @@
 
 		contacts: {
 			label: 'Contact',
+			related: 'fetch',
 			plural: 'Contacts',
 			title: function (row) {
 				return ((row.first_name || '') + ' ' + (row.last_name || '')).trim() || row.email || 'Contact';
@@ -507,6 +512,7 @@
 
 		opportunities: {
 			label: 'Opportunity',
+			related: 'fetch',
 			plural: 'Opportunities',
 			title: function (row) { return row.name; },
 			kicker: function (row) { return row._account_name || 'No account'; },
@@ -686,6 +692,9 @@
 
 		activities: {
 			label: 'Activity',
+			// A leaf: nothing hangs off an activity, so its section lists the
+			// records it hangs off instead, built from the record in hand.
+			related: 'local',
 			plural: 'Activities',
 			title: function (row) { return row.subject || 'Activity'; },
 			kicker: function (row) { return row.activity_type || 'Activity'; },
@@ -3133,6 +3142,14 @@
 
 		api('/recycle-bin').then(function (counts) {
 			var total = counts.reduce(function (sum, row) { return sum + row.count; }, 0);
+
+			if (!counts.length) {
+				clear(dom.body, el('div.pcm-crm-empty', {}, [
+					el('h3', { text: 'Nothing to show' }),
+					el('p', { text: 'No objects report a recycle bin.' })
+				]));
+				return;
+			}
 
 			if (!state.binObject) {
 				// Open on something with contents rather than on an empty tab

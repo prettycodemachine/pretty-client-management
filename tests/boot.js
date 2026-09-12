@@ -28,6 +28,10 @@ function makeEl(tag) {
 		style: {},
 		appendChild(child) { this.children.push(child); return child; },
 		insertBefore(child) { this.children.unshift(child); return child; },
+		// Views that position one control relative to another walk these, so
+		// they have to exist rather than be undefined.
+		get firstChild() { return this.children[0] || null; },
+		get nextSibling() { return null; },
 		replaceChildren() { this.children = []; },
 		addEventListener() {},
 		querySelector() { return makeEl('div'); },
@@ -41,7 +45,7 @@ function makeEl(tag) {
 	};
 }
 
-function run(view) {
+function run(view, hash) {
 	const root = makeEl('div');
 	root.dataset.view = view;
 
@@ -53,6 +57,7 @@ function run(view) {
 		querySelectorAll: () => [],
 		createElement: makeEl,
 		createElementNS: (ns, tag) => makeEl(tag),
+		createTextNode: (text) => ({ nodeType: 3, textContent: String(text) }),
 		addEventListener() {},
 		body: makeEl('body'),
 	};
@@ -60,7 +65,9 @@ function run(view) {
 	const window = {
 		document,
 		PCM_CRM: { root: 'https://example.test/wp-json/pcm-crm/v1', nonce: 'n', adminUrl: '/wp-admin/admin.php' },
-		location: { hash: '', pathname: '/wp-admin/admin.php', search: '' },
+		// A hash of #id=5 opens that record on load — the same path a
+		// notification email's "Open in the CRM" link takes.
+		location: { hash: hash || '', pathname: '/wp-admin/admin.php', search: '' },
 		history: { replaceState() {} },
 		// Every custom property resolves, so themeColors() gets a full ramp.
 		getComputedStyle: () => ({ getPropertyValue: () => '#112233' }),
@@ -70,11 +77,62 @@ function run(view) {
 		confirm: () => true,
 		prompt: () => '',
 		fetch(url) {
-			requests.push(String(url).replace(/^.*\/v1/, ''));
-			return Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve({ items: [], total: 0, stages: [], owners: [], users: [] }),
-			});
+			const route = String(url).replace(/^.*\/v1/, '');
+			requests.push(route);
+
+			// Shaped per route. A stub that answers everything with the same
+			// object makes half the views throw on their own data, and that
+			// noise is what hides a real failure.
+			let body = { items: [], total: 0 };
+
+			if (route.startsWith('/bootstrap')) {
+				body = {
+					stages: [], accountTypes: [], industries: [], opportunityTypes: [],
+					leadSources: [], activityTypes: [], activityStatuses: [], priorities: [],
+					interests: {}, owners: [], users: [], currency: '$', stallDays: 30,
+					frequencies: [], weekdays: {}, emailVariables: [], templates: [], sequences: [],
+					recyclable: {},
+				};
+			}
+
+			if (route.startsWith('/schema')) {
+				body = {};
+			}
+
+			if (route.startsWith('/dashboard')) {
+				body = {
+					tiles: {
+						openValue: 0, openCount: 0, weightedValue: 0, wonValue: 0, wonCount: 0,
+						winRate: 0, contactCount: 0, accountCount: 0, overdueCount: 0,
+						cycleDays: 0, stalledCount: 0, stallDays: 30,
+					},
+					charts: {
+						pipelineByStage: [], byMonth: [], byLeadSource: [],
+						activityByType: [], avgDaysByStage: [], conversion: [],
+					},
+				};
+			}
+
+			if (route.startsWith('/pipeline')) { body = { columns: [] }; }
+			if (route.startsWith('/report')) { body = { rows: [], groups: [], total: 0, sum: 0 }; }
+			if (route.startsWith('/recycle-bin')) {
+				body = [
+					{ object: 'accounts', label: 'Accounts', count: 0 },
+					{ object: 'contacts', label: 'Contacts', count: 0 },
+					{ object: 'opportunities', label: 'Opportunities', count: 0 },
+					{ object: 'activities', label: 'Activities', count: 0 },
+				];
+			}
+
+			if (/^\/[a-z]+\/\d+(\?|$)/.test(route)) {
+				body = { id: 5, name: 'Sample', subject: 'Sample', account_id: 0, who_id: 0, is_deleted: 0 };
+			}
+
+			if (route.startsWith('/related/')) {
+				body = { contacts: [], opportunities: [], activities: [] };
+			}
+
+			return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
 		},
 	};
 	window.window = window;
@@ -117,12 +175,49 @@ views.forEach((view) => {
 	}
 });
 
-// The charts have to expose everything crm.js reaches for, including the theme
-// hook added when themes arrived.
-const { window } = run('dashboard');
-['setTheme', 'bar', 'days', 'funnel', 'donut', 'columns', 'palette', 'formatCurrency'].forEach((fn) => {
-	check(`charts expose ${fn}()`, typeof window.PCM_CRM_Charts[fn], 'function');
-});
+/**
+ * Let the boot promises settle.
+ *
+ * Everything after init() is a chain of resolved promises, so the assertions
+ * have to wait a turn or they read the request list before anything asked for
+ * anything.
+ */
+const settle = () => new Promise((resolve) => setImmediate(resolve));
 
-console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');
-process.exit(failed ? 1 : 0);
+(async function () {
+	// Opening a record has to reach for what hangs off it. The guard deciding
+	// this reads a mode from each object's definition, so an object that
+	// forgets to declare one loses its related lists silently — no error, just
+	// a record with one tab. That is exactly how it went unnoticed once.
+	const relatedChecks = [
+		['accounts', true],
+		['contacts', true],
+		['opportunities', true],
+		// A leaf: its section is built from the record rather than fetched, so
+		// it must *not* ask for a route that does not exist.
+		['activities', false],
+	];
+
+	for (const [view, shouldFetch] of relatedChecks) {
+		const { requests } = run(view, '#id=5');
+
+		await settle();
+		await settle();
+		await settle();
+
+		const asked = requests.some((route) => route.startsWith('/related/'));
+
+		check(`${view} ${shouldFetch ? 'fetches' : 'does not fetch'} its related records`, asked, shouldFetch);
+	}
+
+	// The charts have to expose everything crm.js reaches for, including the
+	// theme hook added when themes arrived.
+	const { window } = run('dashboard');
+
+	['setTheme', 'bar', 'days', 'funnel', 'donut', 'columns', 'palette', 'formatCurrency'].forEach((fn) => {
+		check(`charts expose ${fn}()`, typeof window.PCM_CRM_Charts[fn], 'function');
+	});
+
+	console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');
+	process.exit(failed ? 1 : 0);
+})();

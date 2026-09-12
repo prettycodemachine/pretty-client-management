@@ -81,6 +81,12 @@ function pcm_crm_register_settings() {
 		'default'           => 'pcm',
 	) );
 
+	register_setting( 'pcm_crm_modules_settings', PCM_CRM_MODULES_OPTION, array(
+		'type'              => 'array',
+		'sanitize_callback' => 'pcm_crm_sanitize_modules',
+		'default'           => array(),
+	) );
+
 	register_setting( 'pcm_crm_pipeline_settings', 'pcm_crm_stall_days', array(
 		'type'              => 'integer',
 		'sanitize_callback' => 'absint',
@@ -99,6 +105,8 @@ function pcm_crm_settings_tabs() {
 		'fields'   => __( 'Fields & Layouts', 'pcm-crm' ),
 		'pipeline' => __( 'Pipeline', 'pcm-crm' ),
 		'theme'    => __( 'Theme', 'pcm-crm' ),
+		// The tab that switches a module on cannot live inside the module.
+		'modules'  => __( 'Modules', 'pcm-crm' ),
 		'samples'  => __( 'Sample Data', 'pcm-crm' ),
 	);
 }
@@ -183,6 +191,8 @@ function pcm_crm_render_settings() {
 			pcm_crm_render_theme_tab();
 		} elseif ( 'samples' === $pcm_tab ) {
 			pcm_crm_render_samples_tab();
+		} elseif ( 'modules' === $pcm_tab ) {
+			pcm_crm_render_modules_tab();
 		} elseif ( 'pipeline' === $pcm_tab ) {
 			pcm_crm_render_pipeline_tab();
 		} else {
