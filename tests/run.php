@@ -351,7 +351,10 @@ check( 'and a write still knows which table it is for',
 echo "\n--- email variables ---\n";
 $groups = pcm_crm_email_variables();
 $prefixes = wp_list_pluck( $groups, 'prefix' );
-check( 'variables are grouped by record', array_slice( $prefixes, 0, 3 ), array( 'contact', 'account', 'opportunity' ) );
+check( 'variables are grouped by record', array_slice( $prefixes, 0, 2 ), array( 'contact', 'account' ) );
+// A contact has many opportunities and neither send path picks one, so an
+// opportunity variable could only ever resolve to nothing.
+check( 'opportunity variables are not offered', in_array( 'opportunity', $prefixes, true ), false );
 
 $contact_tokens = wp_list_pluck( $groups[0]['fields'], 'token' );
 check( 'a contact field is offered', in_array( '{{contact.first_name}}', $contact_tokens, true ), true );
@@ -360,10 +363,9 @@ check( 'ids are not offered', in_array( '{{contact.account_id}}', $contact_token
 check( 'nor are checkboxes', in_array( '{{contact.do_not_contact}}', $contact_tokens, true ), false );
 
 $context = array(
-	'contact'     => array( 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'title' => 'Director' ),
-	'account'     => array( 'name' => 'Analytical & Co' ),
-	'opportunity' => array(),
-	'sender'      => 'Jason Jensen',
+	'contact' => array( 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'title' => 'Director' ),
+	'account' => array( 'name' => 'Analytical & Co' ),
+	'sender'  => 'Jason Jensen',
 );
 
 check( 'a contact variable fills', pcm_crm_fill_variables( 'Hi {{contact.first_name}}', $context ), 'Hi Ada' );
@@ -374,7 +376,11 @@ check( 'a composed full name fills',
 check( 'the sender fills', pcm_crm_fill_variables( '{{sender.name}}', $context ), 'Jason Jensen' );
 // "Hi {{contact.first_name}}," reaching an inbox is worse than "Hi ,".
 check( 'a variable with nothing behind it comes out empty, not as itself',
-	pcm_crm_fill_variables( 'Hi [{{opportunity.name}}]', $context ), 'Hi []' );
+	pcm_crm_fill_variables( 'Hi [{{contact.nonsense}}]', $context ), 'Hi []' );
+// A template written while opportunity variables were offered must not start
+// shipping the raw token.
+check( 'a withdrawn opportunity token blanks rather than going out literally',
+	pcm_crm_fill_variables( 'Re: [{{opportunity.name}}]', $context ), 'Re: []' );
 check( 'a submitted value cannot inject markup',
 	pcm_crm_fill_variables( '{{contact.first_name}}', array( 'contact' => array( 'first_name' => '<b>x</b>' ) ) ),
 	'&lt;b&gt;x&lt;/b&gt;' );
@@ -687,6 +693,21 @@ check( 'and it greets by name',
 	false !== strpos( $templates['inbound-first-reply']['body'], '{{contact.first_name}}' ), true );
 check( 'every template has a subject',
 	count( array_filter( wp_list_pluck( $templates, 'subject' ) ) ), count( $templates ) );
+
+$offered = array();
+foreach ( pcm_crm_email_variables() as $group ) {
+	$offered = array_merge( $offered, wp_list_pluck( $group['fields'], 'token' ) );
+}
+
+$unknown = array();
+foreach ( $templates as $template ) {
+	preg_match_all( '/\{\{[a-z_]+\.[a-z_]+\}\}/i', $template['subject'] . ' ' . $template['body'], $found );
+
+	foreach ( $found[0] as $token ) {
+		if ( ! in_array( $token, $offered, true ) ) { $unknown[] = $token; }
+	}
+}
+check( 'no shipped template uses a variable that is not offered', array_unique( $unknown ), array() );
 
 $sequences = pcm_crm_sample_sequences();
 check( 'a sequence ships for a new inbound lead', isset( $sequences['new-inbound-lead'] ), true );

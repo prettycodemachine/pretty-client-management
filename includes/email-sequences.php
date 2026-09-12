@@ -132,11 +132,16 @@ add_filter( 'pcm_crm_validate', 'pcm_crm_validate_outreach', 10, 4 );
  *
  * Built from the models' field maps, so a custom field is available the moment
  * it is created and nothing here has to be told about it.
+ *
+ * Contact and account only. A contact has many opportunities, and nothing in
+ * either send path — the button on the record, or a sequence step — picks one,
+ * so an opportunity variable had no way to resolve to anything. Offering it
+ * meant a template could look correct and go out with a hole in it.
  */
 function pcm_crm_email_variables() {
 	$pcm_groups = array();
 
-	foreach ( array( 'contact' => 'contacts', 'account' => 'accounts', 'opportunity' => 'opportunities' ) as $pcm_prefix => $pcm_object ) {
+	foreach ( array( 'contact' => 'contacts', 'account' => 'accounts' ) as $pcm_prefix => $pcm_object ) {
 		$pcm_model = PCM_CRM_REST::model( $pcm_object );
 
 		if ( ! $pcm_model ) {
@@ -189,7 +194,7 @@ function pcm_crm_email_variables() {
 function pcm_crm_fill_variables( $pcm_text, array $pcm_context ) {
 	$pcm_values = array();
 
-	foreach ( array( 'contact', 'account', 'opportunity' ) as $pcm_prefix ) {
+	foreach ( array( 'contact', 'account' ) as $pcm_prefix ) {
 		$pcm_record = isset( $pcm_context[ $pcm_prefix ] ) && is_array( $pcm_context[ $pcm_prefix ] ) ? $pcm_context[ $pcm_prefix ] : array();
 
 		foreach ( $pcm_record as $pcm_field => $pcm_value ) {
@@ -210,27 +215,31 @@ function pcm_crm_fill_variables( $pcm_text, array $pcm_context ) {
 	$pcm_filled = strtr( $pcm_text, array_map( 'esc_html', $pcm_values ) );
 
 	// Anything still unresolved was a token for a field this record has no
-	// value for. Blanking it is the least bad outcome.
+	// value for — or an {{opportunity.*}} token from a template written while
+	// those were offered. Blanking it is the least bad outcome either way.
 	return preg_replace( '/\{\{[a-z_]+\.[a-z_]+\}\}/i', '', $pcm_filled );
 }
 
 /**
  * The records a template is filled from.
+ *
+ * The person and their organization. An opportunity id may still be passed to
+ * a send, but only to hang the logged activity off the right record — it is
+ * not a source of merge values, because there is no one opportunity a contact
+ * belongs to.
  */
-function pcm_crm_email_context( $pcm_contact_id, $pcm_opportunity_id = 0 ) {
+function pcm_crm_email_context( $pcm_contact_id ) {
 	$pcm_contact = pcm_crm_contacts()->get( $pcm_contact_id );
 
 	if ( ! $pcm_contact ) {
 		return null;
 	}
 
-	$pcm_account     = $pcm_contact['account_id'] ? pcm_crm_accounts()->get( $pcm_contact['account_id'] ) : array();
-	$pcm_opportunity = $pcm_opportunity_id ? pcm_crm_opportunities()->get( $pcm_opportunity_id ) : array();
+	$pcm_account = $pcm_contact['account_id'] ? pcm_crm_accounts()->get( $pcm_contact['account_id'] ) : array();
 
 	return array(
-		'contact'     => $pcm_contact,
-		'account'     => $pcm_account ? $pcm_account : array(),
-		'opportunity' => $pcm_opportunity ? $pcm_opportunity : array(),
+		'contact' => $pcm_contact,
+		'account' => $pcm_account ? $pcm_account : array(),
 	);
 }
 
@@ -269,7 +278,7 @@ function pcm_crm_send_contact_email( $pcm_contact_id, $pcm_subject, $pcm_body, a
 		'sender'         => '',
 	) );
 
-	$pcm_context = pcm_crm_email_context( $pcm_contact_id, $pcm_args['opportunity_id'] );
+	$pcm_context = pcm_crm_email_context( $pcm_contact_id );
 
 	if ( ! $pcm_context ) {
 		return new WP_Error( 'pcm_crm_no_contact', __( 'That contact no longer exists.', 'pcm-crm' ) );
