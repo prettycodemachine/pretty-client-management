@@ -1500,12 +1500,13 @@
 		dom.drawer.appendChild(el('div.pcm-crm-modal-head', {}, [
 			el('div.pcm-crm-modal-heading', {}, [
 				kicker(def, record, isNew, options),
-				// Sample records are flagged in the database; saying so on the
-				// record itself means nobody has to remember which is which
-				// before acting on one.
-				Number(record.is_test) ? el('span.pcm-crm-test-badge', { text: 'Sample data' }) : null,
 				el('h2', { text: isNew ? 'New ' + def.label : def.title(record) })
 			]),
+			// Sample records are flagged in the database, and saying so on the
+			// record means nobody has to remember which is which before acting
+			// on one. It sits out at the right rather than between the parent
+			// and the name, where it split the heading in two.
+			Number(record.is_test) ? el('span.pcm-crm-test-badge', { text: 'Sample data' }) : null,
 			el('button.pcm-crm-drawer-close', {
 				type: 'button',
 				'aria-label': 'Close',
@@ -3097,6 +3098,25 @@
 				return;
 			}
 
+			// Emptying everything belongs in the header rather than under one
+			// object's table, where it would read as being about that object.
+			clear(dom.actions, el('button.pcm-btn.pcm-btn-danger', {
+				type: 'button',
+				text: 'Empty the whole bin (' + total + ')',
+				onclick: function (event) {
+					if (!window.confirm('Permanently delete all ' + total + ' records in the bin, across every object? This cannot be undone.')) { return; }
+
+					event.target.disabled = true;
+
+					api('/recycle-bin', { method: 'POST' })
+						.then(function () {
+							state.binObject = '';
+							renderRecycleBin();
+						})
+						.catch(showError);
+				}
+			}));
+
 			loadRecycleBin();
 		}).catch(showError);
 	}
@@ -3158,7 +3178,10 @@
 							.catch(showError);
 					}
 				}),
-				el('span.pcm-crm-muted', { text: 'Restoring puts a record back exactly as it was, with its related records intact.' })
+				el('span.pcm-crm-muted', {
+					text: 'Restoring puts a record back exactly as it was, with its related records intact. ' +
+						'Deleting for good is the only thing here that cannot be undone.'
+				})
 			]));
 		}).catch(showError);
 	}

@@ -101,9 +101,16 @@ class PCM_CRM_REST {
 
 		// The recycle bin.
 		register_rest_route( self::NS, '/recycle-bin', array(
-			'methods'             => WP_REST_Server::READABLE,
-			'callback'            => array( __CLASS__, 'recycle_bin' ),
-			'permission_callback' => array( __CLASS__, 'permission' ),
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'recycle_bin' ),
+				'permission_callback' => array( __CLASS__, 'permission' ),
+			),
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( __CLASS__, 'empty_whole_bin' ),
+				'permission_callback' => array( __CLASS__, 'permission' ),
+			),
 		) );
 
 		register_rest_route( self::NS, '/(?P<pcm_object>' . $pcm_slugs . ')/(?P<pcm_id>\d+)/restore', array(
@@ -506,6 +513,28 @@ class PCM_CRM_REST {
 		}
 
 		return rest_ensure_response( $pcm_out );
+	}
+
+	/**
+	 * Empty every object's bin at once.
+	 *
+	 * Opportunities go last, and deliberately: purging one removes its stage
+	 * history, and doing them first would leave nothing for the later objects
+	 * to be inconsistent with either way — but the order is worth keeping
+	 * stable so the count reported back is reproducible.
+	 */
+	public static function empty_whole_bin( WP_REST_Request $pcm_request ) {
+		$pcm_purged = 0;
+
+		foreach ( array_keys( pcm_crm_recyclable_objects() ) as $pcm_slug ) {
+			$pcm_model = self::model( $pcm_slug );
+
+			if ( $pcm_model ) {
+				$pcm_purged += (int) $pcm_model->purge_all();
+			}
+		}
+
+		return rest_ensure_response( array( 'purged' => $pcm_purged ) );
 	}
 
 	public static function restore_item( WP_REST_Request $pcm_request ) {

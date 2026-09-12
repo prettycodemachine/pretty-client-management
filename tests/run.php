@@ -629,6 +629,11 @@ check( 'and a normal list still excludes them',
 	false !== strpos( pcm_crm_contacts()->where( array() ), 'is_deleted = 0' ), true );
 
 check( 'models can purge as well as delete', method_exists( 'PCM_CRM_Model', 'purge' ), true );
+check( 'the whole bin can be emptied at once',
+	method_exists( 'PCM_CRM_REST', 'empty_whole_bin' ), true );
+// It has to cover every object with a bin, or "empty the whole bin" is a lie.
+check( 'and it covers every object that has one',
+	count( pcm_crm_recyclable_objects() ), 4 );
 check( 'and empty a whole bin', method_exists( 'PCM_CRM_Model', 'purge_all' ), true );
 check( 'purging a deal takes its stage history with it',
 	has_filter( 'pcm_crm_before_purge', 'pcm_crm_purge_stage_history' ), true );

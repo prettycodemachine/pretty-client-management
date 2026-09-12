@@ -508,7 +508,11 @@
 /* A record that is not real, said plainly on the record. */
 .pcm-crm-test-badge {
   display: inline-block;
-  margin-bottom: 4px;
+  /* Pushed out to sit beside the close button: between the parent record and
+     the name it broke the heading into three lines for no gain. */
+  margin-left: auto;
+  align-self: center;
+  white-space: nowrap;
   padding: 2px 9px;
   border-radius: 999px;
   background: var(--pcm-accent-deep);
