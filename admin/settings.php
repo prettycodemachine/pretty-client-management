@@ -962,8 +962,9 @@ function pcm_crm_render_samples_tab() {
 			<thead>
 				<tr>
 					<th><?php esc_html_e( 'Object', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Real', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Live', 'pcm-crm' ); ?></th>
 					<th><?php esc_html_e( 'Sample', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'In the bin', 'pcm-crm' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -972,11 +973,40 @@ function pcm_crm_render_samples_tab() {
 						<td class="pcm-crm-strong"><?php echo esc_html( isset( $pcm_labels[ $pcm_key ] ) ? $pcm_labels[ $pcm_key ] : $pcm_key ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( $pcm_count['real'] ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( $pcm_count['test'] ) ); ?></td>
+						<td class="<?php echo $pcm_count['deleted'] ? '' : 'pcm-crm-muted'; ?>">
+							<?php echo esc_html( $pcm_count['deleted'] ? number_format_i18n( $pcm_count['deleted'] ) : '—' ); ?>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
 		</table>
+
+		<p class="description">
+			<?php esc_html_e( 'Deleting a record in the CRM marks it deleted rather than removing the row, the way Salesforce\'s recycle bin does. Those rows are counted separately here because they are not live data — nothing in the CRM shows them.', 'pcm-crm' ); ?>
+		</p>
 	</div>
+
+	<?php if ( ! empty( $pcm_counts['history']['orphans'] ) ) : ?>
+		<div class="pcm-crm-card pcm-crm-card-accent">
+			<h2><?php esc_html_e( 'Orphaned stage history', 'pcm-crm' ); ?></h2>
+			<p class="description">
+				<?php
+				printf(
+					/* translators: %s: number of rows */
+					esc_html__( 'There are %s stage history rows whose opportunity no longer exists — left behind by a sample set removed before this was cleaned up automatically. They are not harmless: the conversion figures count deals per stage straight out of that table, so these inflate every rate they appear in.', 'pcm-crm' ),
+					esc_html( number_format_i18n( $pcm_counts['history']['orphans'] ) )
+				);
+				?>
+			</p>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="pcm_crm_samples">
+				<input type="hidden" name="task" value="orphans">
+				<?php wp_nonce_field( 'pcm_crm_samples', 'pcm_crm_samples_nonce' ); ?>
+				<?php submit_button( __( 'Remove orphaned history', 'pcm-crm' ), 'primary', 'submit', false ); ?>
+			</form>
+		</div>
+	<?php endif; ?>
 
 	<div class="pcm-crm-card">
 		<h2><?php esc_html_e( 'Create sample data', 'pcm-crm' ); ?></h2>
@@ -1063,6 +1093,13 @@ function pcm_crm_handle_samples() {
 		exit;
 	}
 
+	if ( 'orphans' === $pcm_task ) {
+		$pcm_removed = pcm_crm_delete_orphaned_history();
+
+		wp_safe_redirect( add_query_arg( array( 'pcm_samples' => 'orphans', 'count' => $pcm_removed ), $pcm_back ) );
+		exit;
+	}
+
 	if ( 'content' === $pcm_task ) {
 		$pcm_created = pcm_crm_install_sample_content();
 
@@ -1103,6 +1140,7 @@ function pcm_crm_samples_notice() {
 		'created' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Created %d sample records.', 'pcm-crm' ), $pcm_count ) ),
 		'deleted' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Removed %d sample records.', 'pcm-crm' ), $pcm_count ) ),
 		'content' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Installed %d templates and sequences. Anything already present was left alone.', 'pcm-crm' ), $pcm_count ) ),
+		'orphans' => array( 'notice-success', sprintf( /* translators: %d: row count */ __( 'Removed %d orphaned stage history rows. The conversion figures will read correctly now.', 'pcm-crm' ), $pcm_count ) ),
 		'refused' => array( 'notice-error', __( 'Sample data cannot be created on this site.', 'pcm-crm' ) ),
 	);
 

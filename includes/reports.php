@@ -300,13 +300,19 @@ function pcm_crm_avg_days_by_stage() {
 	global $wpdb;
 
 	$pcm_table = PCM_CRM_Schema::history();
+	$pcm_opps  = PCM_CRM_Schema::opportunities();
 
-	// phpcs:ignore WordPress.DB.PreparedSQL -- table name is internal
+	// Joined to the opportunities rather than read alone: a history row whose
+	// deal has been deleted is not evidence about how long a stage takes, and
+	// one whose deal never existed at all — an orphan from a removed sample
+	// set — is not evidence about anything.
+	// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
 	$pcm_rows = $wpdb->get_results(
-		"SELECT stage_name, AVG(days_in_stage) AS avg_days, COUNT(*) AS count
-		 FROM {$pcm_table}
-		 WHERE exited_date IS NOT NULL AND days_in_stage IS NOT NULL
-		 GROUP BY stage_name",
+		"SELECT h.stage_name, AVG(h.days_in_stage) AS avg_days, COUNT(*) AS count
+		 FROM {$pcm_table} h
+		 INNER JOIN {$pcm_opps} o ON o.id = h.opportunity_id AND o.is_deleted = 0
+		 WHERE h.exited_date IS NOT NULL AND h.days_in_stage IS NOT NULL
+		 GROUP BY h.stage_name",
 		ARRAY_A
 	);
 
@@ -348,10 +354,17 @@ function pcm_crm_stage_conversion() {
 	global $wpdb;
 
 	$pcm_table = PCM_CRM_Schema::history();
+	$pcm_opps  = PCM_CRM_Schema::opportunities();
 
-	// phpcs:ignore WordPress.DB.PreparedSQL -- table name is internal
+	// Same join, and for a sharper reason: this counts distinct deals per
+	// stage, so a row pointing at a deal that no longer exists inflates every
+	// rate it appears in.
+	// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
 	$pcm_rows = $wpdb->get_results(
-		"SELECT stage_name, COUNT(DISTINCT opportunity_id) AS deals FROM {$pcm_table} GROUP BY stage_name",
+		"SELECT h.stage_name, COUNT(DISTINCT h.opportunity_id) AS deals
+		 FROM {$pcm_table} h
+		 INNER JOIN {$pcm_opps} o ON o.id = h.opportunity_id AND o.is_deleted = 0
+		 GROUP BY h.stage_name",
 		ARRAY_A
 	);
 

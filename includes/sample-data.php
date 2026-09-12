@@ -584,7 +584,11 @@ function pcm_crm_sample_tables() {
 }
 
 /**
- * How much sample data exists, and how much real data sits beside it.
+ * What is actually in each table.
+ *
+ * Soft-deleted rows are counted separately rather than as real data. They are
+ * still rows, but reporting a deleted record as live data is how a supposedly
+ * empty CRM ends up showing four contacts.
  */
 function pcm_crm_sample_data_counts() {
 	global $wpdb;
@@ -592,14 +596,60 @@ function pcm_crm_sample_data_counts() {
 	$pcm_counts = array();
 
 	foreach ( pcm_crm_sample_tables() as $pcm_key => $pcm_table ) {
+		// History keeps no soft-delete flag: its rows are an audit trail and
+		// are removed outright with the deal they belong to.
+		$pcm_has_deleted = 'history' !== $pcm_key;
+		$pcm_live        = $pcm_has_deleted ? ' AND is_deleted = 0' : '';
+
 		// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
 		$pcm_counts[ $pcm_key ] = array(
-			'test' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_test = 1" ),
-			'real' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_test = 0" ),
+			'real'    => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_test = 0{$pcm_live}" ),
+			'test'    => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_test = 1{$pcm_live}" ),
+			'deleted' => $pcm_has_deleted
+				// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+				? (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_deleted = 1" )
+				: 0,
 		);
 	}
 
+	$pcm_counts['history']['orphans'] = pcm_crm_orphaned_history_count();
+
 	return $pcm_counts;
+}
+
+/**
+ * Stage history rows whose opportunity is gone.
+ *
+ * These are not harmless. The conversion figures count distinct opportunities
+ * per stage straight out of this table, so an orphan inflates every rate it
+ * appears in — a dashboard reporting on deals that no longer exist.
+ */
+function pcm_crm_orphaned_history_count() {
+	global $wpdb;
+
+	$pcm_history = PCM_CRM_Schema::history();
+	$pcm_opps    = PCM_CRM_Schema::opportunities();
+
+	// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+	return (int) $wpdb->get_var(
+		"SELECT COUNT(*) FROM {$pcm_history} h
+		 LEFT JOIN {$pcm_opps} o ON o.id = h.opportunity_id
+		 WHERE o.id IS NULL"
+	);
+}
+
+function pcm_crm_delete_orphaned_history() {
+	global $wpdb;
+
+	$pcm_history = PCM_CRM_Schema::history();
+	$pcm_opps    = PCM_CRM_Schema::opportunities();
+
+	// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+	return (int) $wpdb->query(
+		"DELETE h FROM {$pcm_history} h
+		 LEFT JOIN {$pcm_opps} o ON o.id = h.opportunity_id
+		 WHERE o.id IS NULL"
+	);
 }
 
 function pcm_crm_has_sample_data() {
@@ -634,6 +684,10 @@ function pcm_crm_delete_sample_data() {
 		// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
 		$pcm_removed += (int) $wpdb->query( "DELETE FROM {$pcm_table} WHERE is_test = 1" );
 	}
+
+	// Anything left pointing at a deal that no longer exists goes too — an
+	// orphaned stage row still counts toward the conversion figures.
+	$pcm_removed += pcm_crm_delete_orphaned_history();
 
 	// The old CLI seeder's bookkeeping goes with it; the flag is the record now.
 	delete_option( 'pcm_crm_seed_ids' );

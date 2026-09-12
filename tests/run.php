@@ -576,7 +576,7 @@ echo "\n--- stage conversion ---\n";
 class PCM_History_WPDB extends FakeWPDB {
 	public $entered = array( 'Qualification' => 40, 'Discovery' => 30, 'Proposal' => 12, 'Negotiation' => 9, 'Closed Won' => 6 );
 	function get_results( $q = '', $o = null ) {
-		if ( false !== strpos( $q, 'COUNT(DISTINCT opportunity_id)' ) ) {
+		if ( false !== strpos( $q, 'COUNT(DISTINCT h.opportunity_id)' ) ) {
 			$rows = array();
 			foreach ( $this->entered as $stage => $deals ) {
 				$rows[] = array( 'stage_name' => $stage, 'deals' => $deals );
@@ -609,6 +609,29 @@ check( 'no history yet reports zero rather than dividing by zero',
 
 $GLOBALS['wpdb'] = $real_wpdb;
 check( 'the won stage is found by its flag', pcm_crm_won_stage_name(), 'Closed Won' );
+
+echo "\n--- orphaned stage history ---\n";
+// A history row whose deal is gone is not evidence about anything, and
+// conversion counts distinct deals straight out of that table — so an orphan
+// inflates every rate it appears in.
+class PCM_Orphan_WPDB extends FakeWPDB {
+	public $last = '';
+	function get_var( $q = '' ) { $this->last = $q; return 83; }
+	function query( $q = '' ) { $this->last = $q; return 83; }
+}
+$real_wpdb = $GLOBALS['wpdb'];
+$orphan_db = new PCM_Orphan_WPDB();
+$GLOBALS['wpdb'] = $orphan_db;
+
+check( 'orphans are counted', pcm_crm_orphaned_history_count(), 83 );
+check( 'by looking for history with no opportunity behind it',
+	false !== strpos( $orphan_db->last, 'o.id IS NULL' ), true );
+
+pcm_crm_delete_orphaned_history();
+check( 'and removed with a delete, not a select',
+	0 === strpos( $orphan_db->last, 'DELETE' ), true );
+
+$GLOBALS['wpdb'] = $real_wpdb;
 
 echo "\n--- filter operators ---\n";
 $opps_where = new ReflectionMethod( 'PCM_CRM_Model', 'where' );
