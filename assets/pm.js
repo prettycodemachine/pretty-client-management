@@ -23,14 +23,6 @@
 	var el = app.helpers.el;
 	var state = app.state;
 
-	/**
-	 * A stage's badge tone. Closed stages read as finished rather than as a
-	 * failure, so there is no "lost" tone here the way there is on a deal.
-	 */
-	function stageTone(row) {
-		return row.is_closed ? 'won' : 'open';
-	}
-
 	app.registerObject('projects', {
 		label: 'Project',
 		plural: 'Projects',
@@ -38,7 +30,7 @@
 		title: function (row) { return row.name; },
 		kicker: function (row) { return row.project_type || 'Project'; },
 		kickerLink: function (row) {
-			return row.account_id ? '#' + encodeURIComponent(JSON.stringify({ id: row.account_id })) : '';
+			return row.account_id ? { object: 'accounts', id: row.account_id } : null;
 		},
 		highlights: function (row) {
 			return [
@@ -53,9 +45,10 @@
 			{ key: 'name', label: 'Project', strong: true },
 			{ key: '_account_name', label: 'Account' },
 			{ key: 'project_type', label: 'Type' },
-			{ key: 'stage_name', label: 'Stage', render: function (row) {
-				return el('span.pcm-crm-badge.pcm-crm-badge-' + stageTone(row), { text: row.stage_name || '—' });
-			} },
+			// A plain badge rather than the `stage` flag, which tones itself from
+			// is_won/is_closed: a project has no is_won, so a finished one would
+			// come out in the losing red.
+			{ key: 'stage_name', label: 'Stage', badge: true },
 			{ key: 'health', label: 'Health' },
 			{ key: 'budget_amount', label: 'Budget', money: true },
 			{ key: 'end_date', label: 'Ends', due: true },
@@ -79,10 +72,12 @@
 
 			// The retainer fields are meaningless on a fixed-price build, so they
 			// are hidden until the type says otherwise rather than sitting there
-			// inviting a value that nothing would read.
+			// inviting a value that nothing would read. Matched against the list
+			// of retainer types rather than the word "Retainer" in the name, so
+			// renaming a type does not change which fields it offers.
 			if (name.indexOf('retainer_') === 0) {
 				hints.showWhen = 'project_type';
-				hints.showWhenRetainer = true;
+				hints.showWhenOneOf = (state.boot && state.boot.retainerTypes) || [];
 			}
 
 			return hints;
@@ -109,10 +104,10 @@
 			{ key: '_project_name', label: 'Project', strong: true },
 			{ key: '_user_name', label: 'Person' },
 			{ key: 'hours', label: 'Hours', num: true },
+			// render() is handed to a cell as text, not as a node, so this returns
+			// a string rather than a badge element.
 			{ key: 'is_billable', label: 'Billable', render: function (row) {
-				return el('span.pcm-crm-badge.pcm-crm-badge-' + (Number(row.is_billable) ? 'open' : 'due'), {
-					text: Number(row.is_billable) ? 'Billable' : 'Internal'
-				});
+				return Number(row.is_billable) ? 'Billable' : 'Internal';
 			} },
 			{ key: 'description', label: 'What you did' }
 		],
@@ -122,7 +117,7 @@
 				{ key: 'is_billable', label: 'Billable', options: [
 					{ value: '1', label: 'Billable' }, { value: '0', label: 'Internal' }
 				], blank: 'Either' },
-				{ key: 'entry_date', label: 'Date', type: 'date-range' }
+				{ key: 'entry_date', label: 'Date', range: 'date' }
 			];
 		},
 		hints: function (name) {

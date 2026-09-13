@@ -2006,6 +2006,7 @@
 			wrap.dataset.showWhen = field.showWhen;
 			if (field.showWhenLost) { wrap.dataset.showWhenLost = '1'; }
 			if (field.showWhenValue) { wrap.dataset.showWhenValue = field.showWhenValue; }
+			if (field.showWhenOneOf) { wrap.dataset.showWhenOneOf = field.showWhenOneOf.join('|'); }
 			wrap.hidden = !conditionMet(wrap.dataset, values);
 		}
 
@@ -2080,6 +2081,12 @@
 		// Depends on another field holding a particular value — a weekday
 		// only matters on a weekly schedule.
 		if (data.showWhenValue) { return String(values[data.showWhen] || '') === data.showWhenValue; }
+
+		// Or any of several: retainer terms matter on both kinds of retainer,
+		// and naming them one at a time would mean a new condition per type.
+		if (data.showWhenOneOf) {
+			return data.showWhenOneOf.split('|').indexOf(String(values[data.showWhen] || '')) !== -1;
+		}
 
 		return !!Number(values[data.showWhen]);
 	}
