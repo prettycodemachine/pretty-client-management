@@ -32,9 +32,23 @@
 		kickerLink: function (row) {
 			return row.account_id ? { object: 'accounts', id: row.account_id } : null;
 		},
+		// The stages this project's type moves through, not every stage there is.
+		path: function (row) {
+			var sets = (state.boot && state.boot.projectStageSets) || {};
+			var set = sets[row.project_type] || [];
+
+			return {
+				field: 'stage_name',
+				current: row.stage_name,
+				stages: set.map(function (stage) {
+					return { name: stage.name, closed: !!Number(stage.is_closed), lost: false };
+				})
+			};
+		},
 		highlights: function (row) {
 			return [
-				{ label: 'Account', value: row._account_name },
+				{ label: 'Account', value: row._account_name, link: row.account_id ? { object: 'accounts', id: row.account_id } : null },
+				{ label: 'Opportunity', value: row._opportunity_name, link: row.opportunity_id ? { object: 'opportunities', id: row.opportunity_id } : null },
 				{ label: 'Stage', value: row.stage_name },
 				{ label: 'Health', value: row.health },
 				{ label: 'Ends', value: app.helpers.formatDate(row.end_date) },
@@ -43,7 +57,7 @@
 		},
 		columns: [
 			{ key: 'name', label: 'Project', strong: true },
-			{ key: '_account_name', label: 'Account' },
+			{ key: '_account_name', label: 'Account', link: 'account_id' },
 			{ key: 'project_type', label: 'Type' },
 			// A plain badge rather than the `stage` flag, which tones itself from
 			// is_won/is_closed: a project has no is_won, so a finished one would
@@ -105,7 +119,7 @@
 		},
 		columns: [
 			{ key: 'name', label: 'Task', strong: true },
-			{ key: '_project_name', label: 'Project' },
+			{ key: '_project_name', label: 'Project', link: 'project_id' },
 			{ key: 'status', label: 'Status', badge: true },
 			{ key: '_assignee_name', label: 'Assigned To' },
 			{ key: 'due_date', label: 'Due', due: true }
@@ -137,7 +151,7 @@
 		kickerLink: projectLink,
 		highlights: function (row) {
 			return [
-				{ label: 'Project', value: row._project_name },
+				{ label: 'Project', value: row._project_name, link: row.project_id ? { object: 'projects', id: row.project_id } : null },
 				{ label: 'Status', value: row.status },
 				{ label: 'Severity', value: row.severity ? String(row.severity) : '' },
 				{ label: 'Review By', value: app.helpers.formatDate(row.due_date) }
@@ -146,7 +160,7 @@
 		columns: [
 			{ key: 'title', label: 'Title', strong: true },
 			{ key: 'raid_type', label: 'Kind', badge: true },
-			{ key: '_project_name', label: 'Project' },
+			{ key: '_project_name', label: 'Project', link: 'project_id' },
 			{ key: 'status', label: 'Status', badge: true },
 			{ key: 'severity', label: 'Severity', num: true },
 			{ key: 'due_date', label: 'Review By', due: true }
@@ -176,7 +190,7 @@
 		kickerLink: projectLink,
 		highlights: function (row) {
 			return [
-				{ label: 'Project', value: row._project_name },
+				{ label: 'Project', value: row._project_name, link: row.project_id ? { object: 'projects', id: row.project_id } : null },
 				{ label: 'Role', value: row.role },
 				{ label: 'Organisation', value: row._org_name }
 			];
@@ -185,7 +199,7 @@
 			{ key: '_person_name', label: 'Person', strong: true },
 			{ key: '_party_label', label: 'Side', badge: true },
 			{ key: 'role', label: 'Role' },
-			{ key: '_project_name', label: 'Project' },
+			{ key: '_project_name', label: 'Project', link: 'project_id' },
 			{ key: '_org_name', label: 'Organisation' }
 		],
 		filters: function () {
@@ -225,7 +239,7 @@
 		kickerLink: projectLink,
 		highlights: function (row) {
 			return [
-				{ label: 'Project', value: row._project_name },
+				{ label: 'Project', value: row._project_name, link: row.project_id ? { object: 'projects', id: row.project_id } : null },
 				{ label: 'Person', value: row._user_name },
 				{ label: 'Date', value: row.entry_date },
 				{ label: 'Hours', value: row.hours }
@@ -233,7 +247,7 @@
 		},
 		columns: [
 			{ key: 'entry_date', label: 'Date', date: true },
-			{ key: '_project_name', label: 'Project', strong: true },
+			{ key: '_project_name', label: 'Project', strong: true, link: 'project_id' },
 			{ key: '_user_name', label: 'Person' },
 			{ key: 'hours', label: 'Hours', num: true },
 			// render() is handed to a cell as text, not as a node, so this returns

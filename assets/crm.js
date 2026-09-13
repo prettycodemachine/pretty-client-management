@@ -240,7 +240,13 @@
 	 * flattening it into individual params would need parsing rules on both
 	 * sides that the two would eventually disagree about.
 	 */
-	function writeHash() {
+	/**
+	 * @param {boolean} push A move between a list and a record is a history
+	 *                       entry, so Back returns; a filter change replaces
+	 *                       the current one, so Back does not step through
+	 *                       every checkbox.
+	 */
+	function writeHash(push) {
 		var payload = {
 			s: state.query.search || undefined,
 			f: Object.keys(state.query.filters).length ? state.query.filters : undefined,
@@ -260,8 +266,17 @@
 
 		var hash = Object.keys(pruned).length ? '#' + encodeURIComponent(JSON.stringify(pruned)) : '';
 
+		// A record on its own is written the short way, the same form the
+		// notification email links to.
+		if (state.recordId && pageMode(state.view)) {
+			hash = '#id=' + state.recordId;
+		}
+
 		if (hash !== window.location.hash) {
-			window.history.replaceState(null, '', window.location.pathname + window.location.search + hash);
+			var url = window.location.pathname + window.location.search + hash;
+
+			if (push && window.history.pushState) { window.history.pushState(null, '', url); }
+			else { window.history.replaceState(null, '', url); }
 		}
 	}
 
@@ -498,7 +513,7 @@
 			columns: [
 				{ key: 'last_name', label: 'Name', strong: true, render: function (row) { return objects.contacts.title(row); } },
 				{ key: 'title', label: 'Title' },
-				{ key: '_account_name', label: 'Account' },
+				{ key: '_account_name', label: 'Account', link: 'account_id' },
 				{ key: 'email', label: 'Email' },
 				{ key: 'phone', label: 'Phone' },
 				{ key: 'lead_source', label: 'Source', badge: true },
@@ -522,8 +537,20 @@
 			kickerLink: function (row) {
 				return row.account_id ? { object: 'accounts', id: row.account_id } : null;
 			},
+			// The Salesforce path: every stage in order, the deal's marked.
+			path: function (row) {
+				return {
+					field: 'stage_name',
+					current: row.stage_name,
+					stages: (state.boot.stages || []).map(function (stage) {
+						return { name: stage.name, closed: !!Number(stage.is_closed), lost: stageIsLost(stage.name) };
+					})
+				};
+			},
 			highlights: function (row) {
 				return [
+					{ label: 'Primary contact', value: row._primary_contact_id_name || row._contact_name,
+						link: row.primary_contact_id ? { object: 'contacts', id: row.primary_contact_id } : null },
 					{ label: 'Stage', value: row.stage_name },
 					{ label: 'Amount', value: money(row.amount) },
 					{ label: 'Close date', value: formatDate(row.close_date) },
@@ -533,7 +560,7 @@
 			},
 			columns: [
 				{ key: 'name', label: 'Name', strong: true },
-				{ key: '_account_name', label: 'Account' },
+				{ key: '_account_name', label: 'Account', link: 'account_id' },
 				{ key: 'stage_name', label: 'Stage', stage: true },
 				{ key: 'amount', label: 'Amount', money: true },
 				{ key: 'probability', label: '%', render: function (row) { return row.probability + '%'; }, num: true },
@@ -1360,13 +1387,13 @@
 				? el('tr', { style: 'cursor:default' })
 				: el('tr', {
 					tabindex: '0',
-					onclick: function () { openDrawer(object, row.id); },
+					onclick: function () { openRecord(object, row.id); },
 					onkeydown: function (event) {
-						if (event.key === 'Enter') { openDrawer(object, row.id); }
+						if (event.key === 'Enter') { openRecord(object, row.id); }
 					}
 				});
 
-			def.columns.forEach(function (column) { tr.appendChild(cell(column, row)); });
+			def.columns.forEach(function (column) { tr.appendChild(cell(column, row, object)); });
 
 			if (actions) {
 				tr.appendChild(el('td.pcm-crm-row-actions', {}, actions.map(function (action) {
@@ -1394,8 +1421,20 @@
 		]);
 	}
 
-	function cell(column, row) {
+	function cell(column, row, object) {
 		var value = row[column.key];
+
+		// A column naming a lookup's record links to it. The lookup's target
+		// comes from the schema, so a column only has to say which id it shows.
+		if (column.link) {
+			var field = object ? fieldDefinition(object, column.link) : null;
+			var target = field && field.lookup;
+			var id = Number(row[column.link]);
+
+			if (target && target !== 'polymorphic' && id && value) {
+				return el('td' + (column.strong ? '.pcm-crm-strong' : ''), {}, [recordLink(target, id, String(value), { icon: false })]);
+			}
+		}
 
 		if (column.render) {
 			return el('td' + (column.strong ? '.pcm-crm-strong' : ''), { text: column.render(row) });
@@ -1473,110 +1512,356 @@
 	}
 
 	/* ---------------------------------------------------------------------
-	   Drawer
+	   Records: the page, the modal, and the way between them
+
+	   A record opens as a page of its own when its object has one, the way a
+	   Salesforce record does: the URL names it, Back returns to the list, and a
+	   lookup on it is a link to the record it points at. The centred modal is
+	   kept for creating — New from a list or a related list, and a quick create
+	   from inside a lookup — and for the objects with no page of their own
+	   (templates, schedules, project roles), which open there as before.
+
+	   Both draw through renderRecord(), into whichever host `current` names, so
+	   the two cannot drift into different forms of the same record.
 	   --------------------------------------------------------------------- */
 
 	/**
-	 * Open a record.
+	 * The record on screen: where it is drawn, whether it is being edited, and
+	 * a token that lets a slow fetch notice it has been overtaken.
+	 */
+	var current = { host: null, mode: '', object: '', record: null, options: {}, editing: false, dirty: false, token: 0 };
+
+	function recordHost() {
+		return current.host || dom.drawer;
+	}
+
+	/**
+	 * The admin page an object's records open on, from the registry.
+	 */
+	function objectPage(object) {
+		var directory = (state.boot && state.boot.objects) || {};
+
+		return (directory[object] && directory[object].page) || '';
+	}
+
+	function recordUrl(object, id) {
+		var page = objectPage(object);
+
+		return page && id ? (cfg.adminUrl || 'admin.php') + '?page=' + page + '#id=' + id : '';
+	}
+
+	/**
+	 * Whether this screen shows records as pages. Only an object's own list
+	 * screen does — a record id on the dashboard means nothing.
+	 */
+	function pageMode(view) {
+		return !!(objects[view] && objectPage(view) && !views[view]);
+	}
+
+	/**
+	 * A plural slug for the singular what_type an activity stores.
+	 */
+	function pluralFor(singular) {
+		var directory = (state.boot && state.boot.objects) || {};
+		var match = '';
+
+		Object.keys(directory).forEach(function (slug) {
+			if (!match && String(directory[slug].label).toLowerCase().replace(/\s+/g, '_') === String(singular || '')) {
+				match = slug;
+			}
+		});
+
+		return match;
+	}
+
+	function singularFor(slug) {
+		var directory = (state.boot && state.boot.objects) || {};
+
+		return directory[slug] ? String(directory[slug].label).toLowerCase().replace(/\s+/g, '_') : '';
+	}
+
+	/**
+	 * An object's mark: its icon, in its colour. Decorative — the label beside
+	 * it always says the same thing in words.
+	 */
+	function objectIcon(object) {
+		var directory = (state.boot && state.boot.objects) || {};
+		var entry = directory[object] || {};
+
+		return el('span.pcm-crm-obj-icon.pcm-crm-obj-c' + (entry.color || 1) + '.dashicons.dashicons-' + (entry.icon || 'media-default'), {
+			'aria-hidden': 'true'
+		});
+	}
+
+	/**
+	 * Unsaved edits are worth one question before they are thrown away.
+	 */
+	function confirmDiscard() {
+		if (!current.editing || !current.dirty) { return true; }
+
+		return window.confirm('Discard your unsaved changes?');
+	}
+
+	/**
+	 * Go to a record.
+	 *
+	 * On its own list screen that is a history entry and a repaint; anywhere
+	 * else it is a real navigation, so the browser's Back button, a new tab and
+	 * a copied link all do what they say. An object with no page opens in the
+	 * modal.
+	 */
+	function openRecord(object, id) {
+		if (!id || !confirmDiscard()) { return; }
+
+		if (pageMode(state.view) && object === state.view) {
+			if (dom.drawer && !dom.drawer.hidden) { closeDrawer(true); }
+
+			state.recordId = Number(id);
+			writeHash(true);
+			render();
+			if (window.scrollTo) { window.scrollTo(0, 0); }
+			return;
+		}
+
+		var url = recordUrl(object, id);
+
+		if (url) {
+			current.dirty = false;
+			window.location.href = url;
+			return;
+		}
+
+		openDrawer(object, id);
+	}
+
+	/**
+	 * Open a record in the modal.
 	 *
 	 * options.prefill seeds a new record's fields — used when creating a child
 	 * from its parent, so the link is already made before the form is shown.
-	 * options.returnTo names the record to reopen afterwards, so creating a
+	 * options.returnTo names the record to go back to afterwards, so creating a
 	 * contact from an account lands you back on the account with the new row
 	 * in its list, rather than on nothing.
 	 */
 	function openDrawer(object, id, options) {
 		options = options || {};
 
-		state.recordId = id;
-		writeHash();
+		// The page stays underneath, so its record is what the modal returns to
+		// when it closes.
+		if (current.mode === 'page') { current.below = Object.assign({}, current); }
+
+		if (!id && current.mode !== 'page') { state.recordId = 0; }
+		if (id && !pageMode(state.view)) { state.recordId = id; writeHash(); }
 
 		dom.drawer.hidden = false;
 		dom.scrim.hidden = false;
 		clear(dom.drawer, el('p.pcm-crm-loading', { text: 'Loading…' }));
 
-		var needed = [loadLookup('accounts'), loadLookup('contacts'), loadLookup('opportunities')];
+		loadRecord(dom.drawer, 'modal', object, id, options);
+	}
 
-		Promise.all(needed).then(function () {
-			if (!id) { return Promise.resolve(options.prefill || {}); }
-			return api('/' + object + '/' + id);
-		}).then(function (record) {
-			renderDrawer(object, record, options);
+	/**
+	 * @param {boolean} keepHash Closing on the way to another record, whose own
+	 *                           navigation writes the hash.
+	 */
+	function closeDrawer(keepHash) {
+		if (current.mode === 'modal' && !confirmDiscard()) { return; }
 
-			if (!id) { return; }
+		dom.drawer.hidden = true;
+		dom.scrim.hidden = true;
 
-			// Each object declares how its related section is built, because
-			// asking for a route that does not exist is a guaranteed 404 —
-			// which then showed up as an error tab on a record that simply has
-			// nothing hanging off it. 'local' is a leaf like an activity:
-			// nothing hangs off one, so its section comes from the record's own
-			// parents rather than a fetch.
-			var relatedMode = (objects[object] || {}).related;
+		var below = current.below;
 
-			if (relatedMode === 'local') {
-				renderRelated(object, record, {});
-				return;
-			}
+		if (below) {
+			current = below;
+			current.below = null;
+			return;
+		}
 
-			if (relatedMode !== 'fetch') {
-				return;
-			}
+		current = { host: null, mode: '', object: '', record: null, options: {}, editing: false, dirty: false, token: current.token + 1 };
 
-			api('/related/' + object + '/' + id).then(function (related) {
-				renderRelated(object, record, related);
-			}).catch(function (error) {
-				// Swallowing this would leave a record showing only a Details
-				// tab, which reads as "nothing is attached to this" — a
-				// different and wrong statement.
-				var panels = dom.drawer.querySelector('[data-role="panels"]');
+		if (!pageMode(state.view)) {
+			state.recordId = 0;
+			if (keepHash !== true) { writeHash(); }
+		}
+	}
 
-				if (panels) {
-					panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: 'related-error' }, hidden: true }, [
-						el('div.pcm-crm-error', {
-							text: 'Could not load related records: ' + (error.message || 'request failed')
-						})
-					]));
+	/**
+	 * A record as the whole screen, under its list's heading.
+	 */
+	function renderRecordPage(object, id) {
+		dom.root.classList.add('is-record');
+		clear(dom.filters);
+		clear(dom.actions);
 
-					renderTabs([
-						{ id: 'details', label: 'Details' },
-						{ id: 'related-error', label: 'Related' }
-					]);
-				}
+		var page = el('div.pcm-crm-record-page');
+		clear(dom.body, page);
+		page.appendChild(el('p.pcm-crm-loading', { text: 'Loading…' }));
 
-				window.console.error(error);
-			});
+		loadRecord(page, 'page', object, id, {});
+	}
+
+	/**
+	 * Fetch a record and draw it into a host, then its related lists.
+	 */
+	function loadRecord(host, mode, object, id, options) {
+		var token = current.token + 1;
+
+		current = {
+			host: host,
+			mode: mode,
+			object: object,
+			record: null,
+			options: options || {},
+			editing: !id || !servedLayout(object),
+			dirty: false,
+			token: token,
+			below: current.below
+		};
+
+		var fetch = id ? api('/' + object + '/' + id) : Promise.resolve(options.prefill || {});
+
+		return fetch.then(function (record) {
+			if (current.token !== token) { return; }
+
+			current.record = record;
+			renderRecord(object, record, current.options);
+
+			if (id) { rememberRecent(object, record.id, objects[object].title(record)); }
+
+			if (id) { loadRelated(object, record, token); }
 		}).catch(function (error) {
-			clear(dom.drawer, el('div.pcm-crm-error', { text: error.message }));
+			if (current.token !== token) { return; }
+
+			clear(host, el('div.pcm-crm-error', { text: error.message }));
 		});
 	}
 
-	function closeDrawer() {
-		dom.drawer.hidden = true;
-		dom.scrim.hidden = true;
-		state.recordId = 0;
-		writeHash();
+	/**
+	 * Each object declares how its related section is built, because asking
+	 * for a route that does not exist is a guaranteed 404 — which then showed
+	 * up as an error tab on a record that simply has nothing hanging off it.
+	 * 'local' is a leaf like an activity: nothing hangs off one, so its section
+	 * comes from the record's own parents rather than a fetch.
+	 */
+	function loadRelated(object, record, token) {
+		var relatedMode = (objects[object] || {}).related;
+
+		if (relatedMode === 'local') {
+			renderRelated(object, record, {});
+			return;
+		}
+
+		if (relatedMode !== 'fetch') { return; }
+
+		api('/related/' + object + '/' + record.id).then(function (related) {
+			if (current.token !== token) { return; }
+
+			renderRelated(object, record, related);
+		}).catch(function (error) {
+			if (current.token !== token) { return; }
+
+			// Swallowing this would leave a record showing only a Details tab,
+			// which reads as "nothing is attached to this" — a different and
+			// wrong statement.
+			var panels = recordHost().querySelector('[data-role="panels"]');
+
+			if (panels) {
+				panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: 'related-error' }, hidden: true }, [
+					el('div.pcm-crm-error', {
+						text: 'Could not load related records: ' + (error.message || 'request failed')
+					})
+				]));
+
+				renderTabs([
+					{ id: 'details', label: 'Details' },
+					{ id: 'related-error', label: 'Related' }
+				]);
+			}
+
+			window.console.error(error);
+		});
 	}
 
+	/**
+	 * Draw the current record again from what is on the server — after a save,
+	 * a send, an enrollment — without losing where it is drawn.
+	 */
+	function reloadRecord() {
+		if (!current.object || !current.record || !current.record.id) { return; }
+
+		if (current.mode === 'page') {
+			renderRecordPage(current.object, current.record.id);
+		} else {
+			loadRecord(current.host, current.mode, current.object, current.record.id, {});
+		}
+	}
+
+	/**
+	 * Whether an object's form comes from a served layout. Those read as a
+	 * record and edit in place; an object that declares its own form —
+	 * templates, sequences, schedules — is a form and nothing else.
+	 */
+	function servedLayout(object) {
+		var schema = state.schema && state.schema[object];
+
+		return !!(schema && schema.layout && schema.layout.length);
+	}
+
+	/**
+	 * Alias kept for callers that predate the record page.
+	 */
 	function renderDrawer(object, record, options) {
+		renderRecord(object, record, options);
+	}
+
+	function renderRecord(object, record, options) {
 		options = options || {};
 
+		var host = recordHost();
 		var def = objects[object];
 		var isNew = !record.id;
-		var values = Object.assign({}, record);
+		var isPage = current.mode === 'page';
 
-		clear(dom.drawer);
+		clear(host);
 
-		dom.drawer.appendChild(el('div.pcm-crm-modal-head', {}, [
+		var actions = el('div.pcm-crm-record-actions');
+
+		if (!isNew && !current.editing) {
+			actions.appendChild(el('button.pcm-btn.pcm-btn-sm', {
+				type: 'button',
+				text: 'Edit',
+				onclick: function () { enterEdit(); }
+			}));
+
+			actions.appendChild(el('button.pcm-btn.pcm-btn-sm.pcm-btn-danger', {
+				type: 'button',
+				text: 'Delete',
+				onclick: function () { deleteRecord(object, record); }
+			}));
+		}
+
+		// A record glimpsed in the modal — a deal off the board — has a page of
+		// its own, and one click should reach it.
+		if (!isNew && !isPage && objectPage(object) && !pageMode(state.view)) {
+			actions.appendChild(el('a.pcm-btn.pcm-btn-sm.pcm-btn-quiet', {
+				href: recordUrl(object, record.id),
+				text: 'Open page'
+			}));
+		}
+
+		host.appendChild(el('div.pcm-crm-modal-head' + (isPage ? '.pcm-crm-record-head' : ''), {}, [
+			objectIcon(object),
 			el('div.pcm-crm-modal-heading', {}, [
 				kicker(def, record, isNew, options),
-				el('h2', { text: isNew ? 'New ' + def.label : def.title(record) })
+				el(isPage ? 'h2.pcm-crm-record-title' : 'h2', { text: isNew ? 'New ' + def.label : def.title(record) })
 			]),
 			// Sample records are flagged in the database, and saying so on the
 			// record means nobody has to remember which is which before acting
-			// on one. It sits out at the right rather than between the parent
-			// and the name, where it split the heading in two.
+			// on one.
 			Number(record.is_test) ? el('span.pcm-crm-test-badge', { text: 'Sample data' }) : null,
-			el('button.pcm-crm-drawer-close', {
+			actions.children.length ? actions : null,
+			isPage ? null : el('button.pcm-crm-drawer-close', {
 				type: 'button',
 				'aria-label': 'Close',
 				text: '×',
@@ -1605,8 +1890,15 @@
 			top.appendChild(highlightPanel(def.highlights(record)));
 		}
 
+		if (!isNew && def.path) {
+			var path = pathBar(object, record, def.path(record));
+			if (path) { top.appendChild(path); }
+		}
+
 		top.appendChild(el('div.pcm-crm-tabs', { 'data-role': 'tabs', role: 'tablist' }));
-		dom.drawer.appendChild(top);
+		host.appendChild(top);
+
+		var values = Object.assign({}, record);
 
 		var scroll = el('div.pcm-crm-modal-body', {}, [
 			el('div.pcm-crm-panels', { 'data-role': 'panels' }, [
@@ -1614,13 +1906,76 @@
 			])
 		]);
 
-		dom.drawer.appendChild(scroll);
+		host.appendChild(scroll);
 
 		// Details is the only tab until the related lists arrive and say what
 		// else this record has.
 		renderTabs([{ id: 'details', label: 'Details' }]);
 
 		scroll.scrollTop = 0;
+	}
+
+	/**
+	 * Swap the Details panel between reading and editing, in place, so the
+	 * related tabs and the scroll position survive the switch.
+	 */
+	function redrawDetails(focusKey) {
+		var host = recordHost();
+		var panels = host.querySelector('[data-role="panels"]');
+		var old = panels && panels.querySelector('[data-tab="details"]');
+
+		if (!old || !current.record) { return; }
+
+		var next = detailsPanel(current.object, current.record, Object.assign({}, current.record), current.options);
+
+		panels.replaceChild(next, old);
+
+		// The header's Edit and Delete belong to reading.
+		var actions = host.querySelector('.pcm-crm-record-actions');
+		if (actions) { actions.hidden = current.editing; }
+
+		selectTab('details');
+
+		if (focusKey) {
+			var input = host.querySelector('#pcm-crm-field-' + focusKey);
+			if (input && input.focus) { input.focus(); }
+		}
+	}
+
+	function enterEdit(focusKey) {
+		if (current.editing) { return; }
+
+		current.editing = true;
+		current.dirty = false;
+		redrawDetails(focusKey);
+	}
+
+	function cancelEdit() {
+		if (!confirmDiscard()) { return; }
+
+		current.editing = false;
+		current.dirty = false;
+		redrawDetails();
+	}
+
+	function deleteRecord(object, record) {
+		var def = objects[object];
+
+		if (!window.confirm('Delete this ' + def.label.toLowerCase() + '? It goes to the Recycle Bin, and can be restored from there.')) { return; }
+
+		api('/' + object + '/' + record.id, { method: 'DELETE' }).then(function () {
+			current.dirty = false;
+
+			if (current.mode === 'page') {
+				state.recordId = 0;
+				writeHash(true);
+				render();
+				return;
+			}
+
+			closeDrawer();
+			refreshView();
+		}).catch(showError);
 	}
 
 	/**
@@ -1632,7 +1987,7 @@
 	 * fetch can resolve after someone has already clicked away from Details.
 	 */
 	function renderTabs(tabs, selected) {
-		var strip = dom.drawer.querySelector('[data-role="tabs"]');
+		var strip = recordHost().querySelector('[data-role="tabs"]');
 		if (!strip) { return; }
 
 		var active = selected || strip.dataset.active || 'details';
@@ -1660,8 +2015,8 @@
 	}
 
 	function selectTab(id) {
-		var strip = dom.drawer.querySelector('[data-role="tabs"]');
-		var panels = dom.drawer.querySelector('[data-role="panels"]');
+		var strip = recordHost().querySelector('[data-role="tabs"]');
+		var panels = recordHost().querySelector('[data-role="panels"]');
 		if (!strip || !panels) { return; }
 
 		strip.dataset.active = id;
@@ -1681,19 +2036,37 @@
 	}
 
 	/**
-	 * The details form, as a set of two-column field groups.
+	 * The details, as a set of two-column field groups — read, or in a form.
 	 *
 	 * Two columns rather than as many as fit: three made related fields — a
 	 * street and the city under it — land in different columns, which is
 	 * exactly the pairing a form like this should preserve.
+	 *
+	 * Reading is the default for a saved record, the way Salesforce shows one:
+	 * values as text and lookups as links. A pencil beside any field, a double
+	 * click on it, or Edit in the header turns the whole panel into the form,
+	 * with Save and Cancel held at the foot.
 	 */
 	function detailsPanel(object, record, values, options) {
 		options = options || {};
 
 		var def = objects[object];
 		var isNew = !record.id;
+		var editing = current.editing || isNew;
 
-		var form = el('form', { onsubmit: function (e) { e.preventDefault(); } });
+		var form = el('form.pcm-crm-details' + (editing ? '.is-editing' : '.is-reading'), {
+			onsubmit: function (e) { e.preventDefault(); }
+		});
+
+		// Lookups on this form, so choosing one can clear the ones it narrows.
+		form.pcmLookups = [];
+
+		if (editing) {
+			var markDirty = function () { if (form === current.form) { current.dirty = true; } };
+			form.addEventListener('input', markDirty);
+			form.addEventListener('change', markDirty);
+			current.form = form;
+		}
 
 		layoutFor(object).forEach(function (group) {
 			var grid = el('div.pcm-crm-fields');
@@ -1706,7 +2079,11 @@
 			group.fields.forEach(function (entry) {
 				var field = ( typeof entry === 'string' ) ? fieldDefinition(object, entry) : entry;
 
-				if (field) { grid.appendChild(fieldControl(field, values)); }
+				if (!field) { return; }
+
+				grid.appendChild(editing
+					? fieldControl(field, values, form)
+					: fieldOutput(object, field, record));
 			});
 
 			// A section whose fields have all been removed would otherwise
@@ -1720,9 +2097,20 @@
 			form.appendChild(grid);
 		});
 
-		var status = el('span.pcm-crm-muted');
+		// Last group, and read-only: these are stamps the database writes, so
+		// showing them as inputs would invite edits that the model discards.
+		if (!isNew) {
+			form.appendChild(el('h4.pcm-crm-group-head', { text: 'System Information' }));
+			form.appendChild(systemInfo(record));
+		}
 
-		var actions = el('div.pcm-crm-form-actions', {}, [
+		if (!editing) {
+			return el('div.pcm-crm-panel', { dataset: { tab: 'details' } }, [form]);
+		}
+
+		var status = el('span.pcm-crm-muted', { role: 'status' });
+
+		var actions = el('div.pcm-crm-form-actions.pcm-crm-form-footer', {}, [
 			el('button.pcm-btn.pcm-btn-primary', {
 				type: 'button',
 				text: isNew ? 'Create' : 'Save',
@@ -1732,8 +2120,16 @@
 				type: 'button',
 				text: 'Cancel',
 				onclick: function () {
-					if (options.returnTo) { openDrawer(options.returnTo.object, options.returnTo.id); }
-					else { closeDrawer(); }
+					if (isNew || !servedLayout(object)) {
+						if (!confirmDiscard()) { return; }
+						current.dirty = false;
+						closeDrawer();
+						// Back to the parent it was started from, in the modal it was in.
+						if (options.returnTo && current.mode !== 'page') { openDrawer(options.returnTo.object, options.returnTo.id); }
+						return;
+					}
+
+					cancelEdit();
 				}
 			}),
 			status
@@ -1747,26 +2143,14 @@
 			}));
 		}
 
-		if (!isNew) {
+		// An object that is only ever a form has no read view, and so no header
+		// Delete — it keeps its own here.
+		if (!isNew && !servedLayout(object)) {
 			actions.appendChild(el('button.pcm-btn.pcm-btn-danger.pcm-crm-delete', {
 				type: 'button',
 				text: 'Delete',
-				onclick: function () {
-					if (!window.confirm('Delete this ' + def.label.toLowerCase() + '? It can be restored from the database if needed.')) { return; }
-
-					api('/' + object + '/' + record.id, { method: 'DELETE' }).then(function () {
-						closeDrawer();
-						refreshView();
-					}).catch(showError);
-				}
+				onclick: function () { deleteRecord(object, record); }
 			}));
-		}
-
-		// Last group, and read-only: these are stamps the database writes, so
-		// showing them as inputs would invite edits that the model discards.
-		if (!isNew) {
-			form.appendChild(el('h4.pcm-crm-group-head', { text: 'System Information' }));
-			form.appendChild(systemInfo(record));
 		}
 
 		form.appendChild(actions);
@@ -1775,11 +2159,8 @@
 	}
 
 	/**
-	 * The line above the record's name: the parent it belongs to.
-	 *
-	 * Rendered as a button when it points at a record, because for a contact
-	 * this is the only route to its account — the account is not otherwise
-	 * reachable from the person without going back to the Accounts list.
+	 * The line above the record's name: on a page, the way back to its list;
+	 * then the parent it belongs to, as a link.
 	 */
 	function kicker(def, record, isNew, options) {
 		// A new child names the parent it will be attached to, so the link the
@@ -1787,31 +2168,41 @@
 		if (isNew) {
 			return el('p.pcm-crm-drawer-kicker', {
 				text: options.returnTo
-					? def.label + ' for ' + (lookupLabel(options.returnTo.object, options.returnTo.id) || 'this record')
+					? def.label + ' for ' + (options.returnTo.label || lookupLabel(options.returnTo.object, options.returnTo.id) || 'this record')
 					: def.label
 			});
 		}
 
 		var label = def.kicker ? def.kicker(record) : def.label;
 		var link = def.kickerLink ? def.kickerLink(record) : null;
+		var line = el('p.pcm-crm-drawer-kicker');
 
-		if (!link) {
-			return el('p.pcm-crm-drawer-kicker', { text: label });
+		if (current.mode === 'page') {
+			line.appendChild(el('a.pcm-crm-crumb', {
+				href: '#',
+				text: def.plural,
+				onclick: function (event) {
+					event.preventDefault();
+					if (!confirmDiscard()) { return; }
+					current.dirty = false;
+					state.recordId = 0;
+					writeHash(true);
+					render();
+				}
+			}));
+			line.appendChild(el('span.pcm-crm-crumb-sep', { text: ' › ', 'aria-hidden': 'true' }));
 		}
 
-		return el('p.pcm-crm-drawer-kicker', {}, [
-			el('button.pcm-crm-kicker-link', {
-				type: 'button',
-				text: label,
-				title: 'Open this ' + link.object.replace(/s$/, ''),
-				onclick: function () { openDrawer(link.object, link.id); }
-			})
-		]);
+		line.appendChild(link ? recordLink(link.object, link.id, label, { quiet: true }) : el('span', { text: label }));
+
+		return line;
 	}
 
 	/**
 	 * The Salesforce-style highlights strip: the handful of fields you need
 	 * before deciding whether to read the rest of the record.
+	 *
+	 * An item may carry `link: { object, id }`, and then reads as a lookup.
 	 */
 	function highlightPanel(items) {
 		var panel = el('div.pcm-crm-highlights');
@@ -1819,15 +2210,339 @@
 		items.forEach(function (item) {
 			if (!item.value || item.value === '—') { return; }
 
+			var value;
+
+			if (item.link && item.link.id) {
+				value = el('span.pcm-crm-highlight-value', {}, [recordLink(item.link.object, item.link.id, item.value)]);
+			} else if (item.href) {
+				value = el('a.pcm-crm-highlight-value', { href: item.href, text: item.value });
+			} else {
+				value = el('span.pcm-crm-highlight-value', { text: item.value });
+			}
+
 			panel.appendChild(el('div.pcm-crm-highlight', {}, [
 				el('span.pcm-crm-highlight-label', { text: item.label }),
-				item.href
-					? el('a.pcm-crm-highlight-value', { href: item.href, text: item.value })
-					: el('span.pcm-crm-highlight-value', { text: item.value })
+				value
 			]));
 		});
 
 		return panel;
+	}
+
+	/**
+	 * A stage path: every stage as a step, the current one marked, and a click
+	 * on another offering to move the record there.
+	 *
+	 * spec: { field, stages: [{ name, closed, lost }], current }. A losing stage
+	 * asks for its reason first, because the server refuses one without — the
+	 * board does the same, for the same reason.
+	 */
+	function pathBar(object, record, spec) {
+		if (!spec || !spec.stages || !spec.stages.length) { return null; }
+
+		var currentIndex = -1;
+
+		spec.stages.forEach(function (stage, i) {
+			if (stage.name === spec.current) { currentIndex = i; }
+		});
+
+		var bar = el('ol.pcm-crm-path', { 'aria-label': 'Stage' });
+
+		spec.stages.forEach(function (stage, i) {
+			var tone = i === currentIndex ? '.is-current' : (i < currentIndex ? '.is-done' : '');
+			if (i === currentIndex && stage.lost) { tone += '.is-lost'; }
+
+			bar.appendChild(el('li.pcm-crm-path-step' + tone, {}, [
+				el('button', {
+					type: 'button',
+					text: stage.name,
+					'aria-current': i === currentIndex ? 'step' : null,
+					disabled: i === currentIndex,
+					title: i === currentIndex ? 'Current stage' : 'Move to ' + stage.name,
+					onclick: function () { moveToStage(object, record, spec.field, stage); }
+				})
+			]));
+		});
+
+		return el('div.pcm-crm-path-wrap', {}, [bar]);
+	}
+
+	function moveToStage(object, record, field, stage) {
+		if (current.editing && current.dirty) {
+			window.alert('Save or cancel your edits first.');
+			return;
+		}
+
+		var body = {};
+		body[field] = stage.name;
+
+		if (stage.lost) {
+			var reason = window.prompt('Why was it lost?');
+			if (!reason) { return; }
+			body.closed_lost_reason = reason;
+		} else if (!window.confirm('Mark as ' + stage.name + '?')) {
+			return;
+		}
+
+		api('/' + object + '/' + record.id, { method: 'PUT', body: body })
+			.then(function () {
+				reloadRecord();
+				// The board or list behind a modal shows the stage too.
+				if (current.mode !== 'page') { refreshView(); }
+			})
+			.catch(function (error) { window.alert(error.message); });
+	}
+
+	/**
+	 * A link to a record: its object's mark and its name, going to its page.
+	 *
+	 * A real anchor with a real href, so a middle click or a copied link works;
+	 * a plain click is taken over so moving within a list screen is a history
+	 * entry rather than a reload. Hovering shows the record's highlights.
+	 */
+	function recordLink(object, id, label, opts) {
+		opts = opts || {};
+
+		var url = recordUrl(object, id);
+
+		var link = el('a.pcm-crm-lookup-link' + (opts.quiet ? '.is-quiet' : ''), {
+			href: url || '#',
+			dataset: { object: object, id: String(id) },
+			onclick: function (event) {
+				event.stopPropagation();
+
+				if (event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1) { return; }
+
+				event.preventDefault();
+				hideCard();
+				openRecord(object, id);
+			},
+			onkeydown: function (event) { event.stopPropagation(); },
+			onmouseenter: function () { queueCard(link, object, id); },
+			onmouseleave: function () { leaveCard(); },
+			onfocus: function () { queueCard(link, object, id); },
+			onblur: function () { leaveCard(); }
+		}, [opts.icon === false ? null : objectIcon(object), el('span', { text: label || '#' + id })]);
+
+		return link;
+	}
+
+	/**
+	 * One field, read.
+	 */
+	function fieldOutput(object, field, record) {
+		var editable = !field.readonly && servedLayout(object);
+		var wrap = el('div.pcm-crm-field.pcm-crm-field-read' + (field.wide ? '.pcm-crm-field-wide' : ''), {
+			dataset: { field: field.key }
+		});
+
+		wrap.appendChild(el('span.pcm-crm-read-label', { text: field.label }));
+
+		var line = el('div.pcm-crm-read-value', {
+			ondblclick: editable ? function (event) {
+				// A double click on a link is two clicks on the link.
+				if (event.target && event.target.closest && event.target.closest('a')) { return; }
+				enterEdit(field.key);
+			} : null
+		}, [displayValue(object, field, record)]);
+
+		if (editable) {
+			line.appendChild(el('button.pcm-crm-read-edit', {
+				type: 'button',
+				'aria-label': 'Edit ' + field.label,
+				title: 'Edit',
+				onclick: function () { enterEdit(field.key); }
+			}, [el('span.dashicons.dashicons-edit', { 'aria-hidden': 'true' })]));
+		}
+
+		wrap.appendChild(line);
+
+		// Hidden under the same condition as its input, so a field that does
+		// not apply is no more visible read than it is edited.
+		if (field.showWhen) {
+			wrap.dataset.showWhen = field.showWhen;
+			if (field.showWhenLost) { wrap.dataset.showWhenLost = '1'; }
+			if (field.showWhenValue) { wrap.dataset.showWhenValue = field.showWhenValue; }
+			if (field.showWhenOneOf) { wrap.dataset.showWhenOneOf = field.showWhenOneOf.join('|'); }
+			wrap.hidden = !conditionMet(wrap.dataset, record);
+		}
+
+		return wrap;
+	}
+
+	/**
+	 * A value as it reads: a link, a sum of money, a date, a tick.
+	 */
+	function displayValue(object, field, record) {
+		var value = record[field.key];
+		var empty = value === null || value === undefined || value === '' ||
+			(field.type === 'id' && !Number(value));
+
+		var target = field.lookup === 'polymorphic'
+			? pluralFor(record.what_type)
+			: (field.lookup || (field.ui === 'relationship' ? field.related : ''));
+
+		if (target || field.lookup === 'polymorphic') {
+			if (empty || !target) { return el('span.pcm-crm-muted', { text: '—' }); }
+
+			var name = record['_' + field.key + '_name'] || lookupLabel(target, value) || '';
+
+			return recordLink(target, Number(value), name || ((objects[target] && objects[target].label) || 'Record') + ' #' + value);
+		}
+
+		if (field.type === 'checkbox' || field.type === 'bool' || field.ui === 'checkbox') {
+			return el('span', { text: Number(value) ? '✓ Yes' : 'No' });
+		}
+
+		if (empty) { return el('span.pcm-crm-muted', { text: '—' }); }
+
+		if (field.key === 'owner_id' && record._owner_name) {
+			return el('span', { text: record._owner_name });
+		}
+
+		if (field.options && field.options.length) {
+			var chosen = field.options.filter(function (option) {
+				return String(option.value) === String(value);
+			})[0];
+
+			return el('span', { text: chosen ? chosen.label : String(value) });
+		}
+
+		if (field.ui === 'currency') { return el('span', { text: money(value) }); }
+		if (field.type === 'date' || field.ui === 'date') { return el('span', { text: formatDate(value) }); }
+		if (field.type === 'datetime') { return el('span', { text: formatDateTime(value) }); }
+		if (field.type === 'hours' || field.ui === 'hours') { return el('span', { text: value + 'h' }); }
+
+		if (field.type === 'email' || /(^|_)email$/.test(field.key)) {
+			return el('a', { href: 'mailto:' + value, text: String(value) });
+		}
+
+		if (/phone$/.test(field.key)) {
+			return el('a', { href: 'tel:' + value, text: String(value) });
+		}
+
+		if (field.type === 'url' || field.ui === 'url' || field.key === 'website') {
+			var href = /^https?:\/\//i.test(value) ? value : 'https://' + value;
+			return el('a', { href: href, text: String(value), target: '_blank', rel: 'noopener noreferrer' });
+		}
+
+		if (field.type === 'textarea' || field.type === 'longtext') {
+			return el('div.pcm-crm-read-long', { text: String(value) });
+		}
+
+		return el('span', { text: String(value) });
+	}
+
+	/* Hover cards ------------------------------------------------------------
+	   A lookup link says a name; resting on it says the rest — the record's
+	   highlights, fetched once per page. Not on touch, where there is no
+	   resting, and a tap follows the link.
+	   --------------------------------------------------------------------- */
+
+	var cardCache = {};
+	var cardTimer = 0;
+	var cardLeaveTimer = 0;
+
+	function canHover() {
+		return !!(window.matchMedia && window.matchMedia('(hover: hover)').matches);
+	}
+
+	function queueCard(link, object, id) {
+		if (!canHover() || !objects[object]) { return; }
+
+		window.clearTimeout(cardLeaveTimer);
+		window.clearTimeout(cardTimer);
+
+		cardTimer = window.setTimeout(function () { showCard(link, object, id); }, 400);
+	}
+
+	function leaveCard() {
+		window.clearTimeout(cardTimer);
+		cardLeaveTimer = window.setTimeout(hideCard, 150);
+	}
+
+	function hideCard() {
+		window.clearTimeout(cardTimer);
+		if (dom.card) { dom.card.hidden = true; }
+	}
+
+	function showCard(link, object, id) {
+		if (!dom.card) {
+			dom.card = el('div.pcm-crm-hovercard', {
+				role: 'tooltip',
+				hidden: true,
+				onmouseenter: function () { window.clearTimeout(cardLeaveTimer); },
+				onmouseleave: function () { leaveCard(); }
+			});
+			dom.root.appendChild(dom.card);
+		}
+
+		var key = object + ':' + id;
+		var fetch = cardCache[key] || (cardCache[key] = api('/' + object + '/' + id));
+
+		fetch.then(function (row) {
+			var def = objects[object];
+			var rect = link.getBoundingClientRect();
+
+			clear(dom.card);
+			dom.card.appendChild(el('div.pcm-crm-hovercard-head', {}, [
+				objectIcon(object),
+				el('div', {}, [
+					el('span.pcm-crm-hovercard-kind', { text: def.label }),
+					el('strong', { text: def.title(row) })
+				])
+			]));
+
+			if (def.highlights) {
+				var list = el('dl.pcm-crm-hovercard-list');
+
+				def.highlights(row).forEach(function (item) {
+					if (!item.value || item.value === '—') { return; }
+					list.appendChild(el('dt', { text: item.label }));
+					list.appendChild(el('dd', { text: item.value }));
+				});
+
+				dom.card.appendChild(list);
+			}
+
+			dom.card.style.top = Math.round(rect.bottom + 6) + 'px';
+			dom.card.style.left = Math.round(Math.max(8, Math.min(rect.left, (window.innerWidth || 1200) - 320))) + 'px';
+			dom.card.hidden = false;
+		}).catch(function () {
+			delete cardCache[key];
+		});
+	}
+
+	/* Recently viewed ---------------------------------------------------------
+	   What a lookup offers before anything is typed. Per browser, because it is
+	   a convenience rather than a record of anything.
+	   --------------------------------------------------------------------- */
+
+	function recentKey(object) { return 'pcm-crm-recent-' + object; }
+
+	function readRecent(object) {
+		try {
+			var raw = window.localStorage && window.localStorage.getItem(recentKey(object));
+			var list = raw ? JSON.parse(raw) : [];
+			return Array.isArray(list) ? list : [];
+		} catch (e) {
+			return [];
+		}
+	}
+
+	function rememberRecent(object, id, label) {
+		if (!label) { return; }
+
+		try {
+			if (!window.localStorage) { return; }
+
+			var list = readRecent(object).filter(function (item) { return Number(item.id) !== Number(id); });
+
+			list.unshift({ id: Number(id), label: label });
+			window.localStorage.setItem(recentKey(object), JSON.stringify(list.slice(0, 8)));
+		} catch (e) {
+			// Private windows and full storage both land here; neither matters.
+		}
 	}
 
 	/**
@@ -1908,13 +2623,13 @@
 		return hints;
 	}
 
-	function fieldControl(field, values) {
+	function fieldControl(field, values, form, opts) {
 		var id = 'pcm-crm-field-' + field.key;
 
 		function onInput(event) {
 			values[field.key] = event.target.value;
-			applyDerived(field.key, values);
-			applyConditionalFields(values);
+			applyDerived(field.key, values, form);
+			applyConditionalFields(values, form);
 		}
 
 		// A checkbox is a control with a label beside it, not a labelled box
@@ -1926,7 +2641,7 @@
 				checked: !!Number(values[field.key]),
 				onchange: function (event) {
 					values[field.key] = event.target.checked ? 1 : 0;
-					applyConditionalFields(values);
+					applyConditionalFields(values, form);
 				}
 			});
 
@@ -1940,8 +2655,10 @@
 		});
 		var control;
 
-		if (field.lookup === 'polymorphic') {
-			return relatedToControl(field, values);
+		// A lookup, built-in or a custom relationship, is a search rather than a
+		// dropdown of every record there is.
+		if (field.lookup || field.ui === 'relationship') {
+			return withCondition(lookupControl(field, values, form || el('form'), opts), field, values);
 		}
 
 		var custom = controls[field.type] || controls[field.ui];
@@ -1954,23 +2671,10 @@
 			return wrap;
 		}
 
-		// A custom relationship points at another object; the picker is the same
-		// one a built-in lookup uses, so it needs the same cached list.
-		var lookup = field.lookup || (field.ui === 'relationship' ? field.related : '');
-
-		if (lookup && !lookups[lookup]) {
-			loadLookup(lookup).then(function () {
-				var replacement = fieldControl(field, values);
-				if (wrap.parentNode) { wrap.parentNode.replaceChild(replacement, wrap); }
-			});
-		}
-
-		if (field.options || lookup) {
+		if (field.options) {
 			control = el('select', { id: id, onchange: onInput });
 
-			var list = lookup
-				? [{ value: '', label: '—' }].concat(lookups[lookup] || [])
-				: field.options;
+			var list = field.options;
 
 			list.forEach(function (option) {
 				control.appendChild(el('option', {
@@ -1997,8 +2701,14 @@
 
 		if (field.note) { wrap.appendChild(el('span.pcm-crm-field-note', { text: field.note })); }
 
-		// Fields that only apply under some other field's value start hidden,
-		// and are revealed by the control that makes them relevant.
+		return withCondition(wrap, field, values);
+	}
+
+	/**
+	 * Fields that only apply under some other field's value start hidden, and
+	 * are revealed by the control that makes them relevant.
+	 */
+	function withCondition(wrap, field, values) {
 		if (field.showWhen) {
 			wrap.dataset.showWhen = field.showWhen;
 			if (field.showWhenLost) { wrap.dataset.showWhenLost = '1'; }
@@ -2062,10 +2772,11 @@
 	 * cross a group boundary — probability sits under Forecast and the stage
 	 * that sets it does not.
 	 */
-	function applyConditionalFields(values) {
-		if (!dom.drawer) { return; }
+	function applyConditionalFields(values, scope) {
+		var root = scope || recordHost();
+		if (!root) { return; }
 
-		dom.drawer.querySelectorAll('[data-show-when]').forEach(function (node) {
+		root.querySelectorAll('[data-show-when]').forEach(function (node) {
 			node.hidden = !conditionMet(node.dataset, values);
 		});
 	}
@@ -2095,15 +2806,16 @@
 	 * it here as well is what makes the form show the number it is about to
 	 * store, rather than the previous stage's until someone saves and reopens.
 	 */
-	function applyDerived(key, values) {
-		if (key !== 'stage_name' || !dom.drawer) { return; }
+	function applyDerived(key, values, scope) {
+		var root = scope || recordHost();
+		if (key !== 'stage_name' || !root) { return; }
 
 		var stage = stageByName(values.stage_name);
 		if (!stage) { return; }
 
 		values.probability = Number(stage.probability);
 
-		var input = dom.drawer.querySelector('#pcm-crm-field-probability');
+		var input = root.querySelector('#pcm-crm-field-probability');
 		if (input) { input.value = values.probability; }
 	}
 
@@ -2316,57 +3028,450 @@
 		return wrap;
 	}
 
-	function relatedToControl(field, values) {
-		var wrap = el('div.pcm-crm-field');
-		var row = el('div', { style: 'display:flex;gap:6px' });
+	/**
+	 * A lookup, the Salesforce way: type to search, pick from the matches, and
+	 * the choice sits in the field as a named pill rather than an id in a
+	 * dropdown of every record there is.
+	 *
+	 * Empty and focused, it offers the records of that kind viewed recently.
+	 * A lookup narrowed by another field on the form (a deal's contact by its
+	 * account) says so over the results, with a way to see all of them. The last
+	 * option creates one, in a modal over this form, and selects it.
+	 *
+	 * The polymorphic Related To gets the same control, with the kind of record
+	 * chosen first.
+	 */
+	function lookupControl(field, values, form, opts) {
+		opts = opts || {};
 
-		var typeSelect = el('select', {
-			style: 'flex:0 0 42%',
-			onchange: function (event) {
-				values.what_type = event.target.value;
-				values.what_id = '';
-				rebuild();
-			}
+		var id = 'pcm-crm-field-' + field.key;
+		var listId = id + '-list';
+		var polymorphic = field.lookup === 'polymorphic';
+		var directory = (state.boot && state.boot.objects) || {};
+
+		function target() {
+			return polymorphic ? pluralFor(values.what_type) : (field.lookup || field.related);
+		}
+
+		var wrap = el('div.pcm-crm-field.pcm-crm-field-lookup' + (field.wide ? '.pcm-crm-field-wide' : ''), {
+			dataset: { field: field.key }
 		});
 
-		[{ value: '', label: '—' }, { value: 'account', label: 'Account' }, { value: 'opportunity', label: 'Opportunity' }]
-			.forEach(function (option) {
-				typeSelect.appendChild(el('option', {
-					value: option.value, text: option.label,
-					selected: (values.what_type || '') === option.value
+		var selection = null;
+		var showAll = false;
+		var active = -1;
+		var options = [];
+		var timer = 0;
+		var seq = 0;
+
+		var input = el('input.pcm-crm-lookup-input', {
+			id: id,
+			type: 'text',
+			role: 'combobox',
+			autocomplete: 'off',
+			'aria-autocomplete': 'list',
+			'aria-expanded': 'false',
+			'aria-controls': listId
+		});
+
+		var list = el('ul.pcm-crm-lookup-list', { id: listId, role: 'listbox', hidden: true });
+		var pillSlot = el('span.pcm-crm-lookup-pill-slot');
+		var box = el('div.pcm-crm-lookup', {}, [pillSlot, input, list]);
+
+		if (polymorphic) {
+			var kinds = ['accounts', 'opportunities', 'projects'].filter(function (slug) { return directory[slug]; });
+			var kind = el('select.pcm-crm-lookup-kind', {
+				'aria-label': 'Kind of record',
+				onchange: function (event) {
+					values.what_type = singularFor(event.target.value);
+					choose(null);
+				}
+			});
+
+			kind.appendChild(el('option', { value: '', text: '—' }));
+			kinds.forEach(function (slug) {
+				kind.appendChild(el('option', {
+					value: slug,
+					text: directory[slug].label,
+					selected: target() === slug
 				}));
 			});
 
-		var idSelect = el('select', { style: 'flex:1' });
-
-		function rebuild() {
-			clear(idSelect);
-			idSelect.appendChild(el('option', { value: '', text: '—' }));
-
-			var source = values.what_type === 'opportunity' ? 'opportunities' : 'accounts';
-
-			if (!values.what_type) { return; }
-
-			loadLookup(source).then(function (list) {
-				list.forEach(function (option) {
-					idSelect.appendChild(el('option', {
-						value: option.value, text: option.label,
-						selected: String(values.what_id || '') === String(option.value)
-					}));
-				});
-			});
+			box.insertBefore(kind, pillSlot);
 		}
 
-		idSelect.addEventListener('change', function (event) { values.what_id = event.target.value; });
-		rebuild();
+		function pluralLabel() {
+			var t = target();
+			return t && directory[t] ? directory[t].plural.toLowerCase() : 'records';
+		}
 
-		row.appendChild(typeSelect);
-		row.appendChild(idSelect);
+		function narrowing() {
+			var filters = {};
+			var names = [];
 
-		wrap.appendChild(el('label', { text: field.label }));
-		wrap.appendChild(row);
+			Object.keys(field.lookup_filter || {}).forEach(function (column) {
+				var source = field.lookup_filter[column];
+
+				if (values[source] && Number(values[source])) {
+					filters[column] = values[source];
+					names.push(values['_' + source + '_name'] || '');
+				}
+			});
+
+			return { filters: filters, active: Object.keys(filters).length > 0 && !showAll, names: names.filter(Boolean) };
+		}
+
+		function paint() {
+			clear(pillSlot);
+
+			input.hidden = !!selection;
+			input.placeholder = target() ? 'Search ' + pluralLabel() + '…' : 'Choose a kind first';
+			input.disabled = !target();
+
+			if (selection) {
+				pillSlot.appendChild(el('span.pcm-crm-lookup-pill', {}, [
+					recordLink(target(), selection.id, selection.label),
+					el('button.pcm-crm-lookup-clear', {
+						type: 'button',
+						'aria-label': 'Clear ' + field.label,
+						text: '×',
+						onclick: function () {
+							choose(null);
+							input.focus();
+						}
+					})
+				]));
+			}
+		}
+
+		function close() {
+			list.hidden = true;
+			input.setAttribute('aria-expanded', 'false');
+			input.removeAttribute('aria-activedescendant');
+			active = -1;
+		}
+
+		function draw(heading, rows, filtered) {
+			clear(list);
+			options = [];
+
+			if (heading) {
+				list.appendChild(el('li.pcm-crm-lookup-heading', { role: 'presentation', text: heading }));
+			}
+
+			rows.forEach(function (row) {
+				options.push({ kind: 'record', row: row });
+			});
+
+			if (!rows.length) {
+				list.appendChild(el('li.pcm-crm-lookup-empty', { role: 'presentation', text: 'No matches.' }));
+			}
+
+			if (filtered) { options.push({ kind: 'all' }); }
+			if (!opts.noCreate && target() && objects[target()] && servedLayout(target())) { options.push({ kind: 'new' }); }
+
+			options.forEach(function (option, i) {
+				var content;
+
+				if (option.kind === 'record') {
+					content = [objectIcon(target()), el('span', { text: option.row.label })];
+				} else if (option.kind === 'all') {
+					content = [el('span', { text: 'Show all ' + pluralLabel() })];
+				} else {
+					content = [el('span.dashicons.dashicons-plus-alt2', { 'aria-hidden': 'true' }), el('span', { text: 'New ' + objects[target()].label })];
+				}
+
+				list.appendChild(el('li.pcm-crm-lookup-option.is-' + option.kind, {
+					id: listId + '-' + i,
+					role: 'option',
+					'aria-selected': 'false',
+					// mousedown rather than click: the input's blur fires before
+					// a click lands, and would close the list out from under it.
+					onmousedown: function (event) { event.preventDefault(); pick(i); }
+				}, content));
+			});
+
+			list.hidden = false;
+			input.setAttribute('aria-expanded', 'true');
+		}
+
+		function search(term) {
+			var t = target();
+			if (!t || !objects[t]) { return; }
+
+			var narrow = narrowing();
+			var mine = ++seq;
+
+			// Recently viewed, when nothing is typed and nothing narrows the
+			// choice — which is when a person is most likely to want one of them.
+			if (!term && !narrow.active) {
+				var recent = readRecent(t);
+
+				if (recent.length) {
+					draw('Recent ' + pluralLabel(), recent.map(function (item) {
+						return { id: item.id, label: item.label };
+					}), false);
+					return;
+				}
+			}
+
+			var query = {
+				search: term,
+				per_page: 10,
+				orderby: t === 'contacts' ? 'last_name' : '',
+				order: 'ASC'
+			};
+
+			if (narrow.active) { query.filters = narrow.filters; }
+
+			api('/' + t, { query: query }).then(function (data) {
+				if (mine !== seq) { return; }
+
+				var heading = narrow.active
+					? objects[t].plural + (narrow.names.length ? ' at ' + narrow.names.join(', ') : ', narrowed')
+					: (term ? '' : objects[t].plural);
+
+				draw(heading, (data.items || []).map(function (row) {
+					return { id: row.id, label: objects[t].title(row), row: row };
+				}), narrow.active);
+			}).catch(function () { close(); });
+		}
+
+		function highlight(i) {
+			var nodes = list.querySelectorAll('.pcm-crm-lookup-option');
+
+			nodes.forEach(function (node, n) {
+				var on = n === i;
+				node.classList.toggle('is-active', on);
+				node.setAttribute('aria-selected', on ? 'true' : 'false');
+				if (on) {
+					input.setAttribute('aria-activedescendant', node.id);
+					if (node.scrollIntoView) { node.scrollIntoView({ block: 'nearest' }); }
+				}
+			});
+
+			active = i;
+		}
+
+		function pick(i) {
+			var option = options[i];
+			if (!option) { return; }
+
+			if (option.kind === 'all') {
+				showAll = true;
+				search(input.value.trim());
+				return;
+			}
+
+			if (option.kind === 'new') {
+				var t = target();
+				var prefill = {};
+
+				// What narrowed the search is what the new record belongs to.
+				Object.keys(narrowing().filters).forEach(function (column) {
+					prefill[column] = narrowing().filters[column];
+				});
+
+				if (input.value.trim()) {
+					prefill[t === 'contacts' ? 'last_name' : (t === 'project_raid' ? 'title' : 'name')] = input.value.trim();
+				}
+
+				close();
+				quickCreate(t, prefill, function (created) {
+					rememberRecent(t, created.id, objects[t].title(created));
+					choose({ id: created.id, label: objects[t].title(created) });
+				});
+				return;
+			}
+
+			choose({ id: option.row.id, label: option.row.label });
+		}
+
+		function choose(item) {
+			var previous = values[field.key];
+
+			selection = item;
+			values[field.key] = item ? item.id : 0;
+			values['_' + field.key + '_name'] = item ? item.label : '';
+			input.value = '';
+			showAll = false;
+			close();
+			paint();
+
+			if (form === current.form) { current.dirty = true; }
+
+			applyDerived(field.key, values, form);
+			applyConditionalFields(values, form);
+
+			if (String(previous || '') !== String(values[field.key] || '')) {
+				clearDependents(form, field.key, values);
+			}
+		}
+
+		input.addEventListener('focus', function () {
+			if (!selection) { search(input.value.trim()); }
+		});
+
+		input.addEventListener('input', function () {
+			window.clearTimeout(timer);
+			timer = window.setTimeout(function () { search(input.value.trim()); }, 200);
+		});
+
+		input.addEventListener('blur', function () {
+			window.setTimeout(close, 120);
+		});
+
+		input.addEventListener('keydown', function (event) {
+			if (event.key === 'ArrowDown') {
+				event.preventDefault();
+				if (list.hidden) { search(input.value.trim()); return; }
+				highlight(Math.min(options.length - 1, active + 1));
+			} else if (event.key === 'ArrowUp') {
+				event.preventDefault();
+				highlight(Math.max(0, active - 1));
+			} else if (event.key === 'Enter') {
+				event.preventDefault();
+				if (!list.hidden && active >= 0) { pick(active); }
+			} else if (event.key === 'Escape') {
+				if (!list.hidden) {
+					// Closing the list is all Escape should do here, not the modal.
+					event.stopPropagation();
+					close();
+				}
+			}
+		});
+
+		var start = Number(values[field.key]);
+		if (start) {
+			selection = {
+				id: start,
+				label: values['_' + field.key + '_name'] || lookupLabel(target(), start) || '#' + start
+			};
+		}
+
+		form.pcmLookups = form.pcmLookups || [];
+		form.pcmLookups.push({
+			field: field,
+			clear: function () { if (selection) { choose(null); } }
+		});
+
+		paint();
+
+		wrap.appendChild(el('label', { for: id, text: field.label + (field.required ? ' *' : '') }));
+		wrap.appendChild(box);
+
+		if (field.note) { wrap.appendChild(el('span.pcm-crm-field-note', { text: field.note })); }
 
 		return wrap;
+	}
+
+	/**
+	 * Choosing a record clears the lookups it narrows, when what they hold no
+	 * longer belongs: a contact at the old account, a task on the old project.
+	 * Checked against the record rather than cleared blindly, so a contact who
+	 * is also at the new account stays.
+	 */
+	function clearDependents(form, sourceKey, values) {
+		(form.pcmLookups || []).forEach(function (entry) {
+			var filter = entry.field.lookup_filter || {};
+
+			Object.keys(filter).forEach(function (column) {
+				if (filter[column] !== sourceKey) { return; }
+
+				var chosen = Number(values[entry.field.key]);
+				if (!chosen) { return; }
+
+				if (!Number(values[sourceKey])) { return; }
+
+				api('/' + entry.field.lookup + '/' + chosen).then(function (row) {
+					if (String(row[column] || '') !== String(values[sourceKey] || '')) { entry.clear(); }
+				}).catch(function () { entry.clear(); });
+			});
+		});
+	}
+
+	/**
+	 * Create a record from inside a lookup, in a modal of its own over the
+	 * form, and hand the new record back.
+	 *
+	 * Its own host rather than the record modal, which may be the very form the
+	 * lookup is on. It creates and nothing else — no related lists, no nested
+	 * quick create — because it exists to fill one field.
+	 */
+	function quickCreate(object, prefill, onCreated) {
+		var def = objects[object];
+
+		if (!dom.quick) {
+			dom.quickScrim = el('div.pcm-crm-scrim.pcm-crm-scrim-quick', { hidden: true, onclick: closeQuick });
+			dom.quick = el('div.pcm-crm-drawer.pcm-crm-quick', { hidden: true, role: 'dialog', 'aria-modal': 'true' });
+			dom.root.appendChild(dom.quickScrim);
+			dom.root.appendChild(dom.quick);
+		}
+
+		var values = Object.assign({}, prefill || {});
+		var form = el('form.pcm-crm-details.is-editing', { onsubmit: function (e) { e.preventDefault(); } });
+		form.pcmLookups = [];
+
+		layoutFor(object).forEach(function (group) {
+			var grid = el('div.pcm-crm-fields');
+
+			group.fields.forEach(function (entry) {
+				var field = ( typeof entry === 'string' ) ? fieldDefinition(object, entry) : entry;
+				if (field) { grid.appendChild(fieldControl(field, values, form, { noCreate: true })); }
+			});
+
+			if (!grid.children.length) { return; }
+			if (group.title) { form.appendChild(el('h4.pcm-crm-group-head', { text: group.title })); }
+			form.appendChild(grid);
+		});
+
+		var status = el('span.pcm-crm-muted', { role: 'status' });
+
+		form.appendChild(el('div.pcm-crm-form-actions.pcm-crm-form-footer', {}, [
+			el('button.pcm-btn.pcm-btn-primary', {
+				type: 'button',
+				text: 'Create',
+				onclick: function (event) {
+					var button = event.target;
+					button.disabled = true;
+					status.textContent = 'Saving…';
+
+					api('/' + object, { method: 'POST', body: values }).then(function (record) {
+						lookups = {};
+						closeQuick();
+						onCreated(record);
+					}).catch(function (error) {
+						status.textContent = error.message;
+						button.disabled = false;
+					});
+				}
+			}),
+			el('button.pcm-btn.pcm-btn-quiet', { type: 'button', text: 'Cancel', onclick: closeQuick }),
+			status
+		]));
+
+		clear(dom.quick);
+		dom.quick.appendChild(el('div.pcm-crm-modal-head', {}, [
+			objectIcon(object),
+			el('div.pcm-crm-modal-heading', {}, [
+				el('p.pcm-crm-drawer-kicker', { text: 'Quick create' }),
+				el('h2', { text: 'New ' + def.label })
+			]),
+			el('button.pcm-crm-drawer-close', { type: 'button', 'aria-label': 'Close', text: '×', onclick: closeQuick })
+		]));
+		dom.quick.appendChild(el('div.pcm-crm-modal-body', {}, [form]));
+
+		dom.quick.hidden = false;
+		dom.quickScrim.hidden = false;
+		applyConditionalFields(values, form);
+
+		var first = form.querySelector('input, select, textarea');
+		if (first && first.focus) { first.focus(); }
+	}
+
+	function closeQuick() {
+		if (dom.quick) { dom.quick.hidden = true; }
+		if (dom.quickScrim) { dom.quickScrim.hidden = true; }
 	}
 
 	function saveRecord(object, id, values, button, status, returnTo) {
@@ -2380,19 +3485,44 @@
 		request.then(function (record) {
 			status.textContent = 'Saved';
 			button.disabled = false;
+			current.dirty = false;
 
 			// A new account or contact has to reach the pickers immediately,
 			// or the next record cannot be linked to it without a reload.
 			lookups = {};
+			cardCache = {};
 
 			if (id) {
-				renderDrawer(object, record);
-			} else if (returnTo) {
+				// Back to reading, with the related lists fetched again: a save
+				// can move what hangs off a record (a stage, an account).
+				current.editing = false;
+				reloadRecord();
+				if (current.mode !== 'page') { refreshView(); }
+				return;
+			}
+
+			if (current.mode === 'modal' && current.below) {
+				// Created from a related list on a record page: the modal goes,
+				// and the page underneath is drawn again with the new row in it.
+				closeDrawer();
+				reloadRecord();
+				return;
+			}
+
+			if (returnTo) {
 				// Back to the parent it was created from, so the new row is
 				// visible in the list it was created out of.
 				openDrawer(returnTo.object, returnTo.id);
-			} else {
-				closeDrawer();
+				return;
+			}
+
+			closeDrawer();
+
+			// A record created from its own list opens as a page, the way it
+			// would have been reached from the list.
+			if (pageMode(state.view) && object === state.view) {
+				openRecord(object, record.id);
+				return;
 			}
 
 			refreshView();
@@ -2484,7 +3614,7 @@
 	}
 
 	function renderRelated(object, record, related) {
-		var panels = dom.drawer.querySelector('[data-role="panels"]');
+		var panels = recordHost().querySelector('[data-role="panels"]');
 		if (!panels) { return; }
 
 		var tabs = [{ id: 'details', label: 'Details' }];
@@ -2529,7 +3659,7 @@
 					columns: function (row) {
 						return [{ text: row.label, strong: true }, { badge: row.kind }];
 					},
-					open: function (row) { openDrawer(row.object, row.id); }
+					open: function (row) { openRecord(row.object, row.id); }
 				}));
 			}
 
@@ -2550,7 +3680,7 @@
 				onNew: function () {
 					openDrawer(child.object, 0, {
 						prefill: child.prefill,
-						returnTo: { object: object, id: record.id }
+						returnTo: { object: object, id: record.id, label: objects[object].title(record) }
 					});
 				},
 				empty: 'No ' + child.label.toLowerCase() + ' yet.',
@@ -2716,7 +3846,7 @@
 
 				// The send wrote an activity, so the record's other tabs are
 				// now out of date.
-				openDrawer('contacts', record.id);
+				reloadRecord();
 			}).catch(function (error) {
 				status.textContent = error.message;
 				button.disabled = false;
@@ -2797,7 +3927,7 @@
 							method: 'POST',
 							body: { sequence_id: Number(picker.value) }
 						}).then(function () {
-							openDrawer('contacts', record.id);
+							reloadRecord();
 						}).catch(function (error) {
 							status.textContent = error.message;
 							event.target.disabled = false;
@@ -2840,7 +3970,7 @@
 		status.textContent = 'Stopping…';
 
 		api('/enrollments/' + enrollment.id + '/stop', { method: 'POST', body: { reason: reason } })
-			.then(function () { openDrawer('contacts', record.id); })
+			.then(function () { reloadRecord(); })
 			.catch(function (error) {
 				status.textContent = error.message;
 				button.disabled = false;
@@ -2859,18 +3989,18 @@
 				id: record.who_id,
 				object: 'contacts',
 				kind: 'Contact',
-				label: record._contact_name || lookupLabel('contacts', record.who_id) || 'Contact #' + record.who_id
+				label: record._who_id_name || record._contact_name || lookupLabel('contacts', record.who_id) || 'Contact #' + record.who_id
 			});
 		}
 
-		if (record.what_id && record.what_type) {
-			var object = record.what_type === 'opportunity' ? 'opportunities' : 'accounts';
+		var object = record.what_type ? pluralFor(record.what_type) : '';
 
+		if (record.what_id && object) {
 			rows.push({
 				id: record.what_id,
 				object: object,
-				kind: record.what_type === 'opportunity' ? 'Opportunity' : 'Account',
-				label: lookupLabel(object, record.what_id) || 'Record #' + record.what_id
+				kind: objects[object] ? objects[object].label : 'Record',
+				label: record._what_id_name || lookupLabel(object, record.what_id) || 'Record #' + record.what_id
 			});
 		}
 
@@ -2903,7 +4033,7 @@
 			return block;
 		}
 
-		var open = config.open || function (row) { openDrawer(config.object, row.id); };
+		var open = config.open || function (row) { openRecord(config.object, row.id); };
 
 		var list = el('div.pcm-crm-related-rows');
 
@@ -3758,6 +4888,12 @@
 	function refreshView() {
 		var view = views[state.view];
 
+		// On a record page the record is the view; its list is a Back away.
+		if (state.recordId && pageMode(state.view)) {
+			renderRecordPage(state.view, state.recordId);
+			return;
+		}
+
 		if (view && view.load) { view.load(); }
 		else if (objects[state.view]) { loadList(state.view); }
 	}
@@ -3765,15 +4901,50 @@
 	function render() {
 		var view = views[state.view];
 
+		if (dom.root && dom.root.classList) { dom.root.classList.remove('is-record'); }
+		hideCard();
+
+		// A record id in the hash — a link from the notification email, a
+		// lookup on another record, or a reloaded page — is that record's page.
+		if (state.recordId && pageMode(state.view)) {
+			renderRecordPage(state.view, state.recordId);
+			return;
+		}
+
+		current = { host: null, mode: '', object: '', record: null, options: {}, editing: false, dirty: false, token: current.token + 1 };
+
 		if (view) { view.render(); }
 		else if (objects[state.view]) { renderList(state.view); }
 		else { clear(dom.body, el('p', { text: 'Unknown screen.' })); }
 
-		// A record id in the hash — a link from the notification email, or a
-		// reloaded page — opens straight onto that record.
+		// An object with no page of its own still opens in the modal.
 		if (state.recordId && objects[state.view]) {
 			openDrawer(state.view, state.recordId);
 		}
+	}
+
+	/**
+	 * Back and Forward between a list and its records.
+	 */
+	function onPopState() {
+		if (current.editing && current.dirty && !window.confirm('Discard your unsaved changes?')) {
+			// The browser has already moved; put the record back where it was.
+			writeHash(true);
+			return;
+		}
+
+		current.dirty = false;
+		state.recordId = 0;
+		state.query = { search: '', filters: {}, orderby: '', order: 'DESC', page: 1, per_page: state.query.per_page };
+		readHash();
+
+		if (dom.drawer && !dom.drawer.hidden) {
+			dom.drawer.hidden = true;
+			dom.scrim.hidden = true;
+		}
+
+		closeQuick();
+		render();
 	}
 
 	function init() {
@@ -3790,10 +4961,28 @@
 		state.view = root.dataset.view;
 		readHash();
 
-		dom.scrim.addEventListener('click', closeDrawer);
+		dom.scrim.addEventListener('click', function () { closeDrawer(); });
 		document.addEventListener('keydown', function (event) {
-			if (event.key === 'Escape' && !dom.drawer.hidden) { closeDrawer(); }
+			if (event.key !== 'Escape') { return; }
+
+			// The innermost thing open is what Escape closes.
+			if (dom.quick && !dom.quick.hidden) { closeQuick(); return; }
+			if (!dom.drawer.hidden) { closeDrawer(); return; }
+			hideCard();
 		});
+
+		if (window.addEventListener) {
+			window.addEventListener('popstate', onPopState);
+
+			// Leaving the page with an edit half made asks first, as the browser
+			// allows: the wording is the browser's own.
+			window.addEventListener('beforeunload', function (event) {
+				if (current.editing && current.dirty) {
+					event.preventDefault();
+					event.returnValue = '';
+				}
+			});
+		}
 
 		// Before anything draws, so the first chart is already on-theme.
 		if (charts && charts.setTheme) { charts.setTheme(themeColors()); }
@@ -3850,6 +5039,13 @@
 			ownerOptions: ownerOptions,
 			openDrawer: openDrawer,
 			closeDrawer: closeDrawer,
+			openRecord: openRecord,
+			reloadRecord: reloadRecord,
+			recordLink: recordLink,
+			recordUrl: recordUrl,
+			objectIcon: objectIcon,
+			quickCreate: quickCreate,
+			currentRecord: function () { return current; },
 			refreshView: refreshView,
 			renderFilters: renderFilters,
 			drillTo: drillTo,

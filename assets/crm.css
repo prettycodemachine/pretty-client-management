@@ -1638,3 +1638,339 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 @media print {
   .pcm-crm-appbar { display: none !important; }
 }
+
+/* ==========================================================================
+   Record pages, the read view, and lookups
+   ========================================================================== */
+
+/* Object marks -------------------------------------------------------------
+   Each object wears one of the theme's chart colours, so an Account is never
+   mistaken for a Contact at a glance — and a theme moves them with the rest. */
+.pcm-crm-obj-c1 { --pcm-obj: var(--pcm-chart-1); }
+.pcm-crm-obj-c2 { --pcm-obj: var(--pcm-chart-2); }
+.pcm-crm-obj-c3 { --pcm-obj: var(--pcm-chart-3); }
+.pcm-crm-obj-c4 { --pcm-obj: var(--pcm-chart-4); }
+.pcm-crm-obj-c5 { --pcm-obj: var(--pcm-chart-5); }
+.pcm-crm-obj-c6 { --pcm-obj: var(--pcm-chart-6); }
+.pcm-crm-obj-c7 { --pcm-obj: var(--pcm-chart-7); }
+.pcm-crm-obj-c8 { --pcm-obj: var(--pcm-chart-8); }
+
+.pcm-crm .pcm-crm-obj-icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  font-size: 24px;
+  line-height: 36px;
+  text-align: center;
+  border: 2px solid var(--pcm-obj, var(--pcm-ink));
+  border-radius: 10px;
+  background: var(--pcm-paper);
+  color: var(--pcm-obj, var(--pcm-ink));
+}
+
+/* The record page ------------------------------------------------------------ */
+/* The list's own heading, filters and actions step aside: the record header
+   carries the way back. */
+.pcm-crm.is-record > .pcm-crm-head,
+.pcm-crm.is-record > .pcm-crm-filters { display: none; }
+
+.pcm-crm-record-page {
+  margin-top: 18px;
+  background: var(--pcm-paper);
+  border: 3px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  box-shadow: 8px 8px 0 var(--pcm-blue);
+}
+.pcm-crm-record-page > .pcm-crm-loading,
+.pcm-crm-record-page > .pcm-crm-error { margin: 20px 26px; }
+.pcm-crm-record-page .pcm-crm-modal-head { border-radius: 11px 11px 0 0; }
+.pcm-crm-record-page .pcm-crm-modal-body { overflow: visible; }
+.pcm-crm .pcm-crm-record-title { font-size: 1.6rem; }
+
+.pcm-crm-modal-head { align-items: center; }
+.pcm-crm-modal-heading { flex: 1 1 auto; }
+.pcm-crm-modal-head .pcm-crm-test-badge { margin-left: 0; }
+.pcm-crm-record-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pcm-crm-record-actions[hidden] { display: none !important; }
+
+.pcm-crm .pcm-crm-crumb { color: var(--pcm-accent-deep); text-decoration: none; }
+.pcm-crm .pcm-crm-crumb:hover { text-decoration: underline; color: var(--pcm-accent-deeper); }
+.pcm-crm-drawer-kicker .pcm-crm-lookup-link { color: var(--pcm-accent-deep); }
+
+/* Path ---------------------------------------------------------------------- */
+.pcm-crm-path-wrap { margin: -6px 0 18px; overflow-x: auto; }
+.pcm-crm-path {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: max-content;
+}
+.pcm-crm-path-step { margin: 0; flex: 1 1 0; }
+.pcm-crm .pcm-crm-path-step button {
+  width: 100%;
+  padding: 8px 16px 8px 20px;
+  border: 0;
+  background: var(--pcm-gray-light);
+  color: var(--pcm-ink);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%);
+}
+.pcm-crm .pcm-crm-path-step:first-child button { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%); border-radius: 8px 0 0 8px; }
+.pcm-crm .pcm-crm-path-step button:hover { background: var(--pcm-blue); }
+.pcm-crm .pcm-crm-path-step.is-done button { background: var(--pcm-blue); }
+.pcm-crm .pcm-crm-path-step.is-current button {
+  background: var(--pcm-ink);
+  color: var(--pcm-paper);
+  cursor: default;
+}
+.pcm-crm .pcm-crm-path-step.is-current.is-lost button { background: var(--pcm-accent-deep); color: #fff; }
+
+/* Read view ------------------------------------------------------------------ */
+.pcm-crm-details.is-reading .pcm-crm-fields { align-items: start; gap: 4px 28px; }
+.pcm-crm-field-read {
+  gap: 1px;
+  padding: 6px 0 7px;
+  border-bottom: 1px solid var(--pcm-line);
+}
+.pcm-crm-read-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--pcm-body);
+}
+.pcm-crm-read-value {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 26px;
+  color: var(--pcm-ink);
+  font-size: 0.94rem;
+  overflow-wrap: anywhere;
+}
+.pcm-crm-read-long { white-space: pre-wrap; }
+.pcm-crm .pcm-crm-read-edit {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 2px;
+  border-radius: 6px;
+  background: none;
+  color: var(--pcm-gray);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.pcm-crm-field-read:hover .pcm-crm-read-edit,
+.pcm-crm .pcm-crm-read-edit:focus-visible { opacity: 1; }
+.pcm-crm .pcm-crm-read-edit:hover { color: var(--pcm-accent-deep); background: var(--pcm-paper-tint); }
+/* No hover on touch, so the pencil cannot wait to be found. */
+@media (hover: none) {
+  .pcm-crm .pcm-crm-read-edit { opacity: 1; }
+}
+
+/* Edit mode holds Save and Cancel at the foot of the view. The shadow paints
+   paper over the scroll body's bottom padding, which would otherwise let the
+   form show through beneath the bar. */
+.pcm-crm-form-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: 24px;
+  padding: 14px 0;
+  background: var(--pcm-paper);
+  box-shadow: 0 32px 0 var(--pcm-paper);
+}
+.pcm-crm-record-page .pcm-crm-form-footer { box-shadow: 0 -8px 16px -12px rgba(0, 0, 0, 0.25); }
+
+/* Lookup links --------------------------------------------------------------- */
+.pcm-crm .pcm-crm-lookup-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  color: var(--pcm-blue-deep);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.pcm-crm .pcm-crm-lookup-link:hover { color: var(--pcm-accent-deep); }
+.pcm-crm .pcm-crm-lookup-link.is-quiet { font-weight: inherit; }
+.pcm-crm .pcm-crm-lookup-link .pcm-crm-obj-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+  line-height: 17px;
+  border-width: 1.5px;
+  border-radius: 5px;
+}
+.pcm-crm-table .pcm-crm-lookup-link { font-weight: 600; }
+
+/* The lookup control --------------------------------------------------------- */
+.pcm-crm-lookup {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--pcm-control-lg);
+  padding: 0 6px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  background: #fff;
+}
+.pcm-crm-lookup:focus-within { outline: 2px solid var(--pcm-blue-deep); outline-offset: 2px; }
+.pcm-crm .pcm-crm-field .pcm-crm-lookup input.pcm-crm-lookup-input,
+.pcm-crm .pcm-crm-field .pcm-crm-lookup select.pcm-crm-lookup-kind {
+  height: 38px;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background-color: transparent;
+}
+.pcm-crm .pcm-crm-field .pcm-crm-lookup input.pcm-crm-lookup-input { flex: 1 1 auto; min-width: 0; padding: 0 6px; }
+.pcm-crm .pcm-crm-field .pcm-crm-lookup input.pcm-crm-lookup-input[hidden] { display: none; }
+.pcm-crm .pcm-crm-field .pcm-crm-lookup select.pcm-crm-lookup-kind {
+  flex: 0 0 auto;
+  width: auto;
+  border-right: 1px solid var(--pcm-line);
+  border-radius: 0;
+}
+.pcm-crm-lookup-pill-slot:empty { display: none; }
+.pcm-crm-lookup-pill-slot { flex: 1 1 auto; min-width: 0; }
+.pcm-crm-lookup-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 3px 4px 3px 6px;
+  border: 1px solid var(--pcm-line);
+  border-radius: 8px;
+  background: var(--pcm-paper-tint);
+}
+.pcm-crm .pcm-crm-lookup-clear {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--pcm-body);
+  cursor: pointer;
+}
+.pcm-crm .pcm-crm-lookup-clear:hover { color: var(--pcm-accent-deep); }
+
+.pcm-crm-lookup-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: -2px;
+  right: -2px;
+  z-index: 30;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-ink);
+  border-radius: 10px;
+  box-shadow: 4px 4px 0 var(--pcm-blue);
+}
+.pcm-crm-lookup-list[hidden] { display: none !important; }
+.pcm-crm-lookup-heading {
+  margin: 0;
+  padding: 6px 8px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pcm-body);
+}
+.pcm-crm-lookup-empty { margin: 0; padding: 6px 8px; font-size: 0.86rem; color: var(--pcm-body); }
+.pcm-crm-lookup-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 8px;
+  border-radius: 7px;
+  color: var(--pcm-ink);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.pcm-crm-lookup-option .pcm-crm-obj-icon {
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  line-height: 19px;
+  border-width: 1.5px;
+  border-radius: 6px;
+}
+.pcm-crm-lookup-option:hover,
+.pcm-crm-lookup-option.is-active { background: var(--pcm-paper-tint); box-shadow: inset 3px 0 0 var(--pcm-accent-deep); }
+.pcm-crm-lookup-option.is-all,
+.pcm-crm-lookup-option.is-new { font-weight: 700; color: var(--pcm-blue-deep); border-top: 1px solid var(--pcm-line); border-radius: 0 0 7px 7px; }
+
+.pcm-crm[data-theme="dark"] .pcm-crm-lookup,
+.pcm-crm[data-theme="neon"] .pcm-crm-lookup { background-color: var(--pcm-paper-tint); }
+
+/* Quick create sits over the record modal, which may be the form it serves. */
+.pcm-crm-scrim-quick { z-index: 100002; }
+.pcm-crm-drawer.pcm-crm-quick {
+  z-index: 100003;
+  width: min(720px, calc(100vw - 48px));
+  height: auto;
+  max-height: 86vh;
+}
+
+/* Hover card ------------------------------------------------------------------ */
+.pcm-crm-hovercard {
+  position: fixed;
+  z-index: 100004;
+  width: 300px;
+  padding: 12px 14px;
+  background: var(--pcm-paper);
+  border: 2px solid var(--pcm-ink);
+  border-radius: 12px;
+  box-shadow: 5px 5px 0 var(--pcm-blue);
+  font-size: 0.86rem;
+}
+.pcm-crm-hovercard[hidden] { display: none !important; }
+.pcm-crm-hovercard-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pcm-crm-hovercard-head .pcm-crm-obj-icon { width: 32px; height: 32px; font-size: 18px; line-height: 28px; }
+.pcm-crm-hovercard-kind {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pcm-body);
+}
+.pcm-crm-hovercard-head strong { color: var(--pcm-ink); overflow-wrap: anywhere; }
+.pcm-crm-hovercard-list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 12px;
+  margin: 0;
+}
+.pcm-crm-hovercard-list dt { font-weight: 700; color: var(--pcm-body); }
+.pcm-crm-hovercard-list dd { margin: 0; color: var(--pcm-ink); overflow-wrap: anywhere; }
+
+@media (max-width: 782px) {
+  .pcm-crm-record-page { box-shadow: none; }
+  .pcm-crm-modal-head { flex-wrap: wrap; }
+  .pcm-crm-record-actions { width: 100%; }
+}
+
+@media print {
+  .pcm-crm-record-actions,
+  .pcm-crm-read-edit,
+  .pcm-crm-hovercard,
+  .pcm-crm-form-footer { display: none !important; }
+  .pcm-crm-record-page { border-width: 1px; box-shadow: none; }
+}
