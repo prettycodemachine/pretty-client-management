@@ -1925,7 +1925,56 @@ delete_option( PCM_CRM_MODULES_OPTION );
 
 echo "\n--- setup registry ---\n";
 $pcm_nav = pcm_crm_setup_nav();
-check( 'every core group has pages', array_keys( $pcm_nav ), array( 'crm', 'automation', 'data', 'platform' ) );
+check( 'every core group has pages', array_values( array_diff( array_keys( $pcm_nav ), array( 'projects' ) ) ), array( 'crm', 'automation', 'data', 'platform' ) );
+// The suite has loaded the module's files by now, as the bootstrap does when it
+// is switched on — and a module registers its own group.
+check( 'the Projects module brings its own Setup pages', array_keys( $pcm_nav['projects'] ), array( 'project-types', 'time-entry', 'opportunity-mapping', 'project-picklists' ) );
+
+echo "\n--- project type settings ---\n";
+
+$pcm_clean = pcm_crm_pm_clean_type( array(
+	'label'     => ' Studio Time ',
+	'archetype' => 'tm',
+	'active'    => '1',
+	'stages'    => array(
+		array( 'name' => 'Booked', 'is_active' => '1' ),
+		array( 'name' => 'booked' ),
+		array( 'name' => '' ),
+		array( 'name' => 'Billed', 'is_closed' => '1' ),
+	),
+	'time'      => array( 'rate_required' => '1', 'billable_default' => '1', 'description_required' => '1' ),
+	'defaults'  => array( 'default_bill_rate' => '140', 'default_cost_rate' => '' ),
+), '' );
+check( 'a posted type is trimmed and kept', array( $pcm_clean['label'], $pcm_clean['archetype'], $pcm_clean['active'] ), array( 'Studio Time', 'tm', 1 ) );
+check( 'blank and repeated stages are dropped, and the rest numbered in order',
+	array( wp_list_pluck( $pcm_clean['stages'], 'name' ), wp_list_pluck( $pcm_clean['stages'], 'order' ) ), array( array( 'Booked', 'Billed' ), array( 10, 20 ) ) );
+check( 'only rules that differ from the process are stored', $pcm_clean['time'], array( 'description_required' => 1 ) );
+check( 'and only defaults that were given', $pcm_clean['defaults'], array( 'default_bill_rate' => 140.0 ) );
+check( 'a type needs a name',
+	pcm_crm_pm_clean_type( array( 'label' => '', 'archetype' => 'tm' ), '' )->get_error_code(), 'pcm_crm_pm_type_label' );
+check( 'and a process that exists',
+	pcm_crm_pm_clean_type( array( 'label' => 'X', 'archetype' => 'barter' ), '' )->get_error_code(), 'pcm_crm_pm_type_archetype' );
+check( 'stages that never close are refused',
+	pcm_crm_pm_clean_type( array( 'label' => 'X', 'archetype' => 'tm', 'stages' => array( array( 'name' => 'Forever' ) ) ), '' )->get_error_code(), 'pcm_crm_pm_type_closing' );
+check( 'the mapping keeps types and drops Ask',
+	pcm_crm_pm_sanitize_mapping( array( 'Renewal' => 'Custom Development', 'New Business' => '' ) ), array( 'Renewal' => 'custom-development' ) );
+check( 'the time settings clamp the ceiling to a day',
+	pcm_crm_pm_sanitize_time_settings( array( 'max_hours' => 40, 'increment' => '0.25' ) )['max_hours'], 24.0 );
+check( 'an emptied picklist falls back rather than saving nothing',
+	pcm_crm_pm_sanitize_picklists( array( 'roles' => "  \n", 'raid_types' => "Risk\nIssue\nRisk" ) ), array( 'raid_types' => array( 'Risk', 'Issue' ) ) );
+
+ob_start();
+pcm_crm_pm_render_types_page();
+$pcm_html = ob_get_clean();
+check( 'the types page lists every type', substr_count( $pcm_html, 'type=' ) >= 4, true );
+
+$_GET['type'] = 'custom-development';
+ob_start();
+pcm_crm_pm_render_types_page();
+$pcm_html = ob_get_clean();
+unset( $_GET['type'] );
+check( 'a type opens to its stage editor', false !== strpos( $pcm_html, 'stages[0][name]' ), true );
+check( 'with a row for each stage', substr_count( $pcm_html, '[is_closed]' ), 9 + 1 );
 check( 'an old tab link still names its page', isset( pcm_crm_settings_tabs()['fields'] ), true );
 check( 'the app-backed pages are not tabs', isset( pcm_crm_settings_tabs()['templates'] ), false );
 check( 'a tab page links through the Setup screen', pcm_crm_setup_url( 'fields' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-settings&tab=fields' );

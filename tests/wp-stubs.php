@@ -181,6 +181,10 @@ class WP_CLI {
 	static function log( $m ) {} static function warning( $m ) {}
 	static function success( $m ) {} static function error( $m ) { throw new Exception( $m ); }
 }
+function set_transient( $k, $v ) { $GLOBALS['options'][ '_t_' . $k ] = $v; return true; }
+function get_transient( $k ) { return isset( $GLOBALS['options'][ '_t_' . $k ] ) ? $GLOBALS['options'][ '_t_' . $k ] : false; }
+function delete_transient( $k ) { unset( $GLOBALS['options'][ '_t_' . $k ] ); return true; }
+function disabled() {}
 function delete_option( $k ) { unset( $GLOBALS['options'][$k] ); return true; }
 function wp_parse_url( $u, $c = -1 ) { return parse_url( $u, $c ); }
 
