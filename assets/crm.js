@@ -449,6 +449,12 @@
 	/** related-list key => function (row) returning that list's cells. */
 	var relatedRenderers = {};
 
+	/** slug => [function (record, related, helpers)] returning extra record tabs. */
+	var recordTabs = {};
+
+	/** [function (key, values, scope)] run when a form field changes. */
+	var derivers = [];
+
 	/** Callbacks waiting for /bootstrap and /schema. */
 	var readyQueue = [];
 
@@ -1657,6 +1663,35 @@
 		dom.scrim.hidden = false;
 		clear(dom.drawer, el('p.pcm-crm-loading', { text: 'Loading…' }));
 
+		// An object can ask a question before its form: a project asks which
+		// kind of project, because the answer decides what the form is.
+		var def = objects[object];
+
+		if (!id && def && def.beforeCreate && !options.chosen) {
+			def.beforeCreate(options.prefill || {}, {
+				show: function (title, node) {
+					clear(dom.drawer);
+					dom.drawer.appendChild(el('div.pcm-crm-modal-head', {}, [
+						objectIcon(object),
+						el('div.pcm-crm-modal-heading', {}, [
+							el('p.pcm-crm-drawer-kicker', { text: options.returnTo && options.returnTo.label ? def.label + ' for ' + options.returnTo.label : def.label }),
+							el('h2', { text: title })
+						]),
+						el('button.pcm-crm-drawer-close', { type: 'button', 'aria-label': 'Close', text: '×', onclick: function () { closeDrawer(); } })
+					]));
+					dom.drawer.appendChild(el('div.pcm-crm-modal-body', {}, [node]));
+				},
+				proceed: function (prefill) {
+					// The page underneath is still what the modal returns to.
+					var below = current.below;
+					openDrawer(object, 0, Object.assign({}, options, { prefill: prefill, chosen: true }));
+					if (below && !current.below) { current.below = below; }
+				},
+				close: function () { closeDrawer(); }
+			});
+			return;
+		}
+
 		loadRecord(dom.drawer, 'modal', object, id, options);
 	}
 
@@ -2808,6 +2843,9 @@
 	 */
 	function applyDerived(key, values, scope) {
 		var root = scope || recordHost();
+
+		derivers.forEach(function (fn) { fn(key, values, root); });
+
 		if (key !== 'stage_name' || !root) { return; }
 
 		var stage = stageByName(values.stage_name);
@@ -3663,7 +3701,7 @@
 				}));
 			}
 
-			renderTabs(tabs);
+			finishTabs(object, record, related, tabs, panels);
 			return;
 		}
 
@@ -3687,6 +3725,35 @@
 				columns: relatedColumns(child.id)
 			}));
 		});
+
+		finishTabs(object, record, related, tabs, panels);
+	}
+
+	/**
+	 * Add the tabs a module draws itself — a retainer's burn-down — and put
+	 * every tab in the order the object asks for, Details always first.
+	 */
+	function finishTabs(object, record, related, tabs, panels) {
+		(recordTabs[object] || []).forEach(function (provider) {
+			(provider(record, related, { api: api, el: el }) || []).forEach(function (tab) {
+				tabs.push({ id: tab.id, label: tab.label, count: tab.count });
+				panels.appendChild(el('div.pcm-crm-panel', { dataset: { tab: tab.id }, hidden: true }, [tab.node]));
+			});
+		});
+
+		var order = objects[object] && objects[object].tabOrder ? (objects[object].tabOrder(record) || []) : [];
+
+		if (order.length) {
+			var rank = function (tab) {
+				if (tab.id === 'details') { return -1; }
+				var i = order.indexOf(tab.id);
+				return i === -1 ? order.length : i;
+			};
+
+			tabs = tabs.map(function (tab, i) { return { tab: tab, i: i }; })
+				.sort(function (a, b) { return (rank(a.tab) - rank(b.tab)) || (a.i - b.i); })
+				.map(function (entry) { return entry.tab; });
+		}
 
 		renderTabs(tabs);
 	}
@@ -5024,6 +5091,10 @@
 			(childProviders[slug] = childProviders[slug] || []).push(fn);
 		},
 		registerRelatedColumns: function (kind, fn) { relatedRenderers[kind] = fn; },
+		registerRecordTabs: function (slug, fn) {
+			(recordTabs[slug] = recordTabs[slug] || []).push(fn);
+		},
+		registerDerived: function (fn) { derivers.push(fn); },
 		ready: function (fn) { readyQueue.push(fn); },
 		state: state,
 		helpers: {
@@ -5054,6 +5125,9 @@
 			chartCard: chartCard,
 			legend: legend,
 			relatedList: relatedList,
+			applyConditionalFields: applyConditionalFields,
+			fieldDefinition: fieldDefinition,
+			stageIsLost: stageIsLost,
 			pagination: pagination,
 			setCount: setCount,
 			loadList: loadList,

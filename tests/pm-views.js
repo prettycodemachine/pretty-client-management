@@ -68,14 +68,34 @@ const app = {
 	registerControl: (type, spec) => { registered.controls[type] = spec; },
 	registerChildTypes: (slug, fn) => { (registered.children[slug] = registered.children[slug] || []).push(fn); },
 	registerRelatedColumns: (kind, fn) => { registered.columns[kind] = fn; },
+	registerRecordTabs: (slug, fn) => { (registered.tabs = registered.tabs || {})[slug] = fn; },
+	registerDerived: fn => { (registered.derived = registered.derived || []).push(fn); },
 	ready: () => {},
 	state: {
 		boot: {
-			projectTypes: ['Salesforce Support Retainer', 'AI Enablement Retainer', 'Custom Development'],
-			retainerTypes: ['Salesforce Support Retainer', 'AI Enablement Retainer'],
+			projectTypes: [
+				{ value: 'salesforce-support-retainer', label: 'Salesforce Support Retainer' },
+				{ value: 'custom-development', label: 'Custom Development' }
+			],
+			retainerTypes: ['salesforce-support-retainer'],
 			projectStages: ['Active', 'Closed'],
 			projectHealth: ['Green', 'Amber', 'Red'],
-			opportunityTypeMap: { 'Renewal': 'Salesforce Support Retainer', 'New Business': 'Custom Development' }
+			opportunityTypeMap: { 'Renewal': 'salesforce-support-retainer', 'New Business': 'custom-development' },
+			projectTypeDefs: {
+				'salesforce-support-retainer': {
+					label: 'Salesforce Support Retainer', archetype: 'retainer', active: 1, icon: 'backup',
+					stages: [{ name: 'Active', is_closed: 0 }, { name: 'Ended', is_closed: 1 }],
+					fields: { hidden: ['budget_amount', 'budget_hours'], required: ['retainer_hours'], labels: {} },
+					time: { task_required: 0 }, defaults: { default_bill_rate: 185 }, tabs: ['time', 'tasks']
+				},
+				'custom-development': {
+					label: 'Custom Development', archetype: 'fixed', active: 1, icon: 'flag',
+					stages: [{ name: 'Build', is_closed: 0 }, { name: 'Closed', is_closed: 1 }],
+					fields: { hidden: ['retainer_hours', 'retainer_period'], required: ['budget_amount'], labels: {} },
+					time: { task_required: 1 }, defaults: {}, tabs: ['tasks', 'raid']
+				}
+			},
+			archetypes: { retainer: { label: 'Retainer' }, fixed: { label: 'Fixed scope' } }
 		},
 		schema: {}
 	},
@@ -245,11 +265,39 @@ const fromDeal = registered.children.opportunities[0](
 check('a project created from a deal carries the account', fromDeal.prefill.account_id, 5);
 check('and the deal itself', fromDeal.prefill.opportunity_id, 9);
 check('and the amount as the budget', fromDeal.prefill.budget_amount, 24000);
-check('and the mapped project type', fromDeal.prefill.project_type, 'Salesforce Support Retainer');
+check('and the mapped project type', fromDeal.prefill.project_type, 'salesforce-support-retainer');
 
 // Guessing the type would offer the wrong lifecycle, and nothing says so until a
 // stage refuses to save.
 const unmapped = registered.children.opportunities[0]({ id: 9, account_id: 5, type: 'Barter' }, helpers)[0];
+/* The type chooser, and a form that follows the type. ---------------------- */
+
+const projectDef = registered.objects.projects;
+const chooser = (prefill) => {
+	const out = { shown: null, proceeded: null };
+	projectDef.beforeCreate(prefill, {
+		show: (title, body) => { out.shown = title; },
+		proceed: values => { out.proceeded = values; },
+		close() {}
+	});
+	return out;
+};
+
+const mapped = chooser({ project_type: 'salesforce-support-retainer', account_id: 5 });
+check('a mapped type skips the chooser', mapped.shown, null);
+check('and opens on the type\'s first open stage, with its defaults under what was known',
+	[mapped.proceeded.stage_name, mapped.proceeded.default_bill_rate, mapped.proceeded.account_id], ['Active', 185, 5]);
+check('an unmapped one asks which kind of project', chooser({ account_id: 5 }).shown, 'What kind of project?');
+
+const retainerHints = projectDef.hints('retainer_hours');
+check('a field only some processes use is shown only for their types',
+	[retainerHints.showWhen, retainerHints.showWhenOneOf], ['project_type', ['salesforce-support-retainer']]);
+check('and says which types require it', retainerHints.note, 'Required on Salesforce Support Retainer.');
+check('a field every type uses carries no condition', projectDef.hints('name').showWhen, undefined);
+check('the stage picklist narrows to the type', projectDef.hints('stage_name').ui, 'project-stage');
+check('a build opens its related lists on tasks', projectDef.tabOrder({ project_type: 'custom-development' }).slice(0, 3), ['burn', 'tasks', 'raid']);
+check('and reads its type by name in a list', projectDef.columns.find(c => c.key === 'project_type').render({ project_type: 'custom-development' }), 'Custom Development');
+
 check('an unmapped deal type leaves the project type blank rather than guessing',
 	unmapped.prefill.project_type, '');
 

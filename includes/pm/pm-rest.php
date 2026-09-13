@@ -326,3 +326,210 @@ function pcm_crm_pm_decorate( $pcm_object, array $pcm_items, array $pcm_maps, $p
 
 	return $pcm_items;
 }
+
+/* Project summary and time context -------------------------------------------
+   Two read-only routes the type-aware screens need: what a project has burned
+   against what it was given, and what a time entry is about to be counted
+   against. Both are sums over indexed columns, done in SQL rather than by
+   fetching every entry to the browser.
+   -------------------------------------------------------------------------- */
+
+function pcm_crm_pm_register_routes() {
+	register_rest_route( PCM_CRM_REST::NS, '/pm/projects/(?P<pcm_id>\d+)/summary', array(
+		'methods'             => 'GET',
+		'callback'            => 'pcm_crm_pm_rest_summary',
+		'permission_callback' => array( 'PCM_CRM_REST', 'permission' ),
+	) );
+
+	register_rest_route( PCM_CRM_REST::NS, '/pm/time-context', array(
+		'methods'             => 'GET',
+		'callback'            => 'pcm_crm_pm_rest_time_context',
+		'permission_callback' => array( 'PCM_CRM_REST', 'permission' ),
+	) );
+}
+add_action( 'rest_api_init', 'pcm_crm_pm_register_routes' );
+
+/**
+ * Sum an expression over a project's live time entries.
+ */
+function pcm_crm_pm_time_sum( $pcm_expression, $pcm_where, array $pcm_args ) {
+	global $wpdb;
+
+	$pcm_table = pcm_crm_pm_time_table();
+
+	// phpcs:ignore WordPress.DB.PreparedSQL -- expression and clause are literals from this file
+	return (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM({$pcm_expression}), 0) FROM {$pcm_table} WHERE is_deleted = 0 AND {$pcm_where}", $pcm_args ) );
+}
+
+/**
+ * One retainer period, with what has been used of it.
+ */
+function pcm_crm_pm_period_burn( array $pcm_period ) {
+	$pcm_used    = pcm_crm_pm_time_sum( 'hours', 'retainer_period_id = %d', array( (int) $pcm_period['id'] ) );
+	$pcm_allowed = (float) $pcm_period['allotted_hours'] + (float) $pcm_period['carried_in_hours'];
+
+	return array(
+		'id'        => (int) $pcm_period['id'],
+		'start'     => $pcm_period['period_start'],
+		'end'       => $pcm_period['period_end'],
+		'allotted'  => (float) $pcm_period['allotted_hours'],
+		'carried'   => (float) $pcm_period['carried_in_hours'],
+		'available' => $pcm_allowed,
+		'used'      => $pcm_used,
+		'remaining' => round( $pcm_allowed - $pcm_used, 2 ),
+		'is_closed' => (int) $pcm_period['is_closed'],
+	);
+}
+
+/**
+ * The retainer period a date falls in, for a project, or null.
+ */
+function pcm_crm_pm_period_on( $pcm_project_id, $pcm_date ) {
+	$pcm_found = pcm_crm_retainer_periods()->find( array(
+		'filters'  => array(
+			'project_id'   => (int) $pcm_project_id,
+			'period_start' => array( 'max' => $pcm_date ),
+			'period_end'   => array( 'min' => $pcm_date ),
+		),
+		'per_page' => 1,
+	) );
+
+	$pcm_items = isset( $pcm_found['items'] ) ? $pcm_found['items'] : $pcm_found;
+
+	return $pcm_items ? reset( $pcm_items ) : null;
+}
+
+function pcm_crm_pm_project_summary( $pcm_id ) {
+	$pcm_project = pcm_crm_projects()->get( $pcm_id );
+
+	if ( ! $pcm_project ) {
+		return null;
+	}
+
+	$pcm_type = pcm_crm_pm_type( $pcm_project['project_type'] );
+	$pcm_args = array( (int) $pcm_id );
+
+	$pcm_out = array(
+		'type'           => $pcm_type ? $pcm_type['key'] : '',
+		'type_label'     => $pcm_type ? $pcm_type['label'] : '',
+		'archetype'      => $pcm_type ? $pcm_type['archetype'] : '',
+		'logged_hours'   => pcm_crm_pm_time_sum( 'hours', 'project_id = %d', $pcm_args ),
+		'billable_hours' => pcm_crm_pm_time_sum( 'hours', 'project_id = %d AND is_billable = 1', $pcm_args ),
+		'unbilled_hours' => pcm_crm_pm_time_sum( 'hours', "project_id = %d AND is_billable = 1 AND invoice_ref = ''", $pcm_args ),
+		'billable_value' => pcm_crm_pm_time_sum( 'hours * COALESCE(bill_rate, 0)', 'project_id = %d AND is_billable = 1', $pcm_args ),
+		'unbilled_value' => pcm_crm_pm_time_sum( 'hours * COALESCE(bill_rate, 0)', "project_id = %d AND is_billable = 1 AND invoice_ref = ''", $pcm_args ),
+		'cost_value'     => pcm_crm_pm_time_sum( 'hours * COALESCE(cost_rate, 0)', 'project_id = %d', $pcm_args ),
+		'budget_amount'  => null === $pcm_project['budget_amount'] ? null : (float) $pcm_project['budget_amount'],
+		'budget_hours'   => null === $pcm_project['budget_hours'] ? null : (float) $pcm_project['budget_hours'],
+		'estimate_hours' => pcm_crm_project_tasks()->sum( 'estimated_hours', array( 'filters' => array( 'project_id' => (int) $pcm_id ) ) ),
+		'periods'        => array(),
+		'current_period' => null,
+		'next_milestone' => null,
+	);
+
+	$pcm_periods = pcm_crm_retainer_periods()->find( array(
+		'filters'  => array( 'project_id' => (int) $pcm_id ),
+		'orderby'  => 'period_start',
+		'order'    => 'DESC',
+		'per_page' => 24,
+	) );
+
+	foreach ( isset( $pcm_periods['items'] ) ? $pcm_periods['items'] : $pcm_periods as $pcm_period ) {
+		$pcm_burn = pcm_crm_pm_period_burn( $pcm_period );
+		$pcm_out['periods'][] = $pcm_burn;
+
+		if ( $pcm_period['period_start'] <= current_time( 'Y-m-d' ) && $pcm_period['period_end'] >= current_time( 'Y-m-d' ) ) {
+			$pcm_out['current_period'] = $pcm_burn;
+		}
+	}
+
+	$pcm_milestones = pcm_crm_project_tasks()->find( array(
+		'filters'  => array( 'project_id' => (int) $pcm_id, 'is_milestone' => 1 ),
+		'orderby'  => 'due_date',
+		'order'    => 'ASC',
+		'per_page' => 50,
+	) );
+
+	foreach ( isset( $pcm_milestones['items'] ) ? $pcm_milestones['items'] : $pcm_milestones as $pcm_milestone ) {
+		if ( 'Done' !== $pcm_milestone['status'] ) {
+			$pcm_out['next_milestone'] = array( 'id' => (int) $pcm_milestone['id'], 'name' => $pcm_milestone['name'], 'due_date' => $pcm_milestone['due_date'] );
+			break;
+		}
+	}
+
+	return $pcm_out;
+}
+
+function pcm_crm_pm_rest_summary( WP_REST_Request $pcm_request ) {
+	$pcm_params  = $pcm_request->get_url_params();
+	$pcm_summary = pcm_crm_pm_project_summary( isset( $pcm_params['pcm_id'] ) ? absint( $pcm_params['pcm_id'] ) : 0 );
+
+	if ( ! $pcm_summary ) {
+		return new WP_Error( 'pcm_crm_not_found', __( 'That project no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+	}
+
+	return rest_ensure_response( $pcm_summary );
+}
+
+/**
+ * What a time entry is about to be counted against: its project's type and
+ * rules, the retainer period its date falls in, and the task's estimate.
+ */
+function pcm_crm_pm_time_context_for( $pcm_project_id, $pcm_task_id, $pcm_date ) {
+	$pcm_project = $pcm_project_id ? pcm_crm_projects()->get( $pcm_project_id ) : null;
+
+	if ( ! $pcm_project ) {
+		return null;
+	}
+
+	$pcm_type    = pcm_crm_pm_type( $pcm_project['project_type'] );
+	$pcm_context = pcm_crm_pm_time_context( array( 'project_id' => (int) $pcm_project_id ) );
+	$pcm_date    = $pcm_date ? $pcm_date : current_time( 'Y-m-d' );
+
+	$pcm_out = array(
+		'project'      => array( 'id' => (int) $pcm_project['id'], 'name' => $pcm_project['name'] ),
+		'type'         => $pcm_type ? $pcm_type['key'] : '',
+		'type_label'   => $pcm_type ? $pcm_type['label'] : '',
+		'archetype'    => $pcm_type ? $pcm_type['archetype'] : '',
+		'rules'        => $pcm_context['rules'],
+		'default_rate' => null === $pcm_project['default_bill_rate'] ? null : (float) $pcm_project['default_bill_rate'],
+		'period'       => null,
+		'task'         => null,
+	);
+
+	if ( ! empty( $pcm_context['rules']['resolves_period'] ) ) {
+		$pcm_period = pcm_crm_pm_period_on( $pcm_project_id, $pcm_date );
+		$pcm_out['period'] = $pcm_period ? pcm_crm_pm_period_burn( $pcm_period ) : null;
+	}
+
+	if ( $pcm_task_id ) {
+		$pcm_task = pcm_crm_project_tasks()->get( $pcm_task_id );
+
+		if ( $pcm_task && (int) $pcm_task['project_id'] === (int) $pcm_project_id ) {
+			$pcm_out['task'] = array(
+				'id'        => (int) $pcm_task['id'],
+				'name'      => $pcm_task['name'],
+				'estimated' => null === $pcm_task['estimated_hours'] ? null : (float) $pcm_task['estimated_hours'],
+				'logged'    => pcm_crm_pm_time_sum( 'hours', 'task_id = %d', array( (int) $pcm_task_id ) ),
+			);
+		}
+	}
+
+	return $pcm_out;
+}
+
+function pcm_crm_pm_rest_time_context( WP_REST_Request $pcm_request ) {
+	$pcm_date = sanitize_text_field( (string) $pcm_request->get_param( 'date' ) );
+
+	$pcm_context = pcm_crm_pm_time_context_for(
+		absint( $pcm_request->get_param( 'project_id' ) ),
+		absint( $pcm_request->get_param( 'task_id' ) ),
+		preg_match( '/^\d{4}-\d{2}-\d{2}$/', $pcm_date ) ? $pcm_date : ''
+	);
+
+	if ( ! $pcm_context ) {
+		return new WP_Error( 'pcm_crm_not_found', __( 'That project no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+	}
+
+	return rest_ensure_response( $pcm_context );
+}
