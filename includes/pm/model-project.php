@@ -22,7 +22,7 @@ function pcm_crm_projects() {
 				'opportunity_id'        => array( 'type' => 'id',   'sf' => 'PCM_Opportunity_Id__c', 'label' => 'Opportunity', 'lookup' => 'opportunities', 'lookup_filter' => array( 'account_id' => 'account_id' ) ),
 				'name'                  => array( 'type' => 'text', 'sf' => 'PCM_Name__c', 'label' => 'Project Name' ),
 				'project_code'          => array( 'type' => 'text', 'sf' => 'PCM_Code__c', 'label' => 'Project Code' ),
-				'project_type'          => array( 'type' => 'text', 'sf' => 'PCM_Type__c', 'label' => 'Project Type', 'options' => 'pcm_crm_pm_project_types' ),
+				'project_type'          => array( 'type' => 'text', 'sf' => 'PCM_Type__c', 'label' => 'Project Type', 'options' => 'pcm_crm_pm_project_type_options' ),
 				'stage_name'            => array( 'type' => 'text', 'sf' => 'PCM_Stage__c', 'label' => 'Stage', 'options' => 'pcm_crm_pm_all_stage_names' ),
 				// Hand-settable with a computed default. Someone overrides it
 				// knowingly — "amber, but the client knows" — so the numbers
@@ -86,7 +86,21 @@ function pcm_crm_pm_period_options() {
  * reads as a bug in every report downstream.
  */
 function pcm_crm_pm_apply_stage( $pcm_row, $pcm_object, $pcm_id = 0 ) {
-	if ( 'project' !== $pcm_object || ! isset( $pcm_row['stage_name'] ) ) {
+	if ( 'project' !== $pcm_object ) {
+		return $pcm_row;
+	}
+
+	// A label posted by an older form, or stored by an older row, is written
+	// back as the type's key — the key is what survives a rename.
+	if ( isset( $pcm_row['project_type'] ) && '' !== (string) $pcm_row['project_type'] ) {
+		$pcm_key = pcm_crm_pm_type_key( $pcm_row['project_type'] );
+
+		if ( '' !== $pcm_key ) {
+			$pcm_row['project_type'] = $pcm_key;
+		}
+	}
+
+	if ( ! isset( $pcm_row['stage_name'] ) ) {
 		return $pcm_row;
 	}
 
@@ -149,7 +163,7 @@ function pcm_crm_pm_validate_project( $pcm_error, $pcm_object, $pcm_row, $pcm_id
 
 	$pcm_type = (string) $pcm_merged['project_type'];
 
-	if ( '' !== $pcm_type && ! in_array( $pcm_type, pcm_crm_pm_project_types(), true ) ) {
+	if ( '' !== $pcm_type && '' === pcm_crm_pm_type_key( $pcm_type ) ) {
 		return new WP_Error(
 			'pcm_crm_pm_unknown_type',
 			/* translators: %s: the project type that was submitted */
@@ -166,9 +180,28 @@ function pcm_crm_pm_validate_project( $pcm_error, $pcm_object, $pcm_row, $pcm_id
 		return new WP_Error(
 			'pcm_crm_pm_wrong_stage',
 			/* translators: 1: stage name, 2: project type */
-			sprintf( __( '“%1$s” is not a stage a %2$s goes through.', 'pcm-crm' ), $pcm_stage, $pcm_type ),
+			sprintf( __( '“%1$s” is not a stage a %2$s goes through.', 'pcm-crm' ), $pcm_stage, pcm_crm_pm_type_label( $pcm_type ) ),
 			array( 'status' => 400 )
 		);
+	}
+
+	// What the type's process needs, asked of a new project and of one whose
+	// type is changing — not of every edit to a project that predates the rule,
+	// which would make an old record unsaveable over a field nobody is touching.
+	$pcm_type_changed = $pcm_id && isset( $pcm_row['project_type'] )
+		&& pcm_crm_pm_type_key( $pcm_row['project_type'] ) !== pcm_crm_pm_type_key( isset( $pcm_existing['project_type'] ) ? $pcm_existing['project_type'] : '' );
+
+	if ( '' !== $pcm_type && ( ! $pcm_id || $pcm_type_changed ) ) {
+		$pcm_missing = pcm_crm_pm_missing_for_type( $pcm_type, $pcm_merged );
+
+		if ( $pcm_missing ) {
+			return new WP_Error(
+				'pcm_crm_pm_type_required',
+				/* translators: 1: project type, 2: comma-separated field labels */
+				sprintf( __( 'A %1$s project needs: %2$s.', 'pcm-crm' ), pcm_crm_pm_type_label( $pcm_type ), implode( ', ', $pcm_missing ) ),
+				array( 'status' => 400 )
+			);
+		}
 	}
 
 	if ( $pcm_merged['start_date'] && $pcm_merged['end_date'] && $pcm_merged['end_date'] < $pcm_merged['start_date'] ) {
@@ -178,3 +211,32 @@ function pcm_crm_pm_validate_project( $pcm_error, $pcm_object, $pcm_row, $pcm_id
 	return $pcm_error;
 }
 add_filter( 'pcm_crm_validate', 'pcm_crm_pm_validate_project', 10, 4 );
+
+/**
+ * The labels of the fields a type requires that a project is missing.
+ *
+ * Zero counts as missing for an amount or an allotment — a retainer of no hours
+ * or a build with no budget is the blank the rule exists to catch.
+ */
+function pcm_crm_pm_missing_for_type( $pcm_type, array $pcm_row ) {
+	$pcm_fields = pcm_crm_pm_type_fields( $pcm_type );
+	$pcm_model  = pcm_crm_projects()->fields();
+	$pcm_out    = array();
+
+	foreach ( $pcm_fields['required'] as $pcm_name ) {
+		$pcm_value = isset( $pcm_row[ $pcm_name ] ) ? $pcm_row[ $pcm_name ] : null;
+		$pcm_blank = null === $pcm_value || '' === $pcm_value || ( is_numeric( $pcm_value ) && 0.0 === (float) $pcm_value );
+
+		if ( ! $pcm_blank ) {
+			continue;
+		}
+
+		if ( isset( $pcm_fields['labels'][ $pcm_name ] ) ) {
+			$pcm_out[] = $pcm_fields['labels'][ $pcm_name ];
+		} else {
+			$pcm_out[] = isset( $pcm_model[ $pcm_name ]['label'] ) ? $pcm_model[ $pcm_name ]['label'] : $pcm_name;
+		}
+	}
+
+	return $pcm_out;
+}

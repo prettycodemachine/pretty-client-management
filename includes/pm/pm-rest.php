@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * lists would be the only thing standing between the page and its first paint.
  */
 function pcm_crm_pm_bootstrap( $pcm_boot ) {
-	$pcm_boot['projectTypes']    = pcm_crm_pm_project_types();
+	$pcm_boot['projectTypes']    = pcm_crm_pm_project_type_options();
 	$pcm_boot['projectStages']   = pcm_crm_pm_all_stage_names();
 	$pcm_boot['projectHealth']   = pcm_crm_pm_health_options();
 	$pcm_boot['raidTypes']       = pcm_crm_pm_raid_types();
@@ -33,6 +33,13 @@ function pcm_crm_pm_bootstrap( $pcm_boot ) {
 
 	$pcm_boot['retainerTypes']      = pcm_crm_pm_retainer_types();
 	$pcm_boot['opportunityTypeMap'] = pcm_crm_pm_opportunity_type_map();
+
+	// Everything a type decides — fields, stages, time rules, tab order — so a
+	// project form and a time entry form can reshape themselves as the type is
+	// known, and the New Project chooser can describe each one.
+	$pcm_boot['projectTypeDefs'] = pcm_crm_pm_type_defs();
+	$pcm_boot['archetypes']      = pcm_crm_pm_archetype_defs();
+	$pcm_boot['timeSettings']    = pcm_crm_pm_time_settings();
 
 	return $pcm_boot;
 }
@@ -110,23 +117,6 @@ pcm_crm_register_related( 'projects', 'pcm_crm_pm_related_project' );
 // (what_type,what_id), so 'project' needs nothing added here. What it does still
 // need is a way to *pick* a project in the Related To control, which is in the
 // browser rather than here.
-
-/**
- * How a won deal's type becomes a project's.
- *
- * Sent to the browser rather than resolved there, so the mapping is one list in
- * one place. An unmapped type is deliberately absent rather than defaulting to
- * anything: the project type decides which stages are legal, so a wrong guess
- * offers the wrong lifecycle and the mistake is invisible until someone picks a
- * stage that will not save.
- */
-function pcm_crm_pm_opportunity_type_map() {
-	return apply_filters( 'pcm_crm_pm_opportunity_type_map', array(
-		'New Business'      => 'Custom Development',
-		'Existing Business' => 'Custom Development',
-		'Renewal'           => 'Salesforce Support Retainer',
-	) );
-}
 
 /**
  * The record forms.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Project types, and the stages each type moves through.
+ * The stages each project type moves through, and the module's other picklists.
  *
  * Stages are structs rather than strings, for the reason the CRM's own stages
  * are: a consumer needs to know whether a stage means the work is over, and
@@ -14,79 +14,74 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// Where stage sets were saved, keyed by type label, before types had keys. Read
+// once by pcm_crm_pm_migrate_types() and then removed.
 const PCM_CRM_PM_STAGES_OPTION = 'pcm_crm_pm_stages';
 
+/**
+ * Every project type's key, active or not.
+ *
+ * Inactive types still count: a type retired from the New Project chooser still
+ * has projects on it, and those must keep saving. The types themselves live in
+ * pm-archetypes.php.
+ */
 function pcm_crm_pm_project_types() {
-	return apply_filters( 'pcm_crm_pm_project_types', array(
-		'Salesforce Support Retainer',
-		'AI Enablement Retainer',
-		'Custom Development',
-	) );
+	return apply_filters( 'pcm_crm_pm_project_types', array_keys( pcm_crm_pm_types() ) );
+}
+
+/**
+ * The project type picklist, as value/label pairs.
+ */
+function pcm_crm_pm_project_type_options() {
+	$pcm_out = array();
+
+	foreach ( pcm_crm_pm_types() as $pcm_key => $pcm_type ) {
+		$pcm_out[] = array( 'value' => $pcm_key, 'label' => $pcm_type['label'] );
+	}
+
+	return $pcm_out;
 }
 
 /**
  * The types billed against an hour allotment rather than a fixed budget.
  *
- * Derived from a list rather than from the word "Retainer" in the name, so
- * renaming a type does not silently change how it is billed.
+ * Derived from each type's archetype rather than from the word "Retainer" in
+ * its name, so renaming a type does not silently change how it is billed.
  */
 function pcm_crm_pm_retainer_types() {
-	return apply_filters( 'pcm_crm_pm_retainer_types', array(
-		'Salesforce Support Retainer',
-		'AI Enablement Retainer',
-	) );
+	$pcm_out = array();
+
+	foreach ( pcm_crm_pm_types() as $pcm_key => $pcm_type ) {
+		if ( 'retainer' === $pcm_type['archetype'] ) {
+			$pcm_out[] = $pcm_key;
+		}
+	}
+
+	return apply_filters( 'pcm_crm_pm_retainer_types', $pcm_out );
 }
 
 function pcm_crm_pm_is_retainer( $pcm_type ) {
-	return in_array( (string) $pcm_type, pcm_crm_pm_retainer_types(), true );
+	return 'retainer' === pcm_crm_pm_archetype_for( $pcm_type );
 }
 
 /**
- * The shipped stage sets, keyed by project type.
+ * The stage set for a type — by key, or by the label an older row stores.
  *
  * `is_active` marks the one stage per type that a healthy, running project sits
  * in — what the dashboard counts as work in flight. `is_closed` marks the ones
  * that stop the clock. Renewed is neither: it is a moment rather than a state,
  * and a project passing through it returns to Active with a fresh period.
- */
-function pcm_crm_pm_default_stages() {
-	$pcm_retainer = array(
-		array( 'name' => 'Onboarding',      'order' => 10, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-		array( 'name' => 'Active',          'order' => 20, 'is_active' => 1, 'is_closed' => 0, 'is_renewal' => 0 ),
-		array( 'name' => 'At Risk',         'order' => 30, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-		array( 'name' => 'Renewal Pending', 'order' => 40, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-		array( 'name' => 'Renewed',         'order' => 50, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 1 ),
-		array( 'name' => 'Ended',           'order' => 60, 'is_active' => 0, 'is_closed' => 1, 'is_renewal' => 0 ),
-		array( 'name' => 'Churned',         'order' => 70, 'is_active' => 0, 'is_closed' => 1, 'is_renewal' => 0 ),
-	);
-
-	return array(
-		'Salesforce Support Retainer' => $pcm_retainer,
-		'AI Enablement Retainer'      => $pcm_retainer,
-		'Custom Development'          => array(
-			array( 'name' => 'Initiation', 'order' => 10, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-			array( 'name' => 'Discovery',  'order' => 20, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-			array( 'name' => 'Design',     'order' => 30, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-			array( 'name' => 'Build',      'order' => 40, 'is_active' => 1, 'is_closed' => 0, 'is_renewal' => 0 ),
-			array( 'name' => 'UAT',        'order' => 50, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-			array( 'name' => 'Launch',     'order' => 60, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-			array( 'name' => 'Hypercare',  'order' => 70, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
-			array( 'name' => 'Closed',     'order' => 80, 'is_active' => 0, 'is_closed' => 1, 'is_renewal' => 0 ),
-			array( 'name' => 'Cancelled',  'order' => 90, 'is_active' => 0, 'is_closed' => 1, 'is_renewal' => 0 ),
-		),
-	);
-}
-
-/**
- * The stage set for a type.
  *
- * An unrecognised type falls back to the first registered set rather than to
- * nothing: an empty picklist makes a project unsaveable, and a type arriving
- * from an old row or a filter is not the project's fault.
+ * An unrecognised type falls back to the first set rather than to nothing: an
+ * empty picklist makes a project unsaveable, and a type arriving from an old row
+ * or a filter is not the project's fault.
  */
 function pcm_crm_pm_stages( $pcm_type = '' ) {
-	$pcm_saved = get_option( PCM_CRM_PM_STAGES_OPTION, array() );
-	$pcm_sets  = ( is_array( $pcm_saved ) && $pcm_saved ) ? $pcm_saved : pcm_crm_pm_default_stages();
+	$pcm_sets = array();
+
+	foreach ( pcm_crm_pm_types() as $pcm_key => $pcm_def ) {
+		$pcm_sets[ $pcm_key ] = $pcm_def['stages'];
+	}
 
 	$pcm_sets = apply_filters( 'pcm_crm_pm_stages', $pcm_sets );
 
@@ -94,8 +89,10 @@ function pcm_crm_pm_stages( $pcm_type = '' ) {
 		return $pcm_sets;
 	}
 
-	if ( isset( $pcm_sets[ $pcm_type ] ) ) {
-		return $pcm_sets[ $pcm_type ];
+	$pcm_key = pcm_crm_pm_type_key( $pcm_type );
+
+	if ( '' !== $pcm_key && isset( $pcm_sets[ $pcm_key ] ) ) {
+		return $pcm_sets[ $pcm_key ];
 	}
 
 	return $pcm_sets ? reset( $pcm_sets ) : array();

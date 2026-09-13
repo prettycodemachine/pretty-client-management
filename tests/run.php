@@ -1285,7 +1285,7 @@ check( 'and so does the arithmetic', function_exists( 'pcm_crm_pm_week_start' ),
 
 echo "\n--- pm schema ---\n";
 
-check( 'the version was bumped for the new tables', PCM_CRM_Schema::VERSION, '1.8.0' );
+check( 'the version was bumped so the type migration runs', PCM_CRM_Schema::VERSION, '1.9.0' );
 check( 'ten core tables and eight of the module\'s',
 	array( count( $pcm_all_defs ), count( $pcm_pm_only ) ), array( 18, 8 ) );
 
@@ -1401,7 +1401,7 @@ check( 'retainers are identified from a list, not from their name',
 	array( true, false ) );
 
 pcm_test_add_filter( 'pcm_crm_pm_stages', function ( $pcm_sets ) {
-	$pcm_sets['Custom Development'][] = array( 'name' => 'Warranty', 'order' => 85, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 );
+	$pcm_sets['custom-development'][] = array( 'name' => 'Warranty', 'order' => 85, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 );
 
 	return $pcm_sets;
 } );
@@ -1548,24 +1548,85 @@ check( 'a project token with nothing behind it blanks',
 
 pcm_test_reset_filters( 'pcm_crm_merge_prefixes' );
 
+echo "\n--- project types and archetypes ---\n";
+
+check( 'a type is found by its key', pcm_crm_pm_type( 'custom-development' )['label'], 'Custom Development' );
+// Every project stored before types had keys holds the label.
+check( 'and by the label an older row stores', pcm_crm_pm_type_key( 'AI Enablement Retainer' ), 'ai-enablement-retainer' );
+check( 'an unknown type is nobody', pcm_crm_pm_type( 'Consulting' ), null );
+check( 'a type follows its archetype’s time rules', pcm_crm_pm_type( 'custom-development' )['time']['task_required'], 1 );
+check( 'a build hides the retainer fields',
+	in_array( 'retainer_hours', pcm_crm_pm_type_fields( 'custom-development' )['hidden'], true ), true );
+check( 'and a retainer hides the budget',
+	in_array( 'budget_amount', pcm_crm_pm_type_fields( 'salesforce-support-retainer' )['hidden'], true ), true );
+
+update_option( PCM_CRM_PM_TYPES_OPTION, array(
+	'studio-time' => array( 'label' => 'Studio Time', 'archetype' => 'tm', 'time' => array( 'description_required' => 1, 'not_a_rule' => 1 ) ),
+	'side-quest'  => array( 'label' => 'Side Quest', 'archetype' => 'internal', 'active' => 0 ),
+) );
+check( 'saved types replace the shipped ones', pcm_crm_pm_project_types(), array( 'studio-time', 'side-quest' ) );
+check( 'a type can tighten its archetype’s rules',
+	array( pcm_crm_pm_type( 'studio-time' )['time']['rate_required'], pcm_crm_pm_type( 'studio-time' )['time']['description_required'] ),
+	array( 1, 1 ) );
+check( 'but cannot invent one', isset( pcm_crm_pm_type( 'studio-time' )['time']['not_a_rule'] ), false );
+check( 'an inactive type is left out when asked', array_keys( pcm_crm_pm_types( false ) ), array( 'studio-time' ) );
+check( 'a T&M type relabels the budget as a cap', pcm_crm_pm_type_fields( 'studio-time' )['labels']['budget_amount'], 'Not-to-exceed Cap' );
+delete_option( PCM_CRM_PM_TYPES_OPTION );
+
+// The migration: label-keyed stage sets fold into their types, and every
+// project's type is rewritten from label to key.
+class PCM_Migrate_WPDB extends FakeWPDB {
+	public $queries = array();
+	function query( $q ) { $this->queries[] = $q; return 1; }
+}
+$pcm_real_wpdb = $GLOBALS['wpdb'];
+$GLOBALS['wpdb'] = new PCM_Migrate_WPDB();
+update_option( PCM_CRM_PM_STAGES_OPTION, array( 'Custom Development' => array( array( 'name' => 'Only', 'order' => 1, 'is_active' => 1, 'is_closed' => 0, 'is_renewal' => 0 ) ) ) );
+
+pcm_crm_pm_migrate_types();
+
+check( 'the migration saves the types', array_keys( get_option( PCM_CRM_PM_TYPES_OPTION ) ), array( 'salesforce-support-retainer', 'ai-enablement-retainer', 'custom-development' ) );
+check( 'folds saved stages into their type', pcm_crm_pm_stage_names( 'custom-development' ), array( 'Only' ) );
+check( 'and retires the old option', get_option( PCM_CRM_PM_STAGES_OPTION, 'gone' ), 'gone' );
+check( 'rewrites each project’s type from label to key',
+	count( array_filter( $GLOBALS['wpdb']->queries, function ( $q ) {
+		return false !== strpos( $q, "SET project_type = 'custom-development' WHERE project_type = 'Custom Development'" );
+	} ) ), 1 );
+
+$GLOBALS['wpdb']->queries = array();
+pcm_crm_pm_migrate_types();
+check( 'and running it again changes nothing it already changed', pcm_crm_pm_stage_names( 'custom-development' ), array( 'Only' ) );
+
+$GLOBALS['wpdb'] = $pcm_real_wpdb;
+delete_option( PCM_CRM_PM_TYPES_OPTION );
+
 echo "\n--- project bootstrap payload ---\n";
 
 $pcm_pm_boot = pcm_crm_pm_bootstrap( array() );
 
-check( 'the three project types are sent',
+check( 'the three project types are sent, by key with their names',
 	$pcm_pm_boot['projectTypes'],
-	array( 'Salesforce Support Retainer', 'AI Enablement Retainer', 'Custom Development' ) );
+	array(
+		array( 'value' => 'salesforce-support-retainer', 'label' => 'Salesforce Support Retainer' ),
+		array( 'value' => 'ai-enablement-retainer', 'label' => 'AI Enablement Retainer' ),
+		array( 'value' => 'custom-development', 'label' => 'Custom Development' ),
+	) );
 // Sent as a map so the record form can narrow the stage picklist once a type is
 // chosen, without a request per keystroke.
 check( 'and the per-type stage sets, so the form can narrow the picklist',
 	array_keys( $pcm_pm_boot['projectStageSets'] ),
-	array( 'Salesforce Support Retainer', 'AI Enablement Retainer', 'Custom Development' ) );
+	array( 'salesforce-support-retainer', 'ai-enablement-retainer', 'custom-development' ) );
 check( 'the stage union covers both lifecycles',
 	in_array( 'Hypercare', $pcm_pm_boot['projectStages'], true )
 		&& in_array( 'Churned', $pcm_pm_boot['projectStages'], true ), true );
 check( 'and which types bill against an allotment',
 	$pcm_pm_boot['retainerTypes'],
-	array( 'Salesforce Support Retainer', 'AI Enablement Retainer' ) );
+	array( 'salesforce-support-retainer', 'ai-enablement-retainer' ) );
+check( 'each type says what its archetype decides',
+	array( $pcm_pm_boot['projectTypeDefs']['custom-development']['archetype'], $pcm_pm_boot['projectTypeDefs']['custom-development']['time']['task_required'] ),
+	array( 'fixed', 1 ) );
+check( 'and the archetypes are described for the chooser',
+	array_keys( $pcm_pm_boot['archetypes'] ), array( 'retainer', 'fixed', 'tm', 'internal' ) );
 
 echo "\n--- project validation ---\n";
 
@@ -1591,8 +1652,19 @@ check( 'a build stage on a retainer is refused',
 	$pcm_valid( array( 'name' => 'X', 'project_type' => 'AI Enablement Retainer', 'stage_name' => 'UAT', 'start_date' => null, 'end_date' => null ) ),
 	'pcm_crm_pm_wrong_stage' );
 check( 'but its own stage is accepted',
-	$pcm_valid( array( 'name' => 'X', 'project_type' => 'AI Enablement Retainer', 'stage_name' => 'Active', 'start_date' => null, 'end_date' => null ) ),
+	$pcm_valid( array( 'name' => 'X', 'project_type' => 'AI Enablement Retainer', 'stage_name' => 'Active', 'start_date' => null, 'end_date' => null,
+		'retainer_hours' => 20, 'retainer_period' => 'monthly' ) ),
 	'ok' );
+
+// What a type's process needs, asked when a project is created.
+check( 'a new retainer without an allotment is refused',
+	$pcm_valid( array( 'name' => 'X', 'project_type' => 'ai-enablement-retainer', 'stage_name' => 'Active', 'start_date' => null, 'end_date' => null, 'retainer_hours' => null, 'retainer_period' => '' ) ),
+	'pcm_crm_pm_type_required' );
+check( 'and says what is missing',
+	pcm_crm_pm_missing_for_type( 'ai-enablement-retainer', array( 'retainer_hours' => 0, 'retainer_period' => 'monthly' ) ),
+	array( 'Hours per Period' ) );
+check( 'a build needs a budget and an end date',
+	pcm_crm_pm_missing_for_type( 'custom-development', array() ), array( 'Budget', 'Planned End Date' ) );
 check( 'an end date before the start is refused',
 	$pcm_valid( array( 'name' => 'X', 'project_type' => '', 'stage_name' => '', 'start_date' => '2026-06-01', 'end_date' => '2026-05-01' ) ),
 	'pcm_crm_pm_bad_window' );
@@ -1650,6 +1722,60 @@ check( 'more than a day in one entry is refused',
 	$pcm_time_valid( array( 'hours' => 30 ) ), 'pcm_crm_pm_too_many_hours' );
 check( 'a full day is not', $pcm_time_valid( array( 'hours' => 24 ) ), 'ok' );
 
+// What the project's type decides. A wpdb that answers get() for a project of
+// each archetype, and for a task on project 12.
+class PCM_Time_WPDB extends FakeWPDB {
+	function get_row( $q = '', $o = null ) {
+		$types = array( 12 => 'custom-development', 13 => 'salesforce-support-retainer', 14 => 'studio-time', 15 => 'side-quest' );
+
+		if ( false !== strpos( $q, 'pcm_crm_projects' ) && preg_match( '/id = (\d+)/', $q, $m ) && isset( $types[ (int) $m[1] ] ) ) {
+			return array( 'id' => (int) $m[1], 'project_type' => $types[ (int) $m[1] ], 'default_bill_rate' => 14 === (int) $m[1] ? '' : '150.00', 'default_cost_rate' => '60.00', 'name' => 'P' );
+		}
+
+		if ( false !== strpos( $q, 'pcm_crm_project_tasks' ) && preg_match( '/id = (\d+)/', $q, $m ) ) {
+			return array( 'id' => (int) $m[1], 'project_id' => 77 === (int) $m[1] ? 12 : 99, 'name' => 'Build' );
+		}
+
+		return null;
+	}
+}
+
+update_option( PCM_CRM_PM_TYPES_OPTION, array_merge( pcm_crm_pm_default_types(), array(
+	'studio-time' => array( 'label' => 'Studio Time', 'archetype' => 'tm' ),
+	'side-quest'  => array( 'label' => 'Side Quest', 'archetype' => 'internal' ),
+) ) );
+$pcm_real_wpdb = $GLOBALS['wpdb'];
+$GLOBALS['wpdb'] = new PCM_Time_WPDB();
+
+check( 'time on a fixed-scope build needs a task', $pcm_time_valid( array() ), 'pcm_crm_pm_task_required' );
+check( 'and gets it', $pcm_time_valid( array( 'task_id' => 77 ) ), 'ok' );
+check( 'but not a task from another project', $pcm_time_valid( array( 'task_id' => 78 ) ), 'pcm_crm_pm_task_elsewhere' );
+check( 'a retainer does not ask for one', $pcm_time_valid( array( 'project_id' => 13 ) ), 'ok' );
+check( 'billable T&M time with no rate anywhere is refused',
+	$pcm_time_valid( array( 'project_id' => 14, 'is_billable' => 1 ) ), 'pcm_crm_pm_rate_required' );
+check( 'internal time says what it was for', $pcm_time_valid( array( 'project_id' => 15 ) ), 'pcm_crm_pm_description_required' );
+
+$pcm_applied = pcm_crm_pm_apply_time_rules( array( 'project_id' => 15, 'is_billable' => 1, 'hours' => 1 ), 'time_entry' );
+check( 'internal time is never billable, whatever was posted', $pcm_applied['is_billable'], 0 );
+
+$pcm_applied = pcm_crm_pm_apply_time_rules( array( 'project_id' => 12, 'hours' => 1 ), 'time_entry' );
+check( 'a new entry takes its type’s billable default', $pcm_applied['is_billable'], 1 );
+check( 'and the project’s rate, saying where it came from',
+	array( $pcm_applied['bill_rate'], $pcm_applied['cost_rate'], $pcm_applied['rate_source'] ), array( 150.0, 60.0, 'project' ) );
+
+$pcm_applied = pcm_crm_pm_apply_time_rules( array( 'project_id' => 12, 'hours' => 1, 'bill_rate' => 90 ), 'time_entry' );
+check( 'a rate typed on the entry wins', array( $pcm_applied['bill_rate'], isset( $pcm_applied['rate_source'] ) ), array( 90, false ) );
+
+update_option( PCM_CRM_PM_TIME_OPTION, array( 'max_hours' => 10, 'allow_future' => 0 ) );
+check( 'the ceiling on one entry is a setting',
+	$pcm_time_valid( array( 'project_id' => 13, 'hours' => 12 ) ), 'pcm_crm_pm_too_many_hours' );
+check( 'and so is logging ahead of the day',
+	$pcm_time_valid( array( 'project_id' => 13, 'entry_date' => date( 'Y-m-d', time() + 3 * DAY_IN_SECONDS ) ) ), 'pcm_crm_pm_future_time' );
+delete_option( PCM_CRM_PM_TIME_OPTION );
+
+$GLOBALS['wpdb'] = $pcm_real_wpdb;
+delete_option( PCM_CRM_PM_TYPES_OPTION );
+
 echo "\n--- project record form ---\n";
 
 pcm_test_add_filter( 'pcm_crm_layout', 'pcm_crm_pm_layout' );
@@ -1689,8 +1815,8 @@ echo "\n--- opportunity to project ---\n";
 
 $pcm_type_map = pcm_crm_pm_opportunity_type_map();
 
-check( 'a renewal becomes a support retainer', $pcm_type_map['Renewal'], 'Salesforce Support Retainer' );
-check( 'new business becomes a build', $pcm_type_map['New Business'], 'Custom Development' );
+check( 'a renewal becomes a support retainer', $pcm_type_map['Renewal'], 'salesforce-support-retainer' );
+check( 'new business becomes a build', $pcm_type_map['New Business'], 'custom-development' );
 // Absent rather than defaulted: the type decides which stages are legal, so a
 // wrong guess offers the wrong lifecycle and nothing says so until a stage
 // refuses to save.

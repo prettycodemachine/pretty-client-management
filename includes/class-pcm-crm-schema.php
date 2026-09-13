@@ -17,7 +17,7 @@ class PCM_CRM_Schema {
 	 * differs, so an rsync deploy (which never fires the activation hook)
 	 * still picks the change up on the next page load.
 	 */
-	const VERSION = '1.8.0';
+	const VERSION = '1.9.0';
 
 	const OPTION = 'pcm_crm_db_version';
 
