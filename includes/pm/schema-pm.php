@@ -394,3 +394,15 @@ function pcm_crm_pm_backfill() {
 	$wpdb->query( "UPDATE {$pcm_projects} SET stage_entered_date = created_date WHERE stage_entered_date = '0000-00-00 00:00:00'" );
 }
 add_action( 'pcm_crm_after_install', 'pcm_crm_pm_backfill' );
+
+/**
+ * Join the sample-data sweep.
+ *
+ * Registered here rather than in a gated file on purpose: rows seeded while the
+ * module was on have to stay removable after it is switched off, and the tables
+ * exist either way. Counting them is harmless when they are empty.
+ */
+function pcm_crm_pm_sample_tables( array $pcm_tables ) {
+	return array_merge( $pcm_tables, pcm_crm_pm_tables() );
+}
+add_filter( 'pcm_crm_sample_tables', 'pcm_crm_pm_sample_tables' );

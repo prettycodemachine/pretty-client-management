@@ -30,12 +30,23 @@ class PCM_CRM_Sample_Data {
 		$opportunities = $this->seed_opportunities( $accounts, $contacts, $owners );
 		$activities    = $this->seed_activities( $accounts, $contacts, $opportunities, $owners );
 
-		return array(
+		$counts = array(
 			'accounts'      => count( $accounts ),
 			'contacts'      => count( $contacts ),
 			'opportunities' => count( $opportunities ),
 			'activities'    => count( $activities ),
 		);
+
+		// A module seeds its own records off the back of these, which is what
+		// makes the sample set coherent rather than two unrelated piles: a
+		// project belongs to an account that exists and came from a deal that
+		// was actually won.
+		return apply_filters( 'pcm_crm_sample_data_created', $counts, array(
+			'accounts'      => $accounts,
+			'contacts'      => $contacts,
+			'opportunities' => $opportunities,
+			'owners'        => $owners,
+		) );
 	}
 
 	/* -------------------------------------------------------------------
@@ -574,13 +585,16 @@ function pcm_crm_seed_allowed() {
  * longer exist.
  */
 function pcm_crm_sample_tables() {
-	return array(
+	// Filtered, and a module joins this whether or not it is switched on: sample
+	// rows seeded while it was on must still be removable afterwards, and the
+	// tables are there either way.
+	return apply_filters( 'pcm_crm_sample_tables', array(
 		'accounts'      => PCM_CRM_Schema::accounts(),
 		'contacts'      => PCM_CRM_Schema::contacts(),
 		'opportunities' => PCM_CRM_Schema::opportunities(),
 		'activities'    => PCM_CRM_Schema::activities(),
 		'history'       => PCM_CRM_Schema::history(),
-	);
+	) );
 }
 
 /**

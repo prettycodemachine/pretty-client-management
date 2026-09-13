@@ -428,8 +428,11 @@
 	 */
 	var controls = {};
 
-	/** slug => function (record, helpers) returning related-list child types. */
+	/** slug => [function (record, helpers)] returning extra child types. */
 	var childProviders = {};
+
+	/** related-list key => function (row) returning that list's cells. */
+	var relatedRenderers = {};
 
 	/** Callbacks waiting for /bootstrap and /schema. */
 	var readyQueue = [];
@@ -2420,29 +2423,35 @@
 			}, prefill);
 		}
 
-		// A registered provider answers for its own object, with the shared
-		// locals handed to it so it does not recompute them.
-		if (childProviders[object]) {
-			return childProviders[object](record, {
-				firstStage: firstStage,
-				closeDate: closeDate,
-				activity: activity
-			}) || [];
+		// Providers are appended to whatever core answers, never substituted for
+		// it: a module adding a list to an Account must not take away the three
+		// it already has. The shared locals are handed over so a provider does
+		// not recompute them.
+		function withProviders(types) {
+			(childProviders[object] || []).forEach(function (provider) {
+				types = types.concat(provider(record, {
+					firstStage: firstStage,
+					closeDate: closeDate,
+					activity: activity
+				}) || []);
+			});
+
+			return types;
 		}
 
 		if (object === 'accounts') {
-			return [
+			return withProviders([
 				{ id: 'contacts', label: 'Contacts', object: 'contacts', newLabel: 'New Contact',
 					prefill: { account_id: record.id } },
 				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New Opportunity',
 					prefill: { account_id: record.id, stage_name: firstStage, close_date: closeDate } },
 				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ what_type: 'account', what_id: record.id }) }
-			];
+			]);
 		}
 
 		if (object === 'contacts') {
-			return [
+			return withProviders([
 				// The account comes from the contact, so a deal created here
 				// is attached to both the person and their organization.
 				// service_interest rides along from the person: it is what they
@@ -2455,18 +2464,19 @@
 				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ who_id: record.id,
 						what_type: record.account_id ? 'account' : '', what_id: record.account_id || 0 }) }
-			];
+			]);
 		}
 
 		if (object === 'opportunities') {
-			return [
+			return withProviders([
 				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ what_type: 'opportunity', what_id: record.id,
 						who_id: record.primary_contact_id || 0 }) }
-			];
+			]);
 		}
 
-		return [];
+		// An object core knows nothing about is entirely its provider's answer.
+		return withProviders([]);
 	}
 
 	function renderRelated(object, record, related) {
@@ -2548,6 +2558,11 @@
 	}
 
 	function relatedColumns(kind) {
+		// A module's own list brings its own columns; without this every one of
+		// them would fall through to the activity shape below and render a
+		// column of dashes.
+		if (relatedRenderers[kind]) { return relatedRenderers[kind]; }
+
 		if (kind === 'contacts') {
 			return function (row) {
 				return [
@@ -3812,7 +3827,10 @@
 		registerObject: function (slug, def) { objects[slug] = def; },
 		registerView: function (name, handlers) { views[name] = handlers; },
 		registerControl: function (type, spec) { controls[type] = spec; },
-		registerChildTypes: function (slug, fn) { childProviders[slug] = fn; },
+		registerChildTypes: function (slug, fn) {
+			(childProviders[slug] = childProviders[slug] || []).push(fn);
+		},
+		registerRelatedColumns: function (kind, fn) { relatedRenderers[kind] = fn; },
 		ready: function (fn) { readyQueue.push(fn); },
 		state: state,
 		helpers: {

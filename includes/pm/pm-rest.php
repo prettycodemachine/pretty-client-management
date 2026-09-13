@@ -31,7 +31,8 @@ function pcm_crm_pm_bootstrap( $pcm_boot ) {
 	// because it is three short lists and a request per keystroke is not.
 	$pcm_boot['projectStageSets'] = pcm_crm_pm_stages();
 
-	$pcm_boot['retainerTypes'] = pcm_crm_pm_retainer_types();
+	$pcm_boot['retainerTypes']      = pcm_crm_pm_retainer_types();
+	$pcm_boot['opportunityTypeMap'] = pcm_crm_pm_opportunity_type_map();
 
 	return $pcm_boot;
 }
@@ -109,6 +110,88 @@ pcm_crm_register_related( 'projects', 'pcm_crm_pm_related_project' );
 // (what_type,what_id), so 'project' needs nothing added here. What it does still
 // need is a way to *pick* a project in the Related To control, which is in the
 // browser rather than here.
+
+/**
+ * How a won deal's type becomes a project's.
+ *
+ * Sent to the browser rather than resolved there, so the mapping is one list in
+ * one place. An unmapped type is deliberately absent rather than defaulting to
+ * anything: the project type decides which stages are legal, so a wrong guess
+ * offers the wrong lifecycle and the mistake is invisible until someone picks a
+ * stage that will not save.
+ */
+function pcm_crm_pm_opportunity_type_map() {
+	return apply_filters( 'pcm_crm_pm_opportunity_type_map', array(
+		'New Business'      => 'Custom Development',
+		'Existing Business' => 'Custom Development',
+		'Renewal'           => 'Salesforce Support Retainer',
+	) );
+}
+
+/**
+ * The record forms.
+ *
+ * Supplied through the layout filter rather than added to
+ * pcm_crm_default_layouts(), which is core's list — a module should not have to
+ * edit it to describe its own objects. An admin can still rearrange these on the
+ * Fields & Layouts tab, and a saved arrangement wins, because pcm_crm_layout()
+ * reaches for the stored one first and only falls through to here.
+ */
+function pcm_crm_pm_layout( $pcm_layout, $pcm_object ) {
+	// The filter runs after pcm_crm_append_unplaced(), which has already swept
+	// every field of an object with no layout into one "Custom fields" section —
+	// so what arrives here is never empty and cannot be used to detect "no
+	// layout yet". The saved option is the only honest signal, and an
+	// arrangement someone made on the Fields & Layouts tab must win over this.
+	$pcm_saved = get_option( PCM_CRM_LAYOUTS_OPTION, array() );
+
+	if ( is_array( $pcm_saved ) && ! empty( $pcm_saved[ $pcm_object ] ) ) {
+		return $pcm_layout;
+	}
+
+	$pcm_layouts = array(
+		'projects' => array(
+			array( 'title' => '', 'fields' => array( 'name', 'project_code', 'account_id', 'opportunity_id', 'owner_id', 'project_type', 'stage_name' ) ),
+			array( 'title' => 'Health', 'fields' => array( 'health', 'health_note' ) ),
+			array( 'title' => 'Timeline', 'fields' => array( 'start_date', 'end_date', 'actual_end_date' ) ),
+			array( 'title' => 'Budget', 'fields' => array( 'budget_amount', 'budget_hours', 'default_bill_rate', 'default_cost_rate' ) ),
+			// Hidden by the form until the type is a retainer — see the
+			// showWhen hints in pm.js. Grouped anyway, so the section reads as
+			// a unit when it does appear.
+			array( 'title' => 'Retainer', 'fields' => array( 'retainer_hours', 'retainer_period', 'retainer_start_date', 'retainer_rollover', 'retainer_rollover_cap' ) ),
+			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
+		),
+		'project_tasks' => array(
+			array( 'title' => '', 'fields' => array( 'name', 'project_id', 'assignee_user_id', 'status', 'is_milestone' ) ),
+			array( 'title' => 'Dates', 'fields' => array( 'start_date', 'due_date', 'estimated_hours' ) ),
+			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
+		),
+		'project_raid' => array(
+			array( 'title' => '', 'fields' => array( 'title', 'project_id', 'raid_type', 'status', 'owner_id' ) ),
+			array( 'title' => 'Score', 'fields' => array( 'probability', 'impact' ) ),
+			array( 'title' => 'Dates', 'fields' => array( 'raised_date', 'due_date' ) ),
+			array( 'title' => 'Detail', 'fields' => array( 'description', 'mitigation', 'resolution' ) ),
+		),
+		'project_roles' => array(
+			array( 'title' => '', 'fields' => array( 'project_id', 'party_type', 'user_id', 'contact_id', 'partner_account_id', 'role', 'is_primary' ) ),
+			array( 'title' => 'Rates', 'fields' => array( 'bill_rate', 'cost_rate' ) ),
+			array( 'title' => 'Dates', 'fields' => array( 'start_date', 'end_date' ) ),
+			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
+		),
+		'time_entries' => array(
+			array( 'title' => '', 'fields' => array( 'project_id', 'task_id', 'user_id', 'entry_date', 'hours', 'is_billable' ) ),
+			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
+			array( 'title' => 'Billing', 'fields' => array( 'bill_rate', 'cost_rate', 'invoice_ref' ) ),
+		),
+		'allocations' => array(
+			array( 'title' => '', 'fields' => array( 'project_id', 'user_id', 'week_start', 'planned_hours', 'role' ) ),
+			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
+		),
+	);
+
+	return isset( $pcm_layouts[ $pcm_object ] ) ? $pcm_layouts[ $pcm_object ] : $pcm_layout;
+}
+add_filter( 'pcm_crm_layout', 'pcm_crm_pm_layout', 10, 2 );
 
 /**
  * {{project.*}} in an email template.

@@ -103,23 +103,44 @@ check('the close date is a plain ISO date', /^\d{4}-\d{2}-\d{2}$/.test(closeDate
 // These assertions are the contract that makes that possible: a provider
 // answers for its own object, receives the shared locals rather than
 // recomputing them, and cannot change what core objects offer.
-childProviders.projects = function (record, helpers) {
+childProviders.projects = [function (record, helpers) {
 	return [
 		{ id: 'tasks', label: 'Task', prefill: { project_id: record.id } },
 		{ id: 'raid', label: 'Risk', prefill: { project_id: record.id, raid_type: 'Risk' } },
 		{ id: 'activities', label: 'Activity', prefill: helpers.activity({ what_type: 'project', what_id: record.id }) }
 	];
-};
+}];
 
 const project = childTypes('projects', { id: 12, name: 'Acme retainer' });
 check('a registered provider answers for its own object', project.map(c => c.id), ['tasks', 'raid', 'activities']);
 check('and every child carries the parent link', project.every(c => c.prefill.project_id === 12 || c.prefill.what_id === 12), true);
 check('a provider is handed the shared activity builder', byId(project, 'activities').prefill.activity_type, 'Call');
-check('and the shared open-stage local', typeof childProviders.projects({ id: 1 }, { firstStage: 'Onboarding', closeDate: '', activity: o => o }), 'object');
 
-// Registering one provider must not change what anything else offers.
-check('core child types are untouched by a provider',
-	childTypes('accounts', { id: 42 }).map(c => c.id), ['contacts', 'opportunities', 'activities']);
+// A provider ADDS to what core answers; it must never take a list away. An
+// earlier cut substituted the provider's answer, which silently removed an
+// Account's Contacts, Opportunities and Activities tabs the moment the module
+// was switched on — it looked like the new tab working.
+childProviders.accounts = [function (record) {
+	return [{ id: 'projects', label: 'Project', object: 'projects', prefill: { account_id: record.id } }];
+}];
+
+const augmented = childTypes('accounts', { id: 42, name: 'Acme' });
+check('a provider adds a list to an account without removing any',
+	augmented.map(c => c.id), ['contacts', 'opportunities', 'activities', 'projects']);
+check('and the added one is linked back to the parent',
+	byId(augmented, 'projects').prefill.account_id, 42);
+
+// Two providers on one slug both contribute, in registration order.
+childProviders.accounts.push(function () { return [{ id: 'invoices', label: 'Invoice' }]; });
+check('a second provider on the same slug also contributes',
+	childTypes('accounts', { id: 42 }).map(c => c.id),
+	['contacts', 'opportunities', 'activities', 'projects', 'invoices']);
+
+delete childProviders.accounts;
+
+// Registering against one slug must not change what another offers.
+check('another object is untouched by a provider',
+	childTypes('contacts', { id: 7, account_id: 42 }).map(c => c.id), ['opportunities', 'activities']);
 check('an unregistered object still has no children', childTypes('nothing', { id: 1 }), []);
 
 console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');

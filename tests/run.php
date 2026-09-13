@@ -1628,6 +1628,73 @@ check( 'more than a day in one entry is refused',
 	$pcm_time_valid( array( 'hours' => 30 ) ), 'pcm_crm_pm_too_many_hours' );
 check( 'a full day is not', $pcm_time_valid( array( 'hours' => 24 ) ), 'ok' );
 
+echo "\n--- project record form ---\n";
+
+pcm_test_add_filter( 'pcm_crm_layout', 'pcm_crm_pm_layout' );
+
+$pcm_project_layout = pcm_crm_layout( 'projects' );
+$pcm_sections = wp_list_pluck( $pcm_project_layout, 'title' );
+
+check( 'a project has a real form rather than one undifferentiated section',
+	$pcm_sections, array( '', 'Health', 'Timeline', 'Budget', 'Retainer', 'Notes' ) );
+
+$pcm_placed = array();
+
+foreach ( $pcm_project_layout as $pcm_section ) {
+	$pcm_placed = array_merge( $pcm_placed, $pcm_section['fields'] );
+}
+
+check( 'the name leads it', $pcm_placed[0], 'name' );
+check( 'the opportunity it came from is on it',
+	in_array( 'opportunity_id', $pcm_placed, true ), true );
+// Maintained from the stage struct, so offering them invites a value that the
+// before-insert filter will overwrite anyway.
+check( 'but the stage stamps are not',
+	in_array( 'stage_entered_date', $pcm_placed, true ), false );
+
+// An arrangement someone made on the Fields & Layouts tab has to win, or the
+// tab silently does nothing for these objects.
+update_option( PCM_CRM_LAYOUTS_OPTION, array( 'projects' => array(
+	array( 'title' => 'Mine', 'fields' => array( 'name' ) ),
+) ) );
+check( 'a saved arrangement wins over the shipped one',
+	wp_list_pluck( pcm_crm_layout( 'projects' ), 'title' ), array( 'Mine' ) );
+delete_option( PCM_CRM_LAYOUTS_OPTION );
+
+pcm_test_reset_filters( 'pcm_crm_layout' );
+
+echo "\n--- opportunity to project ---\n";
+
+$pcm_type_map = pcm_crm_pm_opportunity_type_map();
+
+check( 'a renewal becomes a support retainer', $pcm_type_map['Renewal'], 'Salesforce Support Retainer' );
+check( 'new business becomes a build', $pcm_type_map['New Business'], 'Custom Development' );
+// Absent rather than defaulted: the type decides which stages are legal, so a
+// wrong guess offers the wrong lifecycle and nothing says so until a stage
+// refuses to save.
+check( 'an unmapped type is absent rather than guessed',
+	isset( $pcm_type_map['Something Else'] ), false );
+
+foreach ( $pcm_type_map as $pcm_from => $pcm_to ) {
+	check( "'{$pcm_from}' maps to a type that exists",
+		in_array( $pcm_to, pcm_crm_pm_project_types(), true ), true );
+}
+
+echo "\n--- sample data reaches the module ---\n";
+
+pcm_test_add_filter( 'pcm_crm_sample_tables', 'pcm_crm_pm_sample_tables' );
+
+$pcm_sample_tables = pcm_crm_sample_tables();
+
+check( 'the sweep covers core and the module', count( $pcm_sample_tables ), 13 );
+check( 'including projects', isset( $pcm_sample_tables['projects'] ), true );
+// Seeded rows have to stay removable after the module is switched off, which is
+// why this filter is registered from the always-loaded schema file.
+check( 'and the bookkeeping tables, so nothing is stranded',
+	isset( $pcm_sample_tables['retainer_periods'] ) && isset( $pcm_sample_tables['allocations'] ), true );
+
+pcm_test_reset_filters( 'pcm_crm_sample_tables' );
+
 delete_option( PCM_CRM_MODULES_OPTION );
 
 echo "\n" . ( $fail ? "$fail FAILED\n" : "All checks passed\n" );

@@ -206,6 +206,105 @@
 	function round2(n) { return Math.round(n * 100) / 100; }
 
 	/**
+	 * Projects hang off the account they are for and the opportunity they came
+	 * from. Registered as additions, so an Account keeps its Contacts,
+	 * Opportunities and Activities and gains a fourth list.
+	 */
+	app.registerChildTypes('accounts', function (record) {
+		return [{
+			id: 'projects',
+			label: 'Projects',
+			object: 'projects',
+			newLabel: 'New Project',
+			prefill: { account_id: record.id, health: 'Green' }
+		}];
+	});
+
+	app.registerChildTypes('opportunities', function (record) {
+		return [{
+			id: 'projects',
+			label: 'Projects',
+			object: 'projects',
+			newLabel: 'New Project',
+			// Everything the deal already knows, so delivery starts from what
+			// was sold rather than from a blank form: the account, the deal
+			// itself, the amount as the budget, and the type mapped across.
+			prefill: projectFromOpportunity(record)
+		}];
+	});
+
+	/**
+	 * A project's opening values, taken from the opportunity it came from.
+	 *
+	 * An unmapped deal type leaves the project type blank rather than guessing:
+	 * the type decides which stages are legal, so guessing it wrong means the
+	 * stage picklist offers the wrong lifecycle.
+	 */
+	function projectFromOpportunity(row) {
+		var map = (state.boot && state.boot.opportunityTypeMap) || {};
+
+		return {
+			account_id: row.account_id || 0,
+			opportunity_id: row.id,
+			name: row.name || '',
+			project_type: map[row.type] || '',
+			budget_amount: row.amount || null,
+			health: 'Green',
+			start_date: app.helpers.today()
+		};
+	}
+
+	/**
+	 * How a project reads in someone else's related list.
+	 */
+	app.registerRelatedColumns('projects', function (row) {
+		return [
+			{ text: row.name, strong: true },
+			{ badge: row.stage_name, tone: row.is_closed ? 'won' : 'open' },
+			{ text: row.project_type || '—' },
+			{ text: app.helpers.money(row.budget_amount), num: true }
+		];
+	});
+
+	app.registerRelatedColumns('tasks', function (row) {
+		return [
+			{ text: row.name, strong: true },
+			{ badge: row.status },
+			{ text: Number(row.is_milestone) ? 'Milestone' : '—' },
+			{ text: app.helpers.formatDate(row.due_date) }
+		];
+	});
+
+	app.registerRelatedColumns('raid', function (row) {
+		return [
+			{ text: row.title, strong: true },
+			{ badge: row.raid_type },
+			{ text: row.status || '—' },
+			// Worst first is how the list is ordered, so the score has to be
+			// visible or the ordering looks arbitrary.
+			{ text: row.severity ? String(row.severity) : '—', num: true }
+		];
+	});
+
+	app.registerRelatedColumns('roles', function (row) {
+		return [
+			{ text: row._person_name || '—', strong: true },
+			{ badge: row._party_label || row.party_type },
+			{ text: row.role || '—' },
+			{ text: row._org_name || '—' }
+		];
+	});
+
+	app.registerRelatedColumns('time', function (row) {
+		return [
+			{ text: app.helpers.formatDate(row.entry_date), strong: true },
+			{ text: row._user_name || '—' },
+			{ text: String(row.hours), num: true },
+			{ text: row.description || '—' }
+		];
+	});
+
+	/**
 	 * What hangs off a project, and how a new child is linked back to it.
 	 */
 	app.registerChildTypes('projects', function (record, helpers) {

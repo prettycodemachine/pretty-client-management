@@ -60,6 +60,7 @@ function pcm_crm_modules() {
 					'pm/pm-objects.php',
 					'pm/pm-rest.php',
 					'pm/pm-menu.php',
+					'pm/pm-sample-data.php',
 				),
 			),
 		) );
