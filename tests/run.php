@@ -1009,7 +1009,18 @@ check( 'the same four objects are reportable',
 	array_keys( pcm_crm_objects_where( 'reportable' ) ),
 	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
 
+// The fifth list this registry replaced. Every object here is soft-deleted, so a
+// deleted one is restorable rather than gone.
+check( 'the same four objects are recyclable',
+	array_keys( pcm_crm_objects_where( 'recyclable' ) ),
+	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
+check( 'and the bin still labels them',
+	pcm_crm_recyclable_objects()['contacts'], 'Contacts' );
+
 check( 'machinery is not reportable', pcm_crm_object_is( 'templates', 'reportable' ), false );
+// An enrollment has an is_deleted column but is bookkeeping, not a record
+// anyone would go looking for in a bin.
+check( 'nor recyclable', pcm_crm_object_is( 'enrollments', 'recyclable' ), false );
 check( 'nor customisable', pcm_crm_object_is( 'schedules', 'customisable' ), false );
 check( 'nor exportable', pcm_crm_object_is( 'submissions', 'exportable' ), false );
 
@@ -1163,6 +1174,461 @@ $pcm_cast = $pcm_reach( 'cast_row' );
 check( 'and comes back out of the database as a float',
 	$pcm_cast->invoke( $pcm_hours_model, array( 'id' => '1', 'hours' => '1.50' ) ),
 	array( 'id' => 1, 'hours' => 1.5 ) );
+
+/* ---------------------------------------------------------------------------
+   The module gate
+   --------------------------------------------------------------------------- */
+
+echo "\n--- module gate ---\n";
+
+// The suite loads the plugin with no options set, so the module is at its
+// default — off. Everything below is asserted from that starting point outwards.
+check( 'the pm module is registered', isset( pcm_crm_modules()['pm'] ), true );
+check( 'and is off by default', pcm_crm_module_active( 'pm' ), false );
+
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1 ) );
+check( 'the option switches it on', pcm_crm_module_active( 'pm' ), true );
+
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 0 ) );
+check( 'and off again', pcm_crm_module_active( 'pm' ), false );
+
+pcm_test_add_filter( 'pcm_crm_module_active', function () { return true; } );
+check( 'a filter overrides the option', pcm_crm_module_active( 'pm' ), true );
+pcm_test_reset_filters( 'pcm_crm_module_active' );
+
+delete_option( PCM_CRM_MODULES_OPTION );
+
+check( 'an unregistered module is off rather than an error', pcm_crm_module_active( 'nope' ), false );
+
+// An unchecked box posts nothing, so the sanitiser writes an explicit 0 for every
+// registered module. A missing key would fall back to the default, which would
+// make a module defaulting to on impossible to switch off.
+check( 'saving with nothing ticked writes an explicit off',
+	pcm_crm_sanitize_modules( array() ), array( 'pm' => 0 ) );
+check( 'and a tick writes an explicit on',
+	pcm_crm_sanitize_modules( array( 'pm' => '1' ) ), array( 'pm' => 1 ) );
+// A module that has been removed should not leave a setting nothing reads.
+check( 'an unknown key is dropped',
+	pcm_crm_sanitize_modules( array( 'pm' => 1, 'ghost' => 1 ) ), array( 'pm' => 1 ) );
+
+// The switched-off surface. These are what "it leaves the navigation" means in
+// terms anything can check.
+check( 'switched off, projects are not a registered object', pcm_crm_object( 'projects' ), null );
+check( 'nor resolvable to a model', PCM_CRM_REST::model( 'projects' ), null );
+check( 'nor reportable', pcm_crm_object_is( 'projects', 'reportable' ), false );
+check( 'projects have no related provider',
+	isset( pcm_crm_related_providers()['projects'] ), false );
+check( 'and no project merge prefix is offered',
+	isset( pcm_crm_merge_prefixes()['project'] ), false );
+
+// The deliberate asymmetry, asserted so nobody tidies it away: storage is not
+// gated. install() is keyed on one version option, so a table withheld here
+// would never be created by a later switch-on that found the versions equal.
+$pcm_defs_method = new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' );
+
+if ( PHP_VERSION_ID < 80100 ) { $pcm_defs_method->setAccessible( true ); }
+
+// The module appends on pcm_crm_table_definitions, and the stub's apply_filters
+// is a pass-through unless a hook is opted in — so opt this one in with the real
+// listener, which is what the assertion is actually about.
+pcm_test_add_filter( 'pcm_crm_table_definitions', 'pcm_crm_pm_definitions' );
+
+$pcm_all_defs = $pcm_defs_method->invoke( null, '' );
+
+// Only the module's own statements, so a rule about PM tables is never quietly
+// measured against core's.
+$pcm_pm_only = array();
+
+foreach ( $pcm_all_defs as $pcm_def ) {
+	if ( preg_match( '/pcm_crm_(projects|project_tasks|project_raid|project_roles|time_entries|retainer_periods|allocations|status_reports) \(/', $pcm_def ) ) {
+		$pcm_pm_only[] = $pcm_def;
+	}
+}
+
+$pcm_pm_defs = implode( "\n", $pcm_pm_only );
+
+foreach ( array( 'projects', 'project_tasks', 'project_raid', 'project_roles',
+	'time_entries', 'retainer_periods', 'allocations', 'status_reports' ) as $pcm_table ) {
+	check( "the {$pcm_table} table is defined even with the module off",
+		false !== strpos( $pcm_pm_defs, 'pcm_crm_' . $pcm_table . ' (' ), true );
+}
+
+check( 'the models load whatever the switch says',
+	pcm_crm_projects() instanceof PCM_CRM_Model, true );
+check( 'and so does the arithmetic', function_exists( 'pcm_crm_pm_week_start' ), true );
+
+/* ---------------------------------------------------------------------------
+   PM schema
+   --------------------------------------------------------------------------- */
+
+echo "\n--- pm schema ---\n";
+
+check( 'the version was bumped for the new tables', PCM_CRM_Schema::VERSION, '1.8.0' );
+check( 'ten core tables and eight of the module\'s',
+	array( count( $pcm_all_defs ), count( $pcm_pm_only ) ), array( 18, 8 ) );
+
+// dbDelta re-adds an index on every run if the KEY is not named, and wants two
+// spaces after PRIMARY KEY. Both are easy to get wrong and silent when wrong.
+check( 'every PM table names its primary key the way dbDelta wants',
+	substr_count( $pcm_pm_defs, 'PRIMARY KEY  (id)' ), 8 );
+check( 'no unnamed KEY anywhere in the PM tables',
+	(bool) preg_match( '/\n\t\t(?:UNIQUE )?KEY \(/', $pcm_pm_defs ), false );
+
+// The races these two prevent are the likeliest data bugs in the module: two
+// periods for one month halves a burn-down, and a duplicate allocation reads as
+// over-allocation.
+check( 'one retainer period per project per start date',
+	false !== strpos( $pcm_pm_defs, 'UNIQUE KEY pcm_period_unique (project_id,period_start)' ), true );
+check( 'one allocation per person per project per week',
+	false !== strpos( $pcm_pm_defs, 'UNIQUE KEY pcm_alloc_unique (project_id,user_id,week_start)' ), true );
+
+// The over-allocation query's GROUP BY, so it runs index-ordered with no
+// temporary table.
+check( 'allocations are indexed by person and week',
+	false !== strpos( $pcm_pm_defs, 'KEY pcm_alloc_person_week (user_id,week_start)' ), true );
+// Every meter aggregate is a SUM over one project within a window.
+check( 'time is indexed by project and date',
+	false !== strpos( $pcm_pm_defs, 'KEY pcm_time_project (project_id,entry_date)' ), true );
+// Burn-down as one indexed sum rather than a date-range scan.
+check( 'and by the period it belongs to',
+	false !== strpos( $pcm_pm_defs, 'KEY pcm_time_period (retainer_period_id)' ), true );
+check( 'a RAID tab reads one index',
+	false !== strpos( $pcm_pm_defs, 'KEY pcm_raid_project (project_id,raid_type,status)' ), true );
+
+// utf8mb4's index-length ceiling. An indexed varchar past 190 fails to create on
+// older MySQL, and dbDelta says nothing about it.
+// Columns that actually appear inside a KEY, read off the KEY lines rather than
+// guessed at by looking for the name in parentheses anywhere — which catches a
+// column whose name merely occurs in some other index's definition.
+$pcm_indexed = array();
+
+if ( preg_match_all( '/KEY \w+ \(([^)]+)\)/', $pcm_pm_defs, $pcm_keys ) ) {
+	foreach ( $pcm_keys[1] as $pcm_columns ) {
+		foreach ( explode( ',', $pcm_columns ) as $pcm_column ) {
+			$pcm_indexed[] = trim( $pcm_column );
+		}
+	}
+}
+
+$pcm_too_wide = array();
+
+if ( preg_match_all( '/(\w+) varchar\((\d+)\)/', $pcm_pm_defs, $pcm_widths, PREG_SET_ORDER ) ) {
+	foreach ( $pcm_widths as $pcm_match ) {
+		if ( (int) $pcm_match[2] > 190 && in_array( $pcm_match[1], $pcm_indexed, true ) ) {
+			$pcm_too_wide[] = $pcm_match[1];
+		}
+	}
+}
+
+check( 'no indexed varchar is wider than utf8mb4 allows', $pcm_too_wide, array() );
+
+check( 'every PM table can be marked as test data',
+	substr_count( $pcm_pm_defs, 'is_test tinyint(1) NOT NULL DEFAULT 0' ), 8 );
+
+/* ---------------------------------------------------------------------------
+   Project stages
+   --------------------------------------------------------------------------- */
+
+echo "\n--- project stages ---\n";
+
+check( 'a retainer and a build do not share a lifecycle',
+	pcm_crm_pm_stage_names( 'Salesforce Support Retainer' ) === pcm_crm_pm_stage_names( 'Custom Development' ),
+	false );
+
+check( 'the two retainers do share one',
+	pcm_crm_pm_stage_names( 'Salesforce Support Retainer' ),
+	pcm_crm_pm_stage_names( 'AI Enablement Retainer' ) );
+
+check( 'a retainer ends or churns',
+	array_slice( pcm_crm_pm_stage_names( 'AI Enablement Retainer' ), -2 ),
+	array( 'Ended', 'Churned' ) );
+
+check( 'a build launches and closes',
+	in_array( 'UAT', pcm_crm_pm_stage_names( 'Custom Development' ), true ), true );
+
+// The mistake worth catching: a stage that saves cleanly, then reads as
+// closed-or-not according to a set the project was never in.
+check( 'a build stage is not valid on a retainer',
+	pcm_crm_pm_stage( 'AI Enablement Retainer', 'UAT' ), null );
+check( 'and a retainer stage is not valid on a build',
+	pcm_crm_pm_stage( 'Custom Development', 'Renewal Pending' ), null );
+
+check( 'a closing stage says so', pcm_crm_pm_stage( 'Custom Development', 'Cancelled' )['is_closed'], 1 );
+check( 'and a running one does not', pcm_crm_pm_stage( 'Custom Development', 'Build' )['is_closed'], 0 );
+// Renewed is a moment rather than a state: a project passing through it returns
+// to Active, so it must not read as either running or finished.
+check( 'Renewed is neither active nor closed',
+	array( pcm_crm_pm_stage( 'AI Enablement Retainer', 'Renewed' )['is_active'],
+		pcm_crm_pm_stage( 'AI Enablement Retainer', 'Renewed' )['is_closed'] ),
+	array( 0, 0 ) );
+
+// An empty picklist makes a project unsaveable, and a type arriving from an old
+// row or a filter is not the project's fault.
+check( 'an unknown type still gets a usable stage list',
+	count( pcm_crm_pm_stages( 'Something Else' ) ) > 0, true );
+
+check( 'the union covers both lifecycles',
+	in_array( 'Hypercare', pcm_crm_pm_all_stage_names(), true )
+		&& in_array( 'Churned', pcm_crm_pm_all_stage_names(), true ), true );
+
+check( 'closed stages are left out of the open list',
+	in_array( 'Ended', pcm_crm_pm_open_stage_names( 'AI Enablement Retainer' ), true ), false );
+
+check( 'retainers are identified from a list, not from their name',
+	array( pcm_crm_pm_is_retainer( 'AI Enablement Retainer' ), pcm_crm_pm_is_retainer( 'Custom Development' ) ),
+	array( true, false ) );
+
+pcm_test_add_filter( 'pcm_crm_pm_stages', function ( $pcm_sets ) {
+	$pcm_sets['Custom Development'][] = array( 'name' => 'Warranty', 'order' => 85, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 );
+
+	return $pcm_sets;
+} );
+check( 'a filter can add a stage',
+	in_array( 'Warranty', pcm_crm_pm_stage_names( 'Custom Development' ), true ), true );
+pcm_test_reset_filters( 'pcm_crm_pm_stages' );
+
+/* ---------------------------------------------------------------------------
+   RAID severity
+   --------------------------------------------------------------------------- */
+
+echo "\n--- raid severity ---\n";
+
+// The product of two ordinal weights, which is the point: a lexical sort on
+// either column alone gets Medium x High and High x Low the wrong way round.
+check( 'high and high is the worst', pcm_crm_pm_severity( 'High', 'High' ), 9 );
+check( 'medium impact at high probability outranks high impact at low',
+	pcm_crm_pm_severity( 'High', 'Medium' ) > pcm_crm_pm_severity( 'Low', 'High' ), true );
+check( 'low and low is the least', pcm_crm_pm_severity( 'Low', 'Low' ), 1 );
+
+// Zero rather than one, so an unscored risk sorts below a scored Low instead of
+// level with it.
+check( 'an unscored risk is zero, not one', pcm_crm_pm_severity( '', 'High' ), 0 );
+check( 'and so is a nonsense level', pcm_crm_pm_severity( 'Catastrophic', 'High' ), 0 );
+
+/* ---------------------------------------------------------------------------
+   Allocation weeks
+   --------------------------------------------------------------------------- */
+
+echo "\n--- allocation weeks ---\n";
+
+update_option( 'start_of_week', 1 );
+
+// 2026-09-11 is a Friday; its week began on Monday the 7th.
+check( 'a midweek date snaps back to its Monday', pcm_crm_pm_week_start( '2026-09-11' ), '2026-09-07' );
+check( 'a Monday is its own week start', pcm_crm_pm_week_start( '2026-09-07' ), '2026-09-07' );
+// The edge that a naive "subtract w days" gets wrong, because PHP's w makes
+// Sunday nought.
+check( 'a Sunday belongs to the week before it', pcm_crm_pm_week_start( '2026-09-13' ), '2026-09-07' );
+
+update_option( 'start_of_week', 0 );
+check( 'a Sunday-start site buckets differently', pcm_crm_pm_week_start( '2026-09-11' ), '2026-09-06' );
+update_option( 'start_of_week', 1 );
+
+check( 'a malformed date is null rather than today', pcm_crm_pm_week_start( 'soon' ), null );
+check( 'and so is an empty one', pcm_crm_pm_week_start( '' ), null );
+
+$pcm_run = pcm_crm_pm_weeks( '2026-09-09', 13 );
+check( 'thirteen weeks is thirteen columns', count( $pcm_run ), 13 );
+check( 'starting from the containing week', $pcm_run[0], '2026-09-07' );
+// Arithmetic is done at UTC noon precisely so a zone that springs forward at
+// midnight cannot produce a six-day week.
+check( 'and every step is exactly seven days',
+	( strtotime( $pcm_run[12] ) - strtotime( $pcm_run[0] ) ) / DAY_IN_SECONDS, 84 );
+
+// What the date-range form writes. A Wednesday-to-Wednesday booking occupies two
+// weeks and both should show.
+check( 'a range covering two weeks writes two rows',
+	pcm_crm_pm_expand_range( '2026-09-09', '2026-09-16' ),
+	array( '2026-09-07', '2026-09-14' ) );
+check( 'a range inside one week writes one',
+	pcm_crm_pm_expand_range( '2026-09-08', '2026-09-10' ), array( '2026-09-07' ) );
+check( 'a backwards range writes nothing',
+	pcm_crm_pm_expand_range( '2026-09-16', '2026-09-09' ), array() );
+
+/* ---------------------------------------------------------------------------
+   The PM surface, with the module switched on
+   --------------------------------------------------------------------------- */
+
+// The suite loaded the plugin with the module off, so the gated files were never
+// required. Switch it on and load them, which is exactly what the bootstrap does
+// on a site where the box is ticked.
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1 ) );
+pcm_crm_load_modules();
+
+echo "\n--- pm surface ---\n";
+
+check( 'switching it on registers the objects', pcm_crm_object( 'projects' ) !== null, true );
+check( 'projects are reportable', pcm_crm_object_is( 'projects', 'reportable' ), true );
+// A custom field is a real ALTER TABLE and columns are never dropped, so a cf_
+// column on a project would outlive the module being switched off.
+check( 'but not customisable in this release', pcm_crm_object_is( 'projects', 'customisable' ), false );
+check( 'and they are exportable, because a table you cannot read out of is a liability',
+	pcm_crm_object_is( 'projects', 'exportable' ), true );
+// Deleting a project by accident should be survivable, the way deleting an
+// account is.
+check( 'a deleted project can be restored',
+	pcm_crm_object_is( 'projects', 'recyclable' ), true );
+check( 'and the bin lists the module\'s records too',
+	in_array( 'Projects', pcm_crm_recyclable_objects(), true ), true );
+check( 'but not its bookkeeping',
+	pcm_crm_object_is( 'retainer_periods', 'recyclable' ), false );
+
+check( 'the route slugs now include the module\'s',
+	in_array( 'projects', array_keys( PCM_CRM_REST::models() ), true ), true );
+// Registration order is route order, and core must keep its place at the front.
+check( 'and core still comes first',
+	array_slice( array_keys( PCM_CRM_REST::models() ), 0, 4 ),
+	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
+
+check( 'a project has related lists to fetch', pcm_crm_object( 'projects' )['related'], 'fetch' );
+check( 'and accounts gained a second provider for them',
+	count( pcm_crm_related_providers()['accounts'] ), 2 );
+check( 'as did opportunities', count( pcm_crm_related_providers()['opportunities'] ), 2 );
+
+echo "\n--- project merge tokens ---\n";
+
+pcm_test_add_filter( 'pcm_crm_merge_prefixes', 'pcm_crm_pm_merge_prefix' );
+
+check( 'the project prefix is offered once the module is on',
+	array_keys( pcm_crm_merge_prefixes() ), array( 'contact', 'account', 'project' ) );
+
+$pcm_pm_groups = pcm_crm_email_variables();
+check( 'and the picker gains a Project group',
+	wp_list_pluck( $pcm_pm_groups, 'prefix' ), array( 'contact', 'account', 'project', 'other' ) );
+
+$pcm_project_group = array_values( array_filter( $pcm_pm_groups, function ( $pcm_group ) {
+	return 'project' === $pcm_group['prefix'];
+} ) );
+
+$pcm_project_tokens = wp_list_pluck( $pcm_project_group[0]['fields'], 'token' );
+
+check( 'the project name is offered', in_array( '{{project.name}}', $pcm_project_tokens, true ), true );
+// Ids and flags make poor sentences — the same rule core applies to its own.
+check( 'ids are not', in_array( '{{project.account_id}}', $pcm_project_tokens, true ), false );
+check( 'nor are checkboxes', in_array( '{{project.retainer_rollover}}', $pcm_project_tokens, true ), false );
+
+$pcm_malformed = array_filter( $pcm_project_tokens, function ( $pcm_token ) {
+	return ! preg_match( '/^\{\{project\.[a-z_]+\}\}$/', $pcm_token );
+} );
+check( 'every project token is well formed', $pcm_malformed, array() );
+
+check( 'a project value fills',
+	pcm_crm_fill_variables( '{{project.name}} is {{project.stage_name}}',
+		array( 'project' => array( 'name' => 'Acme retainer', 'stage_name' => 'Active' ) ) ),
+	'Acme retainer is Active' );
+
+check( 'a project name cannot inject markup',
+	pcm_crm_fill_variables( '{{project.name}}', array( 'project' => array( 'name' => '<b>x</b>' ) ) ),
+	'&lt;b&gt;x&lt;/b&gt;' );
+
+check( 'a project token with nothing behind it blanks',
+	pcm_crm_fill_variables( '[{{project.budget_amount}}]', array( 'project' => array() ) ), '[]' );
+
+pcm_test_reset_filters( 'pcm_crm_merge_prefixes' );
+
+echo "\n--- project bootstrap payload ---\n";
+
+$pcm_pm_boot = pcm_crm_pm_bootstrap( array() );
+
+check( 'the three project types are sent',
+	$pcm_pm_boot['projectTypes'],
+	array( 'Salesforce Support Retainer', 'AI Enablement Retainer', 'Custom Development' ) );
+// Sent as a map so the record form can narrow the stage picklist once a type is
+// chosen, without a request per keystroke.
+check( 'and the per-type stage sets, so the form can narrow the picklist',
+	array_keys( $pcm_pm_boot['projectStageSets'] ),
+	array( 'Salesforce Support Retainer', 'AI Enablement Retainer', 'Custom Development' ) );
+check( 'the stage union covers both lifecycles',
+	in_array( 'Hypercare', $pcm_pm_boot['projectStages'], true )
+		&& in_array( 'Churned', $pcm_pm_boot['projectStages'], true ), true );
+check( 'and which types bill against an allotment',
+	$pcm_pm_boot['retainerTypes'],
+	array( 'Salesforce Support Retainer', 'AI Enablement Retainer' ) );
+
+echo "\n--- project validation ---\n";
+
+// Called directly, because the stub's add_filter is a no-op — the same way the
+// schedule validator is tested.
+$pcm_valid = function ( array $pcm_row, $pcm_id = 0 ) {
+	$pcm_result = pcm_crm_pm_validate_project( null, 'project', $pcm_row, $pcm_id );
+
+	return is_wp_error( $pcm_result ) ? $pcm_result->get_error_code() : 'ok';
+};
+
+check( 'a project needs a name', $pcm_valid( array( 'name' => '' ) ), 'pcm_crm_name_required' );
+check( 'a named project is fine',
+	$pcm_valid( array( 'name' => 'Acme retainer', 'project_type' => '', 'stage_name' => '', 'start_date' => null, 'end_date' => null ) ),
+	'ok' );
+check( 'an invented type is refused',
+	$pcm_valid( array( 'name' => 'X', 'project_type' => 'Consulting', 'stage_name' => '', 'start_date' => null, 'end_date' => null ) ),
+	'pcm_crm_pm_unknown_type' );
+
+// The failure worth catching: it saves cleanly, then reads as closed-or-not
+// according to a stage set the project was never in.
+check( 'a build stage on a retainer is refused',
+	$pcm_valid( array( 'name' => 'X', 'project_type' => 'AI Enablement Retainer', 'stage_name' => 'UAT', 'start_date' => null, 'end_date' => null ) ),
+	'pcm_crm_pm_wrong_stage' );
+check( 'but its own stage is accepted',
+	$pcm_valid( array( 'name' => 'X', 'project_type' => 'AI Enablement Retainer', 'stage_name' => 'Active', 'start_date' => null, 'end_date' => null ) ),
+	'ok' );
+check( 'an end date before the start is refused',
+	$pcm_valid( array( 'name' => 'X', 'project_type' => '', 'stage_name' => '', 'start_date' => '2026-06-01', 'end_date' => '2026-05-01' ) ),
+	'pcm_crm_pm_bad_window' );
+
+echo "\n--- contact role validation ---\n";
+
+$pcm_role_valid = function ( array $pcm_row ) {
+	$pcm_result = pcm_crm_pm_validate_role( null, 'project_role', array_merge( array(
+		'party_type' => '', 'user_id' => 0, 'contact_id' => 0, 'partner_account_id' => 0,
+	), $pcm_row ), 0 );
+
+	return is_wp_error( $pcm_result ) ? $pcm_result->get_error_code() : 'ok';
+};
+
+check( 'a role has to say which side someone is on',
+	$pcm_role_valid( array() ), 'pcm_crm_pm_unknown_party' );
+// The failure this catches looks fine in a list, counts towards the team, and
+// names nobody.
+check( 'an internal role without a team member is refused',
+	$pcm_role_valid( array( 'party_type' => 'internal' ) ), 'pcm_crm_pm_no_user' );
+check( 'with one, it is fine',
+	$pcm_role_valid( array( 'party_type' => 'internal', 'user_id' => 4 ) ), 'ok' );
+check( 'a client role without a contact is refused — that is who a report goes to',
+	$pcm_role_valid( array( 'party_type' => 'client' ) ), 'pcm_crm_pm_no_contact' );
+check( 'with one, it is fine',
+	$pcm_role_valid( array( 'party_type' => 'client', 'contact_id' => 7 ) ), 'ok' );
+check( 'a partner role needs either a person or the firm',
+	$pcm_role_valid( array( 'party_type' => 'partner' ) ), 'pcm_crm_pm_no_partner' );
+// A firm can be engaged before anyone there has been named, and refusing the row
+// would mean not recording the engagement at all.
+check( 'the firm alone is enough',
+	$pcm_role_valid( array( 'party_type' => 'partner', 'partner_account_id' => 3 ) ), 'ok' );
+check( 'and so is a named person there',
+	$pcm_role_valid( array( 'party_type' => 'partner', 'contact_id' => 9 ) ), 'ok' );
+
+echo "\n--- time entry validation ---\n";
+
+$pcm_time_valid = function ( array $pcm_row ) {
+	$pcm_result = pcm_crm_pm_validate_time_entry( null, 'time_entry', array_merge( array(
+		'project_id' => 12, 'hours' => 1.5,
+	), $pcm_row ), 0 );
+
+	return is_wp_error( $pcm_result ) ? $pcm_result->get_error_code() : 'ok';
+};
+
+check( 'a plain entry is fine', $pcm_time_valid( array() ), 'ok' );
+check( 'time needs a project', $pcm_time_valid( array( 'project_id' => 0 ) ), 'pcm_crm_pm_no_project' );
+// Null is what the parser returns for something it could not read, so this
+// catches "1h3O" with a letter in it as well as a blank box.
+check( 'unreadable hours are refused rather than stored as nothing',
+	$pcm_time_valid( array( 'hours' => null ) ), 'pcm_crm_pm_no_hours' );
+check( 'and so is no time at all', $pcm_time_valid( array( 'hours' => 0 ) ), 'pcm_crm_pm_no_hours' );
+// Always a typo — usually a date typed into the hours box.
+check( 'more than a day in one entry is refused',
+	$pcm_time_valid( array( 'hours' => 30 ) ), 'pcm_crm_pm_too_many_hours' );
+check( 'a full day is not', $pcm_time_valid( array( 'hours' => 24 ) ), 'ok' );
+
+delete_option( PCM_CRM_MODULES_OPTION );
 
 echo "\n" . ( $fail ? "$fail FAILED\n" : "All checks passed\n" );
 exit( $fail ? 1 : 0 );

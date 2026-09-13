@@ -148,6 +148,7 @@ pcm_crm_register_object( 'activities', array(
 	'reportable'    => true,
 	'customisable'  => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'Task',
 	'group_options' => array( 'activity_type', 'status', 'priority', 'owner_id' ),
 	// Built from the record in hand rather than fetched: an activity's only

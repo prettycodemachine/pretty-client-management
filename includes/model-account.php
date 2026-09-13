@@ -121,6 +121,7 @@ pcm_crm_register_object( 'accounts', array(
 	'reportable'    => true,
 	'customisable'  => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'Account',
 	'group_options' => array( 'type', 'industry', 'billing_state', 'owner_id' ),
 	'related'       => 'fetch',

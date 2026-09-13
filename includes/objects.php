@@ -30,6 +30,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  *     @type bool     $reportable   In the filter builder, reports and /schema.
  *     @type bool     $customisable Can carry admin-defined custom fields.
  *     @type bool     $exportable   Offered on the Data Export tab.
+ *     @type bool     $recyclable   Deleted rows can be restored from the
+ *                                  Recycle Bin. Needs an is_deleted column.
  *     @type string   $sf           Salesforce object name, for the export tab.
  *     @type string   $group_by     Default report grouping column.
  *     @type array    $group_options Columns the report screen offers to
@@ -52,6 +54,7 @@ function pcm_crm_register_object( $pcm_slug, array $pcm_args ) {
 		'reportable'    => false,
 		'customisable'  => false,
 		'exportable'    => false,
+		'recyclable'    => false,
 		'sf'            => '',
 		'group_by'      => '',
 		'group_options' => array(),

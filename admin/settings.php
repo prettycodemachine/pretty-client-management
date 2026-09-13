@@ -127,6 +127,28 @@ function pcm_crm_sanitize_checkbox( $pcm_value ) {
 }
 
 /**
+ * Which modules are on.
+ *
+ * Written as an explicit 1 or 0 for every registered module rather than as a
+ * list of the ticked ones, because an unchecked box posts nothing at all — and a
+ * missing key would fall back to the module's default, which would make a module
+ * defaulting to on impossible to switch off.
+ *
+ * Unregistered keys are dropped, so a module that has been removed does not
+ * leave a setting behind that nothing reads.
+ */
+function pcm_crm_sanitize_modules( $pcm_value ) {
+	$pcm_value = is_array( $pcm_value ) ? $pcm_value : array();
+	$pcm_out   = array();
+
+	foreach ( pcm_crm_modules() as $pcm_slug => $pcm_module ) {
+		$pcm_out[ $pcm_slug ] = empty( $pcm_value[ $pcm_slug ] ) ? 0 : 1;
+	}
+
+	return $pcm_out;
+}
+
+/**
  * The attachment list posts as a comma-separated string from the picker, since
  * a hidden input cannot hold an array without one field per value.
  */
@@ -674,6 +696,46 @@ function pcm_crm_render_export_tab() {
 /* ---------------------------------------------------------------------------
    Pipeline tab
    --------------------------------------------------------------------------- */
+
+/**
+ * The Modules tab.
+ *
+ * Switching a module off takes it out of the navigation and off the REST surface.
+ * It does not remove anything: the tables stay, which is why switching it back on
+ * is immediate and why nothing here warns about data loss — there is none.
+ */
+function pcm_crm_render_modules_tab() {
+	$pcm_modules = pcm_crm_modules();
+	?>
+	<form method="post" action="options.php" class="pcm-crm-card">
+		<?php settings_fields( 'pcm_crm_modules_settings' ); ?>
+
+		<p class="description">
+			<?php esc_html_e( 'Extra toolsets that share this CRM’s data. Switching one off hides its screens and routes; nothing is deleted, and switching it back on restores it as it was.', 'pcm-crm' ); ?>
+		</p>
+
+		<table class="form-table" role="presentation">
+			<?php foreach ( $pcm_modules as $pcm_slug => $pcm_module ) : ?>
+				<tr>
+					<th scope="row"><?php echo esc_html( $pcm_module['label'] ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox"
+								name="<?php echo esc_attr( PCM_CRM_MODULES_OPTION ); ?>[<?php echo esc_attr( $pcm_slug ); ?>]"
+								value="1"
+								<?php checked( pcm_crm_module_active( $pcm_slug ) ); ?> />
+							<?php esc_html_e( 'Enabled', 'pcm-crm' ); ?>
+						</label>
+						<p class="description"><?php echo esc_html( $pcm_module['description'] ); ?></p>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+		</table>
+
+		<?php submit_button( __( 'Save Modules', 'pcm-crm' ) ); ?>
+	</form>
+	<?php
+}
 
 function pcm_crm_render_pipeline_tab() {
 	?>

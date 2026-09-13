@@ -164,6 +164,7 @@ pcm_crm_register_object( 'opportunities', array(
 	'reportable'    => true,
 	'customisable'  => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'Opportunity',
 	'group_options' => array( 'stage_name', 'type', 'lead_source', 'forecast_category', 'owner_id' ),
 	'related'       => 'fetch',

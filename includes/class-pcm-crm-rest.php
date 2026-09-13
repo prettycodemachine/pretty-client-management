@@ -30,9 +30,19 @@ class PCM_CRM_REST {
 	 */
 	public static function models() {
 		static $pcm_models = null;
+		static $pcm_built_from = -1;
 
-		if ( null === $pcm_models ) {
-			$pcm_models = array();
+		$pcm_registered = count( pcm_crm_objects() );
+
+		// Keyed on how many objects were registered when the memo was built, so a
+		// module registering after something has already asked for the models
+		// cannot be left out of them. Modules load last in the bootstrap and
+		// nothing calls this before that finishes, so in practice it is built
+		// once — but a stale memo here would be a silently missing REST route,
+		// which is not a failure worth risking to save a count().
+		if ( null === $pcm_models || $pcm_built_from !== $pcm_registered ) {
+			$pcm_models     = array();
+			$pcm_built_from = $pcm_registered;
 
 			foreach ( pcm_crm_objects() as $pcm_slug => $pcm_object ) {
 				$pcm_model = pcm_crm_object_model( $pcm_slug );
@@ -945,12 +955,13 @@ function pcm_crm_sequence_choices() {
  * back out of a bin.
  */
 function pcm_crm_recyclable_objects() {
-	return array(
-		'accounts'      => __( 'Accounts', 'pcm-crm' ),
-		'contacts'      => __( 'Contacts', 'pcm-crm' ),
-		'opportunities' => __( 'Opportunities', 'pcm-crm' ),
-		'activities'    => __( 'Activities', 'pcm-crm' ),
-	);
+	$pcm_out = array();
+
+	foreach ( pcm_crm_objects_where( 'recyclable' ) as $pcm_slug => $pcm_object ) {
+		$pcm_out[ $pcm_slug ] = $pcm_object['plural'];
+	}
+
+	return $pcm_out;
 }
 
 function pcm_crm_currency_symbol() {

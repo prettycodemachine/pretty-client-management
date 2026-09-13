@@ -1,0 +1,138 @@
+/**
+ * Project management.
+ *
+ * Loaded after crm.css and on every CRM screen when the module is on, because a
+ * project's meter appears inside an Account's related list — a core screen.
+ *
+ * No token block of its own: it reads the ones crm.css declares on .pcm-crm, so
+ * a theme switch carries the meters with it rather than leaving them behind in
+ * the default palette.
+ */
+
+/* Meter --------------------------------------------------------------------
+   A ratio against a limit, which is not what charts.js draws: that renders
+   {value,count,total} rows as drillable SVG marks. A meter needs a label beside
+   the fill, has to print, and wants role="meter" so a screen reader is handed
+   the number rather than an SVG <title>.
+   ------------------------------------------------------------------------- */
+.pcm-pm-meters {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 0 0 4px;
+}
+
+.pcm-pm-meter-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.pcm-pm-meter-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--pcm-ink);
+}
+
+.pcm-pm-meter-value {
+  color: var(--pcm-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.pcm-pm-meter-track {
+  position: relative;
+  height: 12px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 999px;
+  background: var(--pcm-paper-tint);
+  overflow: hidden;
+}
+
+.pcm-pm-meter-fill {
+  height: 100%;
+  /* Set as a custom-property value inline rather than as a width, so the number
+     stays inspectable and one rule covers every meter. */
+  width: calc(min(var(--pcm-meter-pct), 100) * 1%);
+  background: var(--pcm-blue-deep);
+  transition: width 0.2s ease;
+}
+
+.pcm-pm-meter-fill.is-amber { background: var(--pcm-accent-deep); }
+.pcm-pm-meter-fill.is-red { background: var(--pcm-accent-deeper); }
+.pcm-pm-meter-fill.is-green { background: var(--pcm-green); }
+
+/* An over-run is drawn rather than clipped: a bar pinned at 100% cannot say
+   whether it is at budget or a third past it. */
+.pcm-pm-meter-over {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 34%;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--pcm-accent-deeper) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+/* Tone never travels on colour alone — these print greyscale, and the glyph is
+   what survives that as well as a colour-blind reader. */
+.pcm-pm-meter-flag {
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.pcm-pm-meter.is-amber .pcm-pm-meter-flag,
+.pcm-pm-meter.is-red .pcm-pm-meter-flag { color: var(--pcm-accent-deeper); }
+
+/* A meter with no denominator is not drawn at all. A project with no budget has
+   no budget meter, which is a different statement from nought per cent spent. */
+.pcm-pm-meter.is-empty .pcm-pm-meter-track { display: none; }
+.pcm-pm-meter.is-empty .pcm-pm-meter-value { color: var(--pcm-gray); }
+
+/* Health pill -------------------------------------------------------------- */
+.pcm-pm-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pcm-pm-health.is-green { background: #e6f2ec; color: var(--pcm-green); }
+.pcm-pm-health.is-amber { background: #fdf1e7; color: #9a5a1f; }
+.pcm-pm-health.is-red { background: #fbeaea; color: var(--pcm-accent-deeper); }
+
+/* Where the hand-set value and the computed one disagree, both are shown. A
+   meter that silently disagrees with the pill above it is worse than either. */
+.pcm-pm-health-note {
+  font-size: 11px;
+  color: var(--pcm-body);
+  margin-left: 6px;
+}
+
+/* Print --------------------------------------------------------------------
+   A status report gets printed, and a meter whose fill is a background colour
+   disappears under most browsers' default "do not print backgrounds". The border
+   plus the numeric label carry it either way.
+   ------------------------------------------------------------------------- */
+@media print {
+  .pcm-pm-meter-fill,
+  .pcm-pm-health {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .pcm-pm-meters { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pcm-pm-meter-fill { transition: none; }
+}

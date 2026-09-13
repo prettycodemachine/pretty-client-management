@@ -186,6 +186,7 @@ pcm_crm_register_object( 'contacts', array(
 	'reportable'    => true,
 	'customisable'  => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'Contact',
 	'group_options' => array( 'lead_source', 'account_id', 'title', 'owner_id' ),
 	'related'       => 'fetch',

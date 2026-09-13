@@ -58,6 +58,7 @@ function pcm_crm_modules() {
 				),
 				'files'       => array(
 					'pm/pm-objects.php',
+					'pm/pm-rest.php',
 					'pm/pm-menu.php',
 				),
 			),

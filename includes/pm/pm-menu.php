@@ -21,17 +21,18 @@ function pcm_crm_pm_menu() {
 		__( 'Projects', 'pcm-crm' ),
 		$pcm_cap,
 		'pcm-crm-projects',
-		'pcm_crm_pm_render_dashboard',
+		'pcm_crm_pm_render_projects',
 		'dashicons-clipboard',
 		27
 	);
 
+	// Only the screens that have a view behind them. The dashboard, the board
+	// and the resourcing grid are registered in pm.js as they are built; a menu
+	// item whose view does not exist yet renders the app's "Unknown screen"
+	// fallback, which is a worse answer than not offering it.
 	$pcm_pages = array(
-		'pcm-crm-projects'      => array( __( 'Dashboard', 'pcm-crm' ), 'pcm_crm_pm_render_dashboard' ),
-		'pcm-crm-project-list'  => array( __( 'All Projects', 'pcm-crm' ), 'pcm_crm_pm_render_projects' ),
-		'pcm-crm-project-board' => array( __( 'Project Board', 'pcm-crm' ), 'pcm_crm_pm_render_board' ),
-		'pcm-crm-resourcing'    => array( __( 'Resourcing', 'pcm-crm' ), 'pcm_crm_pm_render_resourcing' ),
-		'pcm-crm-time'          => array( __( 'Time', 'pcm-crm' ), 'pcm_crm_pm_render_time' ),
+		'pcm-crm-projects' => array( __( 'All Projects', 'pcm-crm' ), 'pcm_crm_pm_render_projects' ),
+		'pcm-crm-time'     => array( __( 'Time', 'pcm-crm' ), 'pcm_crm_pm_render_time' ),
 	);
 
 	foreach ( $pcm_pages as $pcm_slug => $pcm_page ) {
@@ -44,20 +45,8 @@ add_action( 'admin_menu', 'pcm_crm_pm_menu' );
    Each is the shared shell with its own data-view, the way every CRM screen is.
    -------------------------------------------------------------------------- */
 
-function pcm_crm_pm_render_dashboard() {
-	pcm_crm_screen( 'pm-dashboard', __( 'Projects', 'pcm-crm' ), __( 'Budget, schedule and hours across every live project.', 'pcm-crm' ) );
-}
-
 function pcm_crm_pm_render_projects() {
-	pcm_crm_screen( 'projects', __( 'All Projects', 'pcm-crm' ) );
-}
-
-function pcm_crm_pm_render_board() {
-	pcm_crm_screen( 'pm-board', __( 'Project Board', 'pcm-crm' ), __( 'Drag a project to move it through its stages.', 'pcm-crm' ) );
-}
-
-function pcm_crm_pm_render_resourcing() {
-	pcm_crm_screen( 'pm-resourcing', __( 'Resourcing', 'pcm-crm' ), __( 'Who is booked on what, week by week.', 'pcm-crm' ) );
+	pcm_crm_screen( 'projects', __( 'Projects', 'pcm-crm' ), __( 'Every project, with the account and opportunity behind it.', 'pcm-crm' ) );
 }
 
 function pcm_crm_pm_render_time() {

@@ -25,6 +25,7 @@ pcm_crm_register_object( 'projects', array(
 	'plural'        => 'Projects',
 	'reportable'    => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	// No standard Salesforce counterpart. The Data Export tab labels these as a
 	// local extract rather than a migration path, so the header row cannot be
 	// mistaken for a mapping.
@@ -40,6 +41,7 @@ pcm_crm_register_object( 'project_tasks', array(
 	'plural'        => 'Tasks',
 	'reportable'    => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'PCM_Project_Task__c',
 	'group_options' => array( 'status', 'assignee_user_id', 'project_id' ),
 	'module'        => 'pm',
@@ -51,6 +53,7 @@ pcm_crm_register_object( 'project_raid', array(
 	'plural'        => 'RAID Log',
 	'reportable'    => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'PCM_Project_RAID__c',
 	'group_options' => array( 'raid_type', 'status', 'impact', 'project_id' ),
 	'module'        => 'pm',
@@ -62,6 +65,7 @@ pcm_crm_register_object( 'project_roles', array(
 	'plural'        => 'Project Roles',
 	'reportable'    => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'PCM_Project_Role__c',
 	'group_options' => array( 'party_type', 'role', 'project_id' ),
 	'module'        => 'pm',
@@ -73,6 +77,7 @@ pcm_crm_register_object( 'time_entries', array(
 	'plural'        => 'Time',
 	'reportable'    => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'PCM_Time_Entry__c',
 	'group_options' => array( 'project_id', 'user_id', 'is_billable', 'task_id' ),
 	'module'        => 'pm',
@@ -84,6 +89,7 @@ pcm_crm_register_object( 'allocations', array(
 	'plural'        => 'Allocations',
 	'reportable'    => true,
 	'exportable'    => true,
+	'recyclable'    => true,
 	'sf'            => 'PCM_Allocation__c',
 	'group_options' => array( 'user_id', 'project_id', 'role' ),
 	'module'        => 'pm',
