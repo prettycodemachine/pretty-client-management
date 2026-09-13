@@ -37,7 +37,7 @@
 				{ label: 'Account', value: row._account_name },
 				{ label: 'Stage', value: row.stage_name },
 				{ label: 'Health', value: row.health },
-				{ label: 'Ends', value: row.end_date },
+				{ label: 'Ends', value: app.helpers.formatDate(row.end_date) },
 				{ label: 'Owner', value: row._owner_name }
 			];
 		},
@@ -84,13 +84,153 @@
 		}
 	});
 
+	/**
+	 * The step back up to the project, shared by everything hanging off one.
+	 */
+	function projectLink(row) {
+		return row.project_id ? { object: 'projects', id: row.project_id } : null;
+	}
+
+	app.registerObject('project_tasks', {
+		label: 'Task',
+		plural: 'Tasks',
+		title: function (row) { return row.name || 'Task'; },
+		kicker: function (row) { return row._project_name || (Number(row.is_milestone) ? 'Milestone' : 'Task'); },
+		kickerLink: projectLink,
+		highlights: function (row) {
+			return [
+				{ label: 'Status', value: row.status },
+				{ label: 'Assigned To', value: row._assignee_name },
+				{ label: 'Due', value: app.helpers.formatDate(row.due_date) },
+				{ label: 'Estimate', value: row.estimated_hours ? row.estimated_hours + 'h' : '' }
+			];
+		},
+		columns: [
+			{ key: 'name', label: 'Task', strong: true },
+			{ key: '_project_name', label: 'Project' },
+			{ key: 'status', label: 'Status', badge: true },
+			{ key: '_assignee_name', label: 'Assigned To' },
+			{ key: 'due_date', label: 'Due', due: true }
+		],
+		filters: function () {
+			return [
+				{ key: 'status', label: 'Status', options: app.helpers.options(state.boot.taskStatuses || [], true), blank: 'Any status' },
+				{ key: 'is_milestone', label: 'Milestone', options: [
+					{ value: '', label: 'Either' }, { value: '1', label: 'Milestones' }, { value: '0', label: 'Tasks' }
+				] },
+				{ key: 'due_date', label: 'Due', range: 'date' }
+			];
+		},
+		hints: function (name) {
+			var hints = {};
+
+			if (name === 'project_id') { hints.lookup = 'projects'; }
+			if (name === 'assignee_user_id') { hints.options = app.helpers.ownerOptions(); }
+			if (name === 'name' || name === 'description') { hints.wide = true; }
+
+			return hints;
+		}
+	});
+
+	app.registerObject('project_raid', {
+		label: 'RAID Entry',
+		plural: 'RAID Log',
+		title: function (row) { return row.title || 'RAID entry'; },
+		kicker: function (row) { return row.raid_type || 'RAID'; },
+		kickerLink: projectLink,
+		highlights: function (row) {
+			return [
+				{ label: 'Project', value: row._project_name },
+				{ label: 'Status', value: row.status },
+				{ label: 'Severity', value: row.severity ? String(row.severity) : '' },
+				{ label: 'Review By', value: app.helpers.formatDate(row.due_date) }
+			];
+		},
+		columns: [
+			{ key: 'title', label: 'Title', strong: true },
+			{ key: 'raid_type', label: 'Kind', badge: true },
+			{ key: '_project_name', label: 'Project' },
+			{ key: 'status', label: 'Status', badge: true },
+			{ key: 'severity', label: 'Severity', num: true },
+			{ key: 'due_date', label: 'Review By', due: true }
+		],
+		filters: function () {
+			return [
+				{ key: 'raid_type', label: 'Kind', options: app.helpers.options(state.boot.raidTypes || [], true), blank: 'Any kind' },
+				{ key: 'status', label: 'Status', options: app.helpers.options(state.boot.raidStatuses || [], true), blank: 'Any status' },
+				{ key: 'impact', label: 'Impact', options: app.helpers.options(state.boot.raidLevels || [], true), blank: 'Any impact' }
+			];
+		},
+		hints: function (name) {
+			var hints = {};
+
+			if (name === 'project_id') { hints.lookup = 'projects'; }
+			if (name === 'owner_contact_id') { hints.lookup = 'contacts'; }
+			if (name === 'owner_id') { hints.options = app.helpers.ownerOptions(); }
+			if (name === 'title' || name === 'description' || name === 'mitigation' || name === 'resolution') { hints.wide = true; }
+
+			return hints;
+		}
+	});
+
+	app.registerObject('project_roles', {
+		label: 'Project Role',
+		plural: 'Project Roles',
+		title: function (row) { return row._person_name || 'Project role'; },
+		kicker: function (row) { return row._party_label || 'Role'; },
+		kickerLink: projectLink,
+		highlights: function (row) {
+			return [
+				{ label: 'Project', value: row._project_name },
+				{ label: 'Role', value: row.role },
+				{ label: 'Organisation', value: row._org_name }
+			];
+		},
+		columns: [
+			{ key: '_person_name', label: 'Person', strong: true },
+			{ key: '_party_label', label: 'Side', badge: true },
+			{ key: 'role', label: 'Role' },
+			{ key: '_project_name', label: 'Project' },
+			{ key: '_org_name', label: 'Organisation' }
+		],
+		filters: function () {
+			var parties = (state.boot && state.boot.partyTypes) || {};
+
+			return [
+				{ key: 'party_type', label: 'Side', options: [{ value: '', label: 'Any side' }].concat(
+					Object.keys(parties).map(function (key) { return { value: key, label: parties[key] }; })
+				) },
+				{ key: 'role', label: 'Role', options: app.helpers.options(state.boot.projectRoles || [], true), blank: 'Any role' }
+			];
+		},
+		hints: function (name) {
+			var hints = {};
+
+			if (name === 'project_id') { hints.lookup = 'projects'; }
+			if (name === 'contact_id') { hints.lookup = 'contacts'; }
+			if (name === 'partner_account_id') { hints.lookup = 'accounts'; }
+			if (name === 'user_id') { hints.options = app.helpers.ownerOptions(); }
+			if (name === 'description') { hints.wide = true; }
+
+			// Each side names its person differently, so only the id column that
+			// side uses is offered: a team member internally, a contact for the
+			// client, and a contact or the firm for a partner.
+			if (name === 'user_id') { hints.showWhen = 'party_type'; hints.showWhenValue = 'internal'; }
+			if (name === 'contact_id') { hints.showWhen = 'party_type'; hints.showWhenOneOf = ['client', 'partner']; }
+			if (name === 'partner_account_id') { hints.showWhen = 'party_type'; hints.showWhenValue = 'partner'; }
+
+			return hints;
+		}
+	});
+
 	app.registerObject('time_entries', {
 		label: 'Time Entry',
 		plural: 'Time',
 		title: function (row) {
 			return (row._project_name || 'Time') + ' — ' + app.helpers.formatDate(row.entry_date);
 		},
-		kicker: function (row) { return row.is_billable ? 'Billable' : 'Internal'; },
+		kicker: function (row) { return Number(row.is_billable) ? 'Billable' : 'Internal'; },
+		kickerLink: projectLink,
 		highlights: function (row) {
 			return [
 				{ label: 'Project', value: row._project_name },

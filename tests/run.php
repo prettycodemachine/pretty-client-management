@@ -1695,6 +1695,84 @@ check( 'and the bookkeeping tables, so nothing is stranded',
 
 pcm_test_reset_filters( 'pcm_crm_sample_tables' );
 
+echo "\n--- display names the browser reads ---\n";
+
+// A column reading a name nothing produces is a blank column, and it never
+// errors — which is how All Projects shipped with an empty Account column: core
+// resolves an account name only for contacts and opportunities. So every
+// underscore field pm.js reads is taken out of pm.js itself and asserted to
+// arrive on a decorated row.
+$pcm_pm_js = file_get_contents( dirname( __DIR__ ) . '/assets/pm.js' );
+
+// What core's expand() already puts on every row with those columns.
+$pcm_core_made = array( '_owner_name', '_created_by_name', '_modified_by_name' );
+
+$pcm_js_to_php = array(
+	'projects'      => 'project',
+	'project_tasks' => 'project_task',
+	'project_raid'  => 'project_raid',
+	'project_roles' => 'project_role',
+	'time_entries'  => 'time_entry',
+);
+
+$pcm_maps = array(
+	'accounts'      => array( 5 => array( 'id' => 5, 'name' => 'Acme' ), 8 => array( 'id' => 8, 'name' => 'Partner Co' ) ),
+	'opportunities' => array( 9 => array( 'id' => 9, 'name' => 'Acme — AI pilot' ) ),
+	'projects'      => array( 12 => array( 'id' => 12, 'name' => 'Acme retainer' ) ),
+	'contacts'      => array( 7 => array( 'id' => 7, 'first_name' => 'Sam', 'last_name' => 'Lee', 'email' => '', 'account_id' => 5 ) ),
+);
+
+$pcm_users = function ( $pcm_id ) { return 4 === $pcm_id ? 'Dana Reyes' : ''; };
+
+// One row carrying every parent column any PM object has, so whatever a block
+// reads has something to resolve from.
+$pcm_full_row = array(
+	'id' => 1, 'account_id' => 5, 'opportunity_id' => 9, 'project_id' => 12, 'user_id' => 4,
+	'assignee_user_id' => 4, 'owner_contact_id' => 7, 'contact_id' => 7, 'partner_account_id' => 0,
+	'party_type' => 'client',
+);
+
+foreach ( $pcm_js_to_php as $pcm_slug => $pcm_php_object ) {
+	$pcm_start = strpos( $pcm_pm_js, "registerObject('{$pcm_slug}'" );
+	$pcm_end   = strpos( $pcm_pm_js, 'app.register', $pcm_start + 10 );
+	$pcm_block = substr( $pcm_pm_js, $pcm_start, false === $pcm_end ? null : $pcm_end - $pcm_start );
+
+	preg_match_all( '/(?:row\._|key: \'_)([a-z_]+)/', $pcm_block, $pcm_reads );
+
+	$pcm_wanted = array_diff( array_unique( array_map( function ( $pcm_k ) { return '_' . $pcm_k; }, $pcm_reads[1] ) ), $pcm_core_made );
+
+	$pcm_decorated = pcm_crm_pm_decorate( $pcm_php_object, array( $pcm_full_row ), $pcm_maps, $pcm_users );
+
+	foreach ( $pcm_wanted as $pcm_field ) {
+		check( "{$pcm_slug}: pm.js reads {$pcm_field}, and the server provides it",
+			array_key_exists( $pcm_field, $pcm_decorated[0] ), true );
+	}
+}
+
+$pcm_named = function ( array $pcm_row ) use ( $pcm_maps, $pcm_users ) {
+	$pcm_out = pcm_crm_pm_decorate( 'project_role', array( array_merge( array(
+		'user_id' => 0, 'contact_id' => 0, 'partner_account_id' => 0, 'project_id' => 12,
+	), $pcm_row ) ), $pcm_maps, $pcm_users );
+
+	return array( $pcm_out[0]['_person_name'], $pcm_out[0]['_party_label'], $pcm_out[0]['_org_name'] );
+};
+
+check( 'an account name actually resolves on a project, not just the key',
+	pcm_crm_pm_decorate( 'project', array( array( 'account_id' => 5 ) ), $pcm_maps, $pcm_users )[0]['_account_name'],
+	'Acme' );
+
+// Who a role names depends on the side they are on — the reason party_type exists.
+check( 'an internal role names the team member', $pcm_named( array( 'party_type' => 'internal', 'user_id' => 4 ) )[0], 'Dana Reyes' );
+check( 'a client role names the contact, at their own organisation',
+	$pcm_named( array( 'party_type' => 'client', 'contact_id' => 7 ) ), array( 'Sam Lee', 'Client', 'Acme' ) );
+// A firm can be engaged before anyone there is named, and the row still has to
+// read as someone rather than a dash.
+check( 'a partner firm with no named person reads as the firm',
+	$pcm_named( array( 'party_type' => 'partner', 'partner_account_id' => 8 ) ), array( 'Partner Co', 'Partner', 'Partner Co' ) );
+check( 'a missing parent comes out empty rather than as a notice',
+	pcm_crm_pm_decorate( 'time_entry', array( array( 'project_id' => 999, 'user_id' => 0 ) ), $pcm_maps, $pcm_users )[0]['_project_name'],
+	'' );
+
 delete_option( PCM_CRM_MODULES_OPTION );
 
 echo "\n" . ( $fail ? "$fail FAILED\n" : "All checks passed\n" );

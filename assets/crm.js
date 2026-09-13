@@ -748,7 +748,10 @@
 		if (lookups[object]) { return Promise.resolve(lookups[object]); }
 
 		return api('/' + object, {
-			query: { per_page: 500, orderby: object === 'accounts' ? 'name' : 'last_name', order: 'ASC' }
+			// Contacts are the one object without a name column. Everything else
+			// sorts by name — including a module's objects, which would otherwise
+			// ask for last_name, get it refused, and arrive in modified order.
+			query: { per_page: 500, orderby: object === 'contacts' ? 'last_name' : 'name', order: 'ASC' }
 		}).then(function (data) {
 			lookups[object] = data.items.map(function (row) {
 				return { value: row.id, label: objects[object].title(row) };

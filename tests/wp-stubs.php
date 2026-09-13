@@ -54,6 +54,8 @@ function apply_filters( $h, $v ) {
 
 $GLOBALS['pcm_test_filters'] = array();
 
+function get_bloginfo( $s = '' ) { return 'Pretty Code Machine'; }
+
 function pcm_test_add_filter( $h, $cb ) { $GLOBALS['pcm_test_filters'][$h][] = $cb; }
 function pcm_test_reset_filters( $h ) { unset( $GLOBALS['pcm_test_filters'][$h] ); }
 function do_action() {} function add_shortcode() {} function register_activation_hook() {}

@@ -202,3 +202,137 @@ function pcm_crm_pm_merge_prefix( $pcm_prefixes ) {
 	return $pcm_prefixes;
 }
 add_filter( 'pcm_crm_merge_prefixes', 'pcm_crm_pm_merge_prefix' );
+
+/* Display names -------------------------------------------------------------
+   Core's expand() resolves an account name only for contacts and
+   opportunities, and knows nothing of projects or of people on them. Without
+   this, a project list shows a blank Account column and a team list is a column
+   of dashes — nothing errors, it just reads as empty.
+   -------------------------------------------------------------------------- */
+
+/**
+ * The module's objects, as expand() names them.
+ */
+function pcm_crm_pm_expandable() {
+	return array( 'project', 'project_task', 'project_raid', 'project_role', 'time_entry', 'allocation', 'retainer_period', 'status_report' );
+}
+
+/**
+ * Fetch every parent a page of rows points at, one query per source.
+ *
+ * A page at a time rather than a row at a time, which is the whole reason the
+ * pcm_crm_expand_items filter hands over the page: a list of a hundred time
+ * entries is two lookups here, not two hundred.
+ */
+function pcm_crm_pm_expand_items( $pcm_items, $pcm_object ) {
+	if ( ! $pcm_items || ! in_array( $pcm_object, pcm_crm_pm_expandable(), true ) ) {
+		return $pcm_items;
+	}
+
+	$pcm_ids = array( 'accounts' => array(), 'opportunities' => array(), 'projects' => array(), 'contacts' => array() );
+
+	foreach ( $pcm_items as $pcm_item ) {
+		foreach ( array( 'account_id' => 'accounts', 'partner_account_id' => 'accounts', 'opportunity_id' => 'opportunities',
+			'project_id' => 'projects', 'contact_id' => 'contacts', 'owner_contact_id' => 'contacts' ) as $pcm_column => $pcm_source ) {
+			if ( ! empty( $pcm_item[ $pcm_column ] ) ) {
+				$pcm_ids[ $pcm_source ][] = (int) $pcm_item[ $pcm_column ];
+			}
+		}
+	}
+
+	$pcm_contacts = $pcm_ids['contacts'] ? pcm_crm_contacts()->get_many( array_unique( $pcm_ids['contacts'] ) ) : array();
+
+	// A client contact's organisation is their own account, which none of the
+	// rows name directly — so it joins the account lookup before that runs,
+	// keeping it to one query rather than a second pass.
+	foreach ( $pcm_contacts as $pcm_contact_row ) {
+		if ( ! empty( $pcm_contact_row['account_id'] ) ) {
+			$pcm_ids['accounts'][] = (int) $pcm_contact_row['account_id'];
+		}
+	}
+
+	$pcm_maps = array(
+		'accounts'      => $pcm_ids['accounts'] ? pcm_crm_accounts()->get_many( array_unique( $pcm_ids['accounts'] ) ) : array(),
+		'opportunities' => $pcm_ids['opportunities'] ? pcm_crm_opportunities()->get_many( array_unique( $pcm_ids['opportunities'] ) ) : array(),
+		'projects'      => $pcm_ids['projects'] ? pcm_crm_projects()->get_many( array_unique( $pcm_ids['projects'] ) ) : array(),
+		'contacts'      => $pcm_contacts,
+	);
+
+	return pcm_crm_pm_decorate( $pcm_object, $pcm_items, $pcm_maps, 'pcm_crm_user_name' );
+}
+add_filter( 'pcm_crm_expand_items', 'pcm_crm_pm_expand_items', 10, 2 );
+
+/**
+ * Add the display names to a page of rows, from lookups already fetched.
+ *
+ * Pure — no queries, and the user resolver is passed in — so the names the
+ * browser reads can be asserted without a database.
+ */
+function pcm_crm_pm_decorate( $pcm_object, array $pcm_items, array $pcm_maps, $pcm_user_name ) {
+	$pcm_name = function ( $pcm_source, $pcm_id, $pcm_key = 'name' ) use ( $pcm_maps ) {
+		return ( $pcm_id && isset( $pcm_maps[ $pcm_source ][ $pcm_id ][ $pcm_key ] ) ) ? (string) $pcm_maps[ $pcm_source ][ $pcm_id ][ $pcm_key ] : '';
+	};
+
+	$pcm_contact = function ( $pcm_id ) use ( $pcm_maps ) {
+		return ( $pcm_id && isset( $pcm_maps['contacts'][ $pcm_id ] ) ) ? pcm_crm_contact_name( $pcm_maps['contacts'][ $pcm_id ] ) : '';
+	};
+
+	$pcm_parties = pcm_crm_pm_party_types();
+
+	foreach ( $pcm_items as $pcm_i => $pcm_item ) {
+		if ( ! is_array( $pcm_item ) ) {
+			continue;
+		}
+
+		if ( array_key_exists( 'account_id', $pcm_item ) ) {
+			$pcm_items[ $pcm_i ]['_account_name'] = $pcm_name( 'accounts', (int) $pcm_item['account_id'] );
+		}
+
+		if ( array_key_exists( 'opportunity_id', $pcm_item ) ) {
+			$pcm_items[ $pcm_i ]['_opportunity_name'] = $pcm_name( 'opportunities', (int) $pcm_item['opportunity_id'] );
+		}
+
+		if ( array_key_exists( 'project_id', $pcm_item ) ) {
+			$pcm_items[ $pcm_i ]['_project_name'] = $pcm_name( 'projects', (int) $pcm_item['project_id'] );
+		}
+
+		if ( array_key_exists( 'user_id', $pcm_item ) ) {
+			$pcm_items[ $pcm_i ]['_user_name'] = $pcm_item['user_id'] ? (string) call_user_func( $pcm_user_name, (int) $pcm_item['user_id'] ) : '';
+		}
+
+		if ( array_key_exists( 'assignee_user_id', $pcm_item ) ) {
+			$pcm_items[ $pcm_i ]['_assignee_name'] = $pcm_item['assignee_user_id'] ? (string) call_user_func( $pcm_user_name, (int) $pcm_item['assignee_user_id'] ) : '';
+		}
+
+		if ( array_key_exists( 'owner_contact_id', $pcm_item ) ) {
+			$pcm_items[ $pcm_i ]['_owner_contact_name'] = $pcm_contact( (int) $pcm_item['owner_contact_id'] );
+		}
+
+		if ( 'project_role' === $pcm_object ) {
+			$pcm_party = isset( $pcm_item['party_type'] ) ? (string) $pcm_item['party_type'] : '';
+
+			$pcm_items[ $pcm_i ]['_party_label'] = isset( $pcm_parties[ $pcm_party ] ) ? $pcm_parties[ $pcm_party ] : '';
+
+			// Who the role names depends on which side they are on, which is the
+			// point of party_type: a user internally, a contact on the client
+			// side, and for a partner either the named person or the firm.
+			if ( 'internal' === $pcm_party ) {
+				$pcm_items[ $pcm_i ]['_person_name'] = $pcm_items[ $pcm_i ]['_user_name'];
+				$pcm_items[ $pcm_i ]['_org_name']    = get_bloginfo( 'name' );
+			} else {
+				$pcm_person = $pcm_contact( (int) $pcm_item['contact_id'] );
+				$pcm_firm   = $pcm_name( 'accounts', (int) $pcm_item['partner_account_id'] );
+
+				if ( 'client' === $pcm_party ) {
+					$pcm_contact_row = isset( $pcm_maps['contacts'][ (int) $pcm_item['contact_id'] ] ) ? $pcm_maps['contacts'][ (int) $pcm_item['contact_id'] ] : array();
+					$pcm_firm        = ! empty( $pcm_contact_row['account_id'] ) ? $pcm_name( 'accounts', (int) $pcm_contact_row['account_id'] ) : '';
+				}
+
+				$pcm_items[ $pcm_i ]['_person_name'] = '' !== $pcm_person ? $pcm_person : $pcm_firm;
+				$pcm_items[ $pcm_i ]['_org_name']    = $pcm_firm;
+			}
+		}
+	}
+
+	return $pcm_items;
+}

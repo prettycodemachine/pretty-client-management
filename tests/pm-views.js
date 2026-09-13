@@ -97,12 +97,31 @@ const win = { PCM_CRM_App: app };
 // eslint-disable-next-line no-new-func
 new Function('window', 'document', pmSrc)(win, { });
 
-check('pm.js registers the project and time objects',
-	Object.keys(registered.objects).sort(), ['projects', 'time_entries']);
+check('pm.js registers every object a project record can open',
+	Object.keys(registered.objects).sort(), ['project_raid', 'project_roles', 'project_tasks', 'projects', 'time_entries']);
+
+// Core's own object map, read out of crm.js, so a child pointing at a core
+// object (activities) counts as resolved.
+const coreObjects = new Set(
+	[...crmSrc.matchAll(/^\t\t([a-z_]+): \{\n\t\t\tlabel:/gm)].map(m => m[1])
+);
+check('crm.js still declares its core objects', coreObjects.has('activities') && coreObjects.has('accounts'), true);
 
 /* The contracts. ------------------------------------------------------------ */
 
 const sampleRows = {
+	project_tasks: {
+		id: 4, project_id: 12, name: 'Kickoff', status: 'Done', is_milestone: 0, due_date: '2026-09-01',
+		_project_name: 'Acme retainer', _assignee_name: 'Dana', estimated_hours: 4
+	},
+	project_raid: {
+		id: 5, project_id: 12, title: 'Data quality', raid_type: 'Risk', status: 'Open', severity: 6,
+		due_date: '2026-10-01', _project_name: 'Acme retainer'
+	},
+	project_roles: {
+		id: 6, project_id: 12, party_type: 'client', contact_id: 7, role: 'Business Owner',
+		_person_name: 'Sam Lee', _party_label: 'Client', _org_name: 'Acme', _project_name: 'Acme retainer'
+	},
 	projects: {
 		id: 12, name: 'Acme retainer', account_id: 5, opportunity_id: 9, project_type: 'AI Enablement Retainer',
 		stage_name: 'Active', health: 'Green', budget_amount: 20000, end_date: '2026-12-31',
@@ -125,7 +144,10 @@ Object.keys(registered.objects).forEach(slug => {
 		check(`${slug}: kickerLink returns an object or null, never a string`,
 			link === null || (typeof link === 'object' && typeof link.object === 'string' && 'id' in link), true);
 
-		const orphan = def.kickerLink(Object.assign({}, row, { account_id: 0 }));
+		// Every parent column zeroed, since objects link up through different
+		// ones — a project through its account, everything under it through
+		// its project.
+		const orphan = def.kickerLink(Object.assign({}, row, { account_id: 0, project_id: 0 }));
 		check(`${slug}: and null when there is no parent to open`, orphan === null || orphan === undefined, true);
 	}
 
@@ -157,7 +179,8 @@ Object.keys(registered.objects).forEach(slug => {
 	// Hints become a field's properties, and anything crm.js does not read is
 	// silently inert — which is how a permanently hidden section happens.
 	if (def.hints) {
-		['name', 'account_id', 'project_id', 'owner_id', 'description', 'retainer_hours', 'user_id', 'task_id']
+		['name', 'title', 'account_id', 'project_id', 'owner_id', 'description', 'retainer_hours', 'user_id',
+			'task_id', 'contact_id', 'partner_account_id', 'assignee_user_id', 'owner_contact_id']
 			.forEach(field => {
 				const hints = def.hints(field) || {};
 
@@ -233,6 +256,41 @@ check('an unmapped deal type leaves the project type blank rather than guessing'
 registered.children.projects[0]({ id: 12 }, helpers).forEach(child => {
 	check(`a project's '${child.id}' child is linked back to it`,
 		child.prefill.project_id === 12 || child.prefill.what_id === 12, true);
+});
+
+// The bug this block exists for: a child list whose object nothing defines.
+// "New Task" opened the drawer for project_tasks, renderDrawer() read
+// objects.project_tasks.label, and there was no objects.project_tasks. The list
+// itself rendered fine, so it only failed at the click. Every child of every
+// parent has to land on a definition — and so must every existing row in the
+// list, which opens the same drawer.
+Object.keys(registered.children).forEach(parent => {
+	registered.children[parent].forEach(provider => {
+		provider({ id: 1, account_id: 1 }, helpers).forEach(child => {
+			check(`'${parent}' offers '${child.id}', whose object '${child.object}' is defined`,
+				!!(registered.objects[child.object] || coreObjects.has(child.object)), true);
+
+			// A list without its own renderer falls through to the activity
+			// shape and draws a column of dashes. Core's own kinds have one.
+			check(`'${parent}' list '${child.id}' has columns to draw`,
+				!!(registered.columns[child.id] || ['contacts', 'opportunities', 'activities'].indexOf(child.id) !== -1), true);
+		});
+	});
+});
+
+// An object that can be opened has to be able to say what it is.
+Object.keys(registered.objects).forEach(slug => {
+	const def = registered.objects[slug];
+
+	['label', 'plural'].forEach(key => {
+		check(`${slug}: has a ${key}`, typeof def[key] === 'string' && def[key].length > 0, true);
+	});
+
+	['title', 'kicker', 'highlights', 'filters'].forEach(key => {
+		check(`${slug}: has ${key}()`, typeof def[key] === 'function', true);
+	});
+
+	check(`${slug}: has columns`, Array.isArray(def.columns) && def.columns.length > 0, true);
 });
 
 /* The hours control mirrors the PHP parser. --------------------------------- */
