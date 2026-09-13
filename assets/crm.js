@@ -2090,6 +2090,7 @@
 		var editing = current.editing || isNew;
 
 		var form = el('form.pcm-crm-details' + (editing ? '.is-editing' : '.is-reading'), {
+			dataset: { object: object },
 			onsubmit: function (e) { e.preventDefault(); }
 		});
 
@@ -2189,6 +2190,11 @@
 		}
 
 		form.appendChild(actions);
+
+		// A form that reshapes itself from what it holds — a time entry from its
+		// project's rules — needs to hear once that it exists, not only when a
+		// field changes.
+		derivers.forEach(function (fn) { fn('', values, form); });
 
 		return el('div.pcm-crm-panel', { dataset: { tab: 'details' } }, [form]);
 	}
@@ -3447,7 +3453,7 @@
 		}
 
 		var values = Object.assign({}, prefill || {});
-		var form = el('form.pcm-crm-details.is-editing', { onsubmit: function (e) { e.preventDefault(); } });
+		var form = el('form.pcm-crm-details.is-editing', { dataset: { object: object }, onsubmit: function (e) { e.preventDefault(); } });
 		form.pcmLookups = [];
 
 		layoutFor(object).forEach(function (group) {
@@ -5095,6 +5101,8 @@
 			(recordTabs[slug] = recordTabs[slug] || []).push(fn);
 		},
 		registerDerived: function (fn) { derivers.push(fn); },
+		// The screen's containers, for a module view that draws its own screen.
+		dom: function () { return { root: dom.root, body: dom.body, filters: dom.filters, actions: dom.actions }; },
 		ready: function (fn) { readyQueue.push(fn); },
 		state: state,
 		helpers: {

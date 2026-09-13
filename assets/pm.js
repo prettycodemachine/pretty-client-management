@@ -591,7 +591,7 @@
 				value: values[field.key] === null || values[field.key] === undefined ? '' : values[field.key],
 				oninput: function (event) { values[field.key] = event.target.value; },
 				onblur: function (event) {
-					var parsed = parseHours(event.target.value);
+					var parsed = roundHours(parseHours(event.target.value));
 
 					if (parsed === null) { return; }
 
@@ -637,6 +637,22 @@
 	}
 
 	function round2(n) { return Math.round(n * 100) / 100; }
+
+	/**
+	 * Round up to the increment set under Setup › Projects › Time Entry, so a
+	 * 20-minute call on a quarter-hour team is 0.5 rather than 0.33.
+	 */
+	function roundHours(hours, increment) {
+		if (hours === null || hours === undefined) { return null; }
+
+		var step = increment === undefined
+			? Number((state.boot && state.boot.timeSettings && state.boot.timeSettings.increment) || 0)
+			: Number(increment);
+
+		if (!step) { return hours; }
+
+		return round2(Math.ceil(round2(hours / step) - 1e-9) * step);
+	}
 
 	/**
 	 * Projects hang off the account they are for and the opportunity they came
@@ -776,7 +792,554 @@
 		];
 	});
 
+	/* Time entry, shaped by the project ----------------------------------------
+	   Which fields a time entry needs depends on the project it is logged
+	   against: a build wants the task, a T&M engagement a rate, internal work
+	   no billing at all. Once a project is chosen the form asks the server what
+	   it is about to be counted against, says so in a line at the top, and hides
+	   or marks the fields that follow from it. The server enforces the same
+	   rules on save; this is so nobody has to find out that way.
+	   --------------------------------------------------------------------- */
+
+	var contextSeq = 0;
+
+	function describeContext(context) {
+		var hours = function (n) { return round2(Number(n || 0)) + 'h'; };
+		var parts = [];
+
+		if (context.type_label) { parts.push(context.type_label); }
+
+		if (context.rules.resolves_period) {
+			parts.push(context.period
+				? 'This period: ' + hours(context.period.used) + ' of ' + hours(context.period.available) + ' used, ' +
+					(context.period.remaining < 0 ? hours(-context.period.remaining) + ' over' : hours(context.period.remaining) + ' left')
+				: 'No retainer period covers this date, so it will not count against an allotment');
+		}
+
+		if (context.task) {
+			parts.push(context.task.name + ': ' + hours(context.task.logged) + ' logged' +
+				(context.task.estimated ? ' of ' + hours(context.task.estimated) + ' estimated' : ''));
+		} else if (context.rules.task_required) {
+			parts.push('Choose the task this was for');
+		}
+
+		if (context.rules.rate_required && context.default_rate) {
+			parts.push('Default rate ' + app.helpers.money(context.default_rate) + '/h');
+		}
+
+		return parts.join(' · ');
+	}
+
+	function toggleField(scope, key, show) {
+		var wrap = scope.querySelector('[data-field="' + key + '"]');
+		if (wrap) { wrap.hidden = !show; }
+	}
+
+	function markRequired(scope, key, required) {
+		var wrap = scope.querySelector('[data-field="' + key + '"]');
+		var label = wrap && wrap.querySelector('label');
+
+		if (!label) { return; }
+
+		var text = String(label.textContent || '').replace(/ \*$/, '');
+		label.textContent = required ? text + ' *' : text;
+	}
+
+	function applyTimeContext(values, scope, context) {
+		var line = scope.querySelector('.pcm-crm-time-context');
+
+		if (!line) {
+			line = el('p.pcm-crm-time-context', { role: 'status' });
+			scope.insertBefore(line, scope.firstChild);
+		}
+
+		if (!context) {
+			line.textContent = 'Choose a project, and this will show what the time counts against.';
+			['is_billable', 'bill_rate', 'cost_rate', 'invoice_ref'].forEach(function (key) { toggleField(scope, key, true); });
+			markRequired(scope, 'task_id', false);
+			markRequired(scope, 'description', false);
+			return;
+		}
+
+		var rules = context.rules || {};
+		var billing = context.archetype !== 'internal';
+
+		line.textContent = describeContext(context);
+
+		// Internal work is never billed, so none of the billing fields apply;
+		// a locked default is not a choice, so its box goes too.
+		toggleField(scope, 'is_billable', billing && !Number(rules.billable_locked));
+		['bill_rate', 'cost_rate', 'invoice_ref'].forEach(function (key) { toggleField(scope, key, billing); });
+
+		if (Number(rules.billable_locked)) { values.is_billable = Number(rules.billable_default) ? 1 : 0; }
+
+		markRequired(scope, 'task_id', !!Number(rules.task_required));
+		markRequired(scope, 'description', !!Number(rules.description_required));
+
+		var rate = scope.querySelector('#pcm-crm-field-bill_rate');
+		if (rate && context.default_rate) { rate.setAttribute('placeholder', String(context.default_rate)); }
+	}
+
+	app.registerDerived(function (key, values, scope) {
+		if (!scope || !scope.dataset || scope.dataset.object !== 'time_entries') { return; }
+		if (key !== '' && key !== 'project_id' && key !== 'task_id' && key !== 'entry_date') { return; }
+
+		var projectId = Number(values.project_id);
+		var mine = ++contextSeq;
+
+		if (!projectId) {
+			applyTimeContext(values, scope, null);
+			return;
+		}
+
+		app.helpers.api('/pm/time-context', {
+			query: { project_id: projectId, task_id: Number(values.task_id) || '', date: values.entry_date || '' }
+		}).then(function (context) {
+			if (mine === contextSeq) { applyTimeContext(values, scope, context); }
+		}).catch(function () {
+			if (mine === contextSeq) { applyTimeContext(values, scope, null); }
+		});
+	});
+
+	/* Timesheet ---------------------------------------------------------------
+	   A week at a glance: a row per project (and task), a column per day, hours
+	   typed straight into the grid. Each row follows its project's type — a
+	   fixed-scope row needs its task before its cells open, an internal row is
+	   marked non-billable and asks what the time was for.
+
+	   A cell holding one entry edits that entry; an empty cell creates one; a
+	   cell holding several is read-only here, because splitting a typed total
+	   back across entries would be a guess. Clearing a one-entry cell deletes
+	   the entry, to the Recycle Bin like any other.
+	   --------------------------------------------------------------------- */
+
+	var sheet = { week: '', user: 0, rows: [], projects: [], entries: [], dirty: {} };
+
+	function isoDate(date) {
+		return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+	}
+
+	function parseIso(value) {
+		var parts = String(value).split('-').map(Number);
+		return new Date(parts[0], parts[1] - 1, parts[2], 12);
+	}
+
+	function weekStart(value, startsOn) {
+		var date = parseIso(value);
+		var back = (date.getDay() - Number(startsOn) + 7) % 7;
+		date.setDate(date.getDate() - back);
+		return isoDate(date);
+	}
+
+	function addDays(value, days) {
+		var date = parseIso(value);
+		date.setDate(date.getDate() + days);
+		return isoDate(date);
+	}
+
+	function weekDays(start) {
+		var out = [];
+		for (var i = 0; i < 7; i++) { out.push(addDays(start, i)); }
+		return out;
+	}
+
+	function rowKey(projectId, taskId) {
+		return Number(projectId) + ':' + (Number(taskId) || 0);
+	}
+
+	/**
+	 * Group a week's entries into rows and cells. Pure, so the tests can hold it
+	 * to the rules without a DOM.
+	 */
+	function buildSheet(entries, days, extraRows) {
+		var rows = {};
+		var order = [];
+
+		function ensure(projectId, taskId, seed) {
+			var key = rowKey(projectId, taskId);
+
+			if (!rows[key]) {
+				rows[key] = Object.assign({ key: key, project_id: Number(projectId), task_id: Number(taskId) || 0, project_name: '', task_name: '', project_type: '', cells: {} }, seed || {});
+				days.forEach(function (day) { rows[key].cells[day] = []; });
+				order.push(key);
+			}
+
+			return rows[key];
+		}
+
+		entries.forEach(function (entry) {
+			var row = ensure(entry.project_id, entry.task_id, {
+				project_name: entry._project_name || entry._project_id_name || '',
+				task_name: entry._task_id_name || ''
+			});
+
+			if (row.cells[entry.entry_date]) { row.cells[entry.entry_date].push(entry); }
+		});
+
+		(extraRows || []).forEach(function (extra) {
+			ensure(extra.project_id, extra.task_id, extra);
+		});
+
+		return order.map(function (key) { return rows[key]; });
+	}
+
+	function cellHours(entries) {
+		return round2(entries.reduce(function (sum, entry) { return sum + Number(entry.hours || 0); }, 0));
+	}
+
+	function projectRules(projectId) {
+		var project = sheet.projects.filter(function (p) { return Number(p.id) === Number(projectId); })[0];
+		var def = project ? typeDef(project.project_type) : null;
+
+		return { project: project, def: def, rules: def ? def.time : {} };
+	}
+
+	function renderTimesheet() {
+		var mount = app.dom();
+		var startsOn = (state.boot && state.boot.weekStartsOn) || 0;
+
+		if (!sheet.week) { sheet.week = weekStart(app.helpers.today(), startsOn); }
+		if (!sheet.user) { sheet.user = Number((window.PCM_CRM && window.PCM_CRM.currentUser) || 0); }
+
+		app.helpers.clear(mount.filters);
+		app.helpers.clear(mount.actions);
+
+		var person = el('select', {
+			'aria-label': 'Person',
+			onchange: function (event) { sheet.user = Number(event.target.value); loadTimesheet(); }
+		});
+
+		app.helpers.ownerOptions().filter(function (o) { return o.value; }).forEach(function (option) {
+			person.appendChild(el('option', { value: option.value, text: option.label, selected: Number(option.value) === sheet.user }));
+		});
+
+		mount.filters.appendChild(el('div.pcm-crm-sheet-nav', {}, [
+			el('button.pcm-btn.pcm-btn-sm.pcm-btn-quiet', { type: 'button', text: '‹ Previous week', onclick: function () { moveWeek(-7); } }),
+			el('button.pcm-btn.pcm-btn-sm.pcm-btn-quiet', { type: 'button', text: 'This week', onclick: function () {
+				if (!confirmLeave()) { return; }
+				sheet.week = weekStart(app.helpers.today(), startsOn);
+				sheet.rows = [];
+				loadTimesheet();
+			} }),
+			el('button.pcm-btn.pcm-btn-sm.pcm-btn-quiet', { type: 'button', text: 'Next week ›', onclick: function () { moveWeek(7); } }),
+			el('label.pcm-crm-sheet-person', {}, ['Person ', person])
+		]));
+
+		mount.actions.appendChild(el('button.pcm-btn.pcm-btn-quiet', { type: 'button', text: 'Copy last week’s rows', onclick: copyLastWeek }));
+		mount.actions.appendChild(el('a.pcm-btn.pcm-btn-quiet', { href: (window.PCM_CRM.adminUrl || 'admin.php') + '?page=pcm-crm-time', text: 'All entries' }));
+
+		loadTimesheet();
+	}
+
+	function confirmLeave() {
+		return !Object.keys(sheet.dirty).length || window.confirm('Discard the hours you have not saved?');
+	}
+
+	function moveWeek(days) {
+		if (!confirmLeave()) { return; }
+
+		sheet.week = addDays(sheet.week, days);
+		sheet.rows = [];
+		loadTimesheet();
+	}
+
+	function loadTimesheet() {
+		var mount = app.dom();
+		var days = weekDays(sheet.week);
+
+		sheet.dirty = {};
+		app.helpers.clear(mount.body, el('p.pcm-crm-loading', { text: 'Loading…' }));
+
+		var entries = app.helpers.api('/time_entries', {
+			query: {
+				per_page: 500,
+				orderby: 'entry_date',
+				order: 'ASC',
+				filters: { user_id: sheet.user, entry_date: { min: days[0], max: days[6] } }
+			}
+		});
+
+		var projects = sheet.projects.length
+			? Promise.resolve({ items: sheet.projects })
+			: app.helpers.api('/projects', { query: { per_page: 500, orderby: 'name', order: 'ASC', filters: { is_closed: 0 } } });
+
+		Promise.all([entries, projects]).then(function (results) {
+			sheet.entries = results[0].items || [];
+			sheet.projects = results[1].items || [];
+			drawTimesheet();
+		}).catch(app.helpers.showError);
+	}
+
+	function drawTimesheet() {
+		var mount = app.dom();
+		var days = weekDays(sheet.week);
+		var rows = buildSheet(sheet.entries, days, sheet.rows);
+		var today = app.helpers.today();
+
+		var head = el('tr', {}, [el('th', { text: 'Project / task' })]);
+
+		days.forEach(function (day) {
+			var date = parseIso(day);
+			head.appendChild(el('th.pcm-crm-num' + (day === today ? '.is-today' : ''), {}, [
+				el('span.pcm-crm-sheet-dow', { text: date.toLocaleDateString(undefined, { weekday: 'short' }) }),
+				el('span.pcm-crm-sheet-date', { text: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })
+			]));
+		});
+
+		head.appendChild(el('th.pcm-crm-num', { text: 'Total' }));
+
+		var body = el('tbody');
+		var dayTotals = {};
+		days.forEach(function (day) { dayTotals[day] = 0; });
+
+		rows.forEach(function (row) {
+			var info = projectRules(row.project_id);
+			var rules = info.rules || {};
+			var needsTask = !!Number(rules.task_required) && !row.task_id;
+			var project = info.project;
+
+			row.project_name = row.project_name || (project ? project.name : 'Project #' + row.project_id);
+			row.project_type = project ? project.project_type : row.project_type;
+
+			var label = el('td.pcm-crm-sheet-label', {}, [
+				app.helpers.recordLink ? app.helpers.recordLink('projects', row.project_id, row.project_name, { icon: false }) : el('strong', { text: row.project_name }),
+				row.task_id ? el('span.pcm-crm-sheet-task', { text: row.task_name || 'Task #' + row.task_id }) : null,
+				needsTask ? taskPicker(row) : null,
+				info.def ? el('span.pcm-crm-sheet-type', { text: info.def.label + (info.def.archetype === 'internal' ? ' · non-billable' : '') }) : null,
+				Number(rules.description_required) ? noteInput(row) : null
+			]);
+
+			var tr = el('tr', {}, [label]);
+			var rowTotal = 0;
+
+			days.forEach(function (day) {
+				var entries = row.cells[day] || [];
+				var total = cellHours(entries);
+				var key = row.key + '@' + day;
+
+				rowTotal += total;
+				dayTotals[day] += total;
+
+				if (entries.length > 1) {
+					tr.appendChild(el('td.pcm-crm-num.pcm-crm-sheet-many', {
+						title: entries.length + ' entries — edit them under All entries'
+					}, [String(total)]));
+					return;
+				}
+
+				var input = el('input.pcm-crm-sheet-cell', {
+					type: 'text',
+					inputmode: 'decimal',
+					'aria-label': row.project_name + ', ' + day,
+					value: sheet.dirty[key] !== undefined ? sheet.dirty[key].raw : (total ? String(total) : ''),
+					disabled: needsTask,
+					title: needsTask ? 'Choose the task first — time on this project is logged against one.' : null,
+					oninput: function (event) {
+						sheet.dirty[key] = { row: row, day: day, entry: entries[0] || null, raw: event.target.value };
+						event.target.classList.add('is-dirty');
+					},
+					onblur: function (event) {
+						var parsed = roundHours(parseHours(event.target.value));
+						if (parsed !== null && sheet.dirty[key]) {
+							event.target.value = String(parsed);
+							sheet.dirty[key].raw = String(parsed);
+						}
+					}
+				});
+
+				tr.appendChild(el('td.pcm-crm-num', {}, [input]));
+			});
+
+			tr.appendChild(el('td.pcm-crm-num.pcm-crm-strong', { text: String(round2(rowTotal)) }));
+			body.appendChild(tr);
+		});
+
+		if (!rows.length) {
+			body.appendChild(el('tr', {}, [el('td.pcm-crm-muted', { colspan: '9', text: 'Nothing logged this week. Add a row to start.' })]));
+		}
+
+		var foot = el('tr', {}, [el('th', { text: 'Total' })]);
+		var weekTotal = 0;
+
+		days.forEach(function (day) {
+			weekTotal += dayTotals[day];
+			foot.appendChild(el('th.pcm-crm-num', { text: String(round2(dayTotals[day])) }));
+		});
+
+		foot.appendChild(el('th.pcm-crm-num', { text: String(round2(weekTotal)) }));
+
+		var status = el('span.pcm-crm-muted', { role: 'status' });
+
+		app.helpers.clear(mount.body);
+		mount.body.appendChild(el('div.pcm-crm-table-wrap', {}, [
+			el('table.pcm-crm-table.pcm-crm-sheet', {}, [el('thead', {}, [head]), body, el('tfoot', {}, [foot])])
+		]));
+		mount.body.appendChild(addRowControl());
+		mount.body.appendChild(el('div.pcm-crm-form-actions', {}, [
+			el('button.pcm-btn.pcm-btn-primary', { type: 'button', text: 'Save hours', onclick: function (event) { saveTimesheet(event.target, status); } }),
+			status
+		]));
+	}
+
+	function noteInput(row) {
+		return el('input.pcm-crm-sheet-note', {
+			type: 'text',
+			placeholder: 'What was it for? (required)',
+			'aria-label': 'Note for ' + row.project_name,
+			value: row.note || '',
+			oninput: function (event) { row.note = event.target.value; remember(row); }
+		});
+	}
+
+	function remember(row) {
+		var known = sheet.rows.filter(function (r) { return r.key === row.key; })[0];
+
+		if (known) { Object.assign(known, { note: row.note, task_id: row.task_id, task_name: row.task_name }); }
+		else { sheet.rows.push({ key: row.key, project_id: row.project_id, task_id: row.task_id, task_name: row.task_name, note: row.note }); }
+	}
+
+	function taskPicker(row) {
+		var select = el('select.pcm-crm-sheet-taskpick', {
+			'aria-label': 'Task for ' + row.project_name,
+			onchange: function (event) {
+				var option = event.target.options[event.target.selectedIndex];
+
+				sheet.rows = sheet.rows.filter(function (r) { return r.key !== row.key; });
+				sheet.rows.push({ project_id: row.project_id, task_id: Number(event.target.value), task_name: option ? option.textContent : '' });
+				drawTimesheet();
+			}
+		}, [el('option', { value: '', text: 'Choose a task…' })]);
+
+		app.helpers.api('/project_tasks', { query: { per_page: 200, orderby: 'name', order: 'ASC', filters: { project_id: row.project_id } } })
+			.then(function (data) {
+				(data.items || []).forEach(function (task) {
+					select.appendChild(el('option', { value: task.id, text: task.name }));
+				});
+			});
+
+		return select;
+	}
+
+	function addRowControl() {
+		var project = el('select', { 'aria-label': 'Project to add' }, [el('option', { value: '', text: 'Add a project…' })]);
+
+		sheet.projects.forEach(function (p) {
+			project.appendChild(el('option', { value: p.id, text: p.name + (typeDef(p.project_type) ? ' — ' + typeDef(p.project_type).label : '') }));
+		});
+
+		return el('div.pcm-crm-sheet-add', {}, [
+			project,
+			el('button.pcm-btn.pcm-btn-sm', {
+				type: 'button',
+				text: 'Add row',
+				onclick: function () {
+					if (!project.value) { return; }
+					sheet.rows.push({ project_id: Number(project.value), task_id: 0 });
+					drawTimesheet();
+				}
+			})
+		]);
+	}
+
+	function copyLastWeek() {
+		var days = weekDays(addDays(sheet.week, -7));
+
+		app.helpers.api('/time_entries', {
+			query: { per_page: 500, filters: { user_id: sheet.user, entry_date: { min: days[0], max: days[6] } } }
+		}).then(function (data) {
+			buildSheet(data.items || [], days, []).forEach(function (row) {
+				sheet.rows.push({ project_id: row.project_id, task_id: row.task_id, project_name: row.project_name, task_name: row.task_name });
+			});
+			drawTimesheet();
+		}).catch(app.helpers.showError);
+	}
+
+	/**
+	 * The writes a timesheet's edits come to: one per changed cell. Pure, so a
+	 * test can check what a grid of typing turns into.
+	 */
+	function sheetChanges(dirty, user) {
+		var out = [];
+
+		Object.keys(dirty).forEach(function (key) {
+			var change = dirty[key];
+			var raw = String(change.raw || '').trim();
+			var hours = raw === '' ? 0 : parseHours(raw);
+
+			if (hours === null) {
+				out.push({ key: key, error: 'Could not read “' + raw + '” as hours.' });
+				return;
+			}
+
+			hours = roundHours(hours);
+
+			if (change.entry) {
+				if (!hours) {
+					out.push({ key: key, method: 'DELETE', path: '/time_entries/' + change.entry.id });
+				} else if (Number(change.entry.hours) !== hours) {
+					out.push({ key: key, method: 'PUT', path: '/time_entries/' + change.entry.id, body: { hours: hours } });
+				}
+				return;
+			}
+
+			if (!hours) { return; }
+
+			var body = { project_id: change.row.project_id, entry_date: change.day, hours: hours, user_id: user };
+			if (change.row.task_id) { body.task_id = change.row.task_id; }
+			if (change.row.note) { body.description = change.row.note; }
+
+			out.push({ key: key, method: 'POST', path: '/time_entries', body: body });
+		});
+
+		return out;
+	}
+
+	function saveTimesheet(button, status) {
+		var changes = sheetChanges(sheet.dirty, sheet.user);
+		var failures = [];
+
+		if (!changes.length) {
+			status.textContent = 'Nothing has changed.';
+			return;
+		}
+
+		button.disabled = true;
+		status.textContent = 'Saving…';
+
+		changes.reduce(function (chain, change) {
+			return chain.then(function () {
+				if (change.error) { failures.push(change.error); return null; }
+
+				return app.helpers.api(change.path, { method: change.method, body: change.body }).then(function () {
+					delete sheet.dirty[change.key];
+				}).catch(function (error) {
+					failures.push(error.message);
+				});
+			});
+		}, Promise.resolve()).then(function () {
+			button.disabled = false;
+
+			if (failures.length) {
+				status.textContent = failures.length + ' not saved: ' + failures.filter(function (m, i, a) { return a.indexOf(m) === i; }).join(' ');
+				return;
+			}
+
+			status.textContent = 'Saved.';
+			sheet.rows = sheet.rows.filter(function (row) { return row.note; });
+			loadTimesheet();
+		});
+	}
+
+	app.registerView('timesheet', { render: renderTimesheet, load: loadTimesheet });
+
 	// Exposed for tests/pm-views.js, which lifts the pure helpers out by name
 	// rather than keeping a copy that would go stale.
-	window.PCM_CRM_PM = { parseHours: parseHours };
+	window.PCM_CRM_PM = {
+		parseHours: parseHours,
+		roundHours: roundHours,
+		buildSheet: buildSheet,
+		sheetChanges: sheetChanges,
+		weekStart: weekStart,
+		describeContext: describeContext
+	};
 })(window, document);

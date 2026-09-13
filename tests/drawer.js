@@ -31,6 +31,8 @@ function check(label, got, want) {
 
 const { makeEl, matches } = require('./dom');
 
+const within = (scope, outer, inner) => { const o = scope && scope.querySelector(outer); return o ? o.querySelector(inner) : null; };
+
 /* Fixtures shaped like what the real routes return. ----------------------- */
 
 const project = {
@@ -107,6 +109,8 @@ function respond(route) {
 			projectStages: ['Active'], projectHealth: ['Green', 'Amber', 'Red'], raidTypes: ['Risk'], raidStatuses: ['Open'],
 			raidLevels: ['Low', 'Medium', 'High'], taskStatuses: ['Done'], partyTypes: { internal: 'Internal', partner: 'Partner', client: 'Client' },
 			projectRoles: ['Business Owner'], retainerPeriods: { monthly: 'Monthly' }, projectStageSets: {}, opportunityTypeMap: {},
+			projectTypeDefs: { 'side-quest': { label: 'Side Quest', archetype: 'internal', active: 1, stages: [{ name: 'Planned', is_closed: 0 }], fields: { hidden: [], required: [], labels: {} }, time: { task_required: 0, description_required: 1, billable_locked: 1, billable_default: 0 }, defaults: {}, tabs: [] } },
+			archetypes: { internal: { label: 'Internal' } }, timeSettings: { increment: 0.25 }, weekStartsOn: 1,
 		};
 	}
 
@@ -125,6 +129,10 @@ function respond(route) {
 		const err = new Error('not found'); err.status = 404; throw err;
 	}
 
+	if (pathPart === '/projects') {
+		return { items: [Object.assign({}, project, { project_type: 'side-quest', name: 'Internal tooling', id: 15 })], total: 1 };
+	}
+
 	// Lookups and lists.
 	return { items: [], total: 0 };
 }
@@ -141,6 +149,7 @@ const body = makeEl('body');
 body.appendChild(root);
 
 const requests = [];
+const requestLog = [];
 const errors = [];
 
 const document = {
@@ -172,9 +181,10 @@ const window = {
 	confirm: () => true,
 	prompt: () => '',
 	addEventListener() {},
-	fetch(url) {
+	fetch(url, init) {
 		const route = String(url).replace(/^.*\/v1/, '');
 		requests.push(route);
+		requestLog.push({ method: (init && init.method) || 'GET', route: route.split('?')[0], body: init && init.body ? JSON.parse(init.body) : null });
 
 		try {
 			const data = respond(route);
@@ -198,6 +208,13 @@ const settle = async () => { for (let i = 0; i < 30; i++) { await new Promise(r 
 async function main() {
 	load('charts.js');
 	load('crm.js');
+
+	// Keep hold of the module's views, which the app does not expose, so the
+	// timesheet can be drawn after the project checks.
+	const moduleViews = {};
+	const registerView = window.PCM_CRM_App.registerView;
+	window.PCM_CRM_App.registerView = (name, handlers) => { moduleViews[name] = handlers; registerView(name, handlers); };
+
 	load('pm.js');
 
 	(document.listeners.DOMContentLoaded || []).forEach(fn => fn());
@@ -261,6 +278,39 @@ async function main() {
 			check(`New from ${key} opens a form without an error`, drawerError(), null);
 		}
 	}
+
+	/* The timesheet. */
+	const bodyNode = root.querySelector('[data-role="body"]');
+	const posts = () => requestLog.filter(r => r.method === 'POST' && r.route === '/time_entries');
+
+	let thrown = null;
+	try { moduleViews.timesheet.render(); await settle(); } catch (e) { thrown = e.message; }
+
+	check('the timesheet draws without throwing', thrown, null);
+	check('as a week grid', !!bodyNode.querySelector('.pcm-crm-sheet'), true);
+
+	const add = bodyNode.querySelector('.pcm-crm-sheet-add');
+	const pickProject = add.querySelector('select');
+	pickProject.value = '15';
+	add.querySelector('button').click();
+	await settle();
+
+	const cell = bodyNode.querySelector('.pcm-crm-sheet-cell');
+	const note = bodyNode.querySelector('.pcm-crm-sheet-note');
+	check('an internal row asks what the time was for', !!note, true);
+
+	note.value = 'Invoicing';
+	note.dispatch('input');
+	cell.value = '20m';
+	cell.dispatch('input');
+	cell.dispatch('blur');
+	check('typed hours round up to the team\'s increment', cell.value, '0.5');
+
+	within(bodyNode, '.pcm-crm-form-actions', '.pcm-btn-primary').click();
+	await settle();
+
+	const posted = posts().pop();
+	check('Save posts the cell as an entry, with the row\'s note', posted && [posted.body.project_id, posted.body.hours, posted.body.description], [15, 0.5, 'Invoicing']);
 
 	check('nothing was logged to the console as an error', errors, []);
 

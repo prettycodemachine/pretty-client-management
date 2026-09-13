@@ -356,5 +356,53 @@ const parseHours = win.PCM_CRM_PM.parseHours;
 	check(`hours '${input}' is refused`, parseHours(input), want);
 });
 
+/* Time: rounding, the week grid, and what typing into it writes. ----------- */
+
+const pm = win.PCM_CRM_PM;
+
+check('hours round up to the increment', [pm.roundHours(0.33, 0.25), pm.roundHours(0.5, 0.25), pm.roundHours(1.01, 0.5)], [0.5, 0.5, 1.5]);
+check('and are left alone with no increment set', pm.roundHours(0.33, 0), 0.33);
+check('a week starts on the site\'s day', [pm.weekStart('2026-09-16', 1), pm.weekStart('2026-09-16', 0)], ['2026-09-14', '2026-09-13']);
+
+const days = ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18', '2026-09-19', '2026-09-20'];
+const grid = pm.buildSheet([
+	{ id: 1, project_id: 12, task_id: 77, entry_date: '2026-09-14', hours: 2, _project_name: 'Acme build', _task_id_name: 'Build' },
+	{ id: 2, project_id: 12, task_id: 77, entry_date: '2026-09-14', hours: 1.5 },
+	{ id: 3, project_id: 13, task_id: 0, entry_date: '2026-09-15', hours: 1 },
+], days, [{ project_id: 15, task_id: 0 }]);
+
+check('entries group into a row per project and task, plus rows added by hand', grid.map(r => r.key), ['12:77', '13:0', '15:0']);
+check('a cell holds every entry on its day', grid[0].cells['2026-09-14'].map(e => e.id), [1, 2]);
+check('and names its row from the entries', [grid[0].project_name, grid[0].task_name], ['Acme build', 'Build']);
+
+const changes = pm.sheetChanges({
+	'13:0@2026-09-15': { row: grid[1], day: '2026-09-15', entry: grid[1].cells['2026-09-15'][0], raw: '1:30' },
+	'13:0@2026-09-16': { row: grid[1], day: '2026-09-16', entry: null, raw: '2' },
+	'15:0@2026-09-17': { row: Object.assign({}, grid[2], { note: 'Bookkeeping' }), day: '2026-09-17', entry: null, raw: '45m' },
+	'13:0@2026-09-18': { row: grid[1], day: '2026-09-18', entry: null, raw: '' },
+	'12:77@2026-09-16': { row: grid[0], day: '2026-09-16', entry: null, raw: 'lots' },
+}, 4);
+
+check('changing a one-entry cell updates that entry', changes[0], { key: '13:0@2026-09-15', method: 'PUT', path: '/time_entries/3', body: { hours: 1.5 } });
+check('typing into an empty cell creates an entry for that person and day',
+	changes[1].body, { project_id: 13, entry_date: '2026-09-16', hours: 2, user_id: 4 });
+check('carrying the row\'s note as the description', changes[2].body.description, 'Bookkeeping');
+check('an empty cell left empty writes nothing', changes.some(c => c.key === '13:0@2026-09-18'), false);
+check('unreadable hours are reported rather than sent', changes[3].error.indexOf('lots') !== -1, true);
+
+const cleared = pm.sheetChanges({ 'k': { row: grid[1], day: '2026-09-15', entry: { id: 3, hours: 1 }, raw: '' } }, 4);
+check('clearing a one-entry cell deletes the entry', [cleared[0].method, cleared[0].path], ['DELETE', '/time_entries/3']);
+
+check('the time entry line says what the hours count against', pm.describeContext({
+	type_label: 'Salesforce Support Retainer',
+	rules: { resolves_period: 1, task_required: 0 },
+	period: { used: 12.5, available: 20, remaining: 7.5 },
+	task: null
+}), 'Salesforce Support Retainer · This period: 12.5h of 20h used, 7.5h left');
+check('and asks for the task where the process needs one', pm.describeContext({
+	type_label: 'Custom Development', rules: { task_required: 1 }, period: null, task: null
+}), 'Custom Development · Choose the task this was for');
+check('the timesheet is a registered view', typeof registered.views.timesheet.render, 'function');
+
 console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');
 process.exit(failed ? 1 : 0);

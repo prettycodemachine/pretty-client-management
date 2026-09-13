@@ -204,3 +204,46 @@
 .pcm-crm-meter.is-over .pcm-crm-meter-fill { background: var(--pcm-accent-deep); }
 .pcm-crm-meter.is-over .pcm-crm-meter-head span { color: var(--pcm-accent-deep); font-weight: 700; }
 .pcm-crm-period-row { cursor: default; }
+
+/* Time entry context ---------------------------------------------------------- */
+.pcm-crm-time-context {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--pcm-blue-deep);
+  border-radius: 8px;
+  background: var(--pcm-paper-tint);
+  color: var(--pcm-ink);
+  font-size: 0.9rem;
+}
+
+/* Timesheet -------------------------------------------------------------------- */
+.pcm-crm-sheet-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pcm-crm-sheet-person { margin-left: auto; font-weight: 700; color: var(--pcm-ink); }
+.pcm-crm-sheet th { white-space: nowrap; }
+.pcm-crm-sheet th.is-today { box-shadow: inset 0 -3px 0 var(--pcm-accent-deep); }
+.pcm-crm-sheet-dow { display: block; font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.pcm-crm-sheet-date { display: block; }
+.pcm-crm-sheet-label { min-width: 220px; }
+.pcm-crm-sheet-task,
+.pcm-crm-sheet-type { display: block; font-size: 0.82rem; }
+.pcm-crm-sheet-type { color: var(--pcm-body); }
+.pcm-crm .pcm-crm-sheet-cell {
+  width: 4.2em;
+  height: 34px;
+  padding: 0 6px;
+  text-align: right;
+  border: 2px solid var(--pcm-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--pcm-ink);
+}
+.pcm-crm .pcm-crm-sheet-cell:focus { border-color: var(--pcm-ink); }
+.pcm-crm .pcm-crm-sheet-cell.is-dirty { border-color: var(--pcm-blue-deep); background: var(--pcm-paper-tint); }
+.pcm-crm .pcm-crm-sheet-cell:disabled { background: var(--pcm-paper-tint); cursor: not-allowed; }
+.pcm-crm-sheet-many { color: var(--pcm-body); font-style: italic; }
+.pcm-crm .pcm-crm-sheet-note,
+.pcm-crm .pcm-crm-sheet-taskpick { display: block; margin-top: 4px; max-width: 260px; height: 32px; }
+.pcm-crm-sheet tfoot th { border-top: 2px solid var(--pcm-ink); }
+.pcm-crm-sheet-add { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+.pcm-crm[data-theme="dark"] .pcm-crm-sheet-cell,
+.pcm-crm[data-theme="neon"] .pcm-crm-sheet-cell { background-color: var(--pcm-paper-tint); }

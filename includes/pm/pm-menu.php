@@ -34,7 +34,8 @@ function pcm_crm_pm_menu() {
 	$pcm_pages = array(
 		'pcm-crm-projects' => array( __( 'All Projects', 'pcm-crm' ), 'pcm_crm_pm_render_projects' ),
 		'pcm-crm-project-tasks' => array( __( 'Tasks', 'pcm-crm' ), 'pcm_crm_pm_render_tasks' ),
-		'pcm-crm-time'     => array( __( 'Time', 'pcm-crm' ), 'pcm_crm_pm_render_time' ),
+		'pcm-crm-timesheet' => array( __( 'Timesheet', 'pcm-crm' ), 'pcm_crm_pm_render_timesheet' ),
+		'pcm-crm-time'     => array( __( 'Time Entries', 'pcm-crm' ), 'pcm_crm_pm_render_time' ),
 		'pcm-crm-raid'     => array( __( 'RAID Log', 'pcm-crm' ), 'pcm_crm_pm_render_raid' ),
 	);
 
@@ -56,8 +57,12 @@ function pcm_crm_pm_render_tasks() {
 	pcm_crm_screen( 'project_tasks', __( 'Tasks', 'pcm-crm' ), __( 'Tasks and milestones across every project.', 'pcm-crm' ), array( 'app' => 'projects' ) );
 }
 
+function pcm_crm_pm_render_timesheet() {
+	pcm_crm_screen( 'timesheet', __( 'Timesheet', 'pcm-crm' ), __( 'A week of hours, a row per project. Each row follows its project’s rules for time.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+}
+
 function pcm_crm_pm_render_time() {
-	pcm_crm_screen( 'time_entries', __( 'Time', 'pcm-crm' ), '', array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'time_entries', __( 'Time Entries', 'pcm-crm' ), '', array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_raid() {
@@ -73,7 +78,8 @@ function pcm_crm_pm_app( $pcm_apps ) {
 		'items' => array(
 			'pcm-crm-projects'      => array( __( 'Projects', 'pcm-crm' ), 'projects' ),
 			'pcm-crm-project-tasks' => array( __( 'Tasks', 'pcm-crm' ), 'project_tasks' ),
-			'pcm-crm-time'          => array( __( 'Time', 'pcm-crm' ), 'time_entries' ),
+			'pcm-crm-timesheet'     => array( __( 'Timesheet', 'pcm-crm' ), 'timesheet' ),
+			'pcm-crm-time'          => array( __( 'Time Entries', 'pcm-crm' ), 'time_entries' ),
 			'pcm-crm-raid'          => array( __( 'RAID Log', 'pcm-crm' ), 'project_raid' ),
 		),
 	);

@@ -76,7 +76,6 @@ function pcm_crm_pm_sanitize_time_settings( $pcm_value ) {
 		'increment'       => in_array( (string) ( isset( $pcm_value['increment'] ) ? $pcm_value['increment'] : '0' ), array( '0', '0.1', '0.25', '0.5' ), true ) ? (float) $pcm_value['increment'] : 0,
 		'allow_future'    => empty( $pcm_value['allow_future'] ) ? 0 : 1,
 		'lock_after_days' => isset( $pcm_value['lock_after_days'] ) ? absint( $pcm_value['lock_after_days'] ) : 0,
-		'week_start'      => isset( $pcm_value['week_start'] ) && in_array( (int) $pcm_value['week_start'], array( 0, 1, 6 ), true ) ? (int) $pcm_value['week_start'] : 1,
 	);
 }
 
@@ -691,14 +690,17 @@ function pcm_crm_pm_render_time_page() {
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="pcm-time-week"><?php esc_html_e( 'Weeks start on', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><?php esc_html_e( 'Weeks start on', 'pcm-crm' ); ?></th>
 				<td>
-					<select id="pcm-time-week" name="<?php echo esc_attr( $pcm_name ); ?>[week_start]">
-						<?php foreach ( array( 1 => __( 'Monday', 'pcm-crm' ), 0 => __( 'Sunday', 'pcm-crm' ), 6 => __( 'Saturday', 'pcm-crm' ) ) as $pcm_value => $pcm_label ) : ?>
-							<option value="<?php echo esc_attr( $pcm_value ); ?>" <?php selected( (int) $pcm_settings['week_start'], $pcm_value ); ?>><?php echo esc_html( $pcm_label ); ?></option>
-						<?php endforeach; ?>
-					</select>
-					<p class="description"><?php esc_html_e( 'The first column of the weekly timesheet.', 'pcm-crm' ); ?></p>
+					<p class="description">
+						<?php
+						printf(
+							/* translators: %s: link to WordPress's General Settings */
+							esc_html__( 'The timesheet and the resourcing board follow the site’s own setting, under %s.', 'pcm-crm' ),
+							'<a href="' . esc_url( admin_url( 'options-general.php' ) ) . '">' . esc_html__( 'Settings › General', 'pcm-crm' ) . '</a>'
+						);
+						?>
+					</p>
 				</td>
 			</tr>
 		</table>

@@ -371,7 +371,6 @@ function pcm_crm_pm_time_settings() {
 		'increment'      => 0,
 		'allow_future'   => 1,
 		'lock_after_days' => 0,
-		'week_start'     => 1,
 	), is_array( $pcm_saved ) ? $pcm_saved : array() );
 }
 

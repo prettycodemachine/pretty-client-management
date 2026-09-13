@@ -41,6 +41,10 @@ function pcm_crm_pm_bootstrap( $pcm_boot ) {
 	$pcm_boot['archetypes']      = pcm_crm_pm_archetype_defs();
 	$pcm_boot['timeSettings']    = pcm_crm_pm_time_settings();
 
+	// The same boundary pcm_crm_pm_week_start() uses, so the timesheet's weeks
+	// are the resourcing board's weeks.
+	$pcm_boot['weekStartsOn'] = (int) get_option( 'start_of_week', 1 );
+
 	return $pcm_boot;
 }
 add_filter( 'pcm_crm_bootstrap', 'pcm_crm_pm_bootstrap' );
