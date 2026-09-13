@@ -322,7 +322,29 @@ check( 'related opportunities carry their account name',
 check( 'related activities carry their contact name',
 	isset( $rows['activities'][0]['_contact_name'] ), true );
 
+// The record page renders every lookup as a named link, so each lookup column
+// gets one predictable key whatever alias the object grew up with.
+check( 'an opportunity names its account under the column’s own key',
+	$rows['opportunities'][0]['_account_id_name'], 'Acme' );
+check( 'and its primary contact',
+	$rows['opportunities'][0]['_primary_contact_id_name'], 'Ada Lovelace' );
+check( 'an activity names its contact',
+	$rows['activities'][0]['_who_id_name'], 'Ada Lovelace' );
+check( 'and resolves its polymorphic parent through what_type',
+	$rows['activities'][0]['_what_id_name'], 'Acme' );
+check( 'a plural slug comes from the models, not an appended s',
+	array( PCM_CRM_REST::slug_for( 'opportunity' ), PCM_CRM_REST::slug_for( 'activity' ) ), array( 'opportunities', 'activities' ) );
+
+$pcm_schema = array();
+foreach ( (array) PCM_CRM_REST::schema( new WP_REST_Request() )['opportunities']['fields'] as $pcm_f ) { $pcm_schema[ $pcm_f['key'] ] = $pcm_f; }
+check( '/schema says which object a lookup points at', $pcm_schema['account_id']['lookup'], 'accounts' );
+check( 'and what narrows it', $pcm_schema['primary_contact_id']['lookup_filter'], array( 'account_id' => 'account_id' ) );
+
 $GLOBALS['wpdb'] = $real_wpdb;
+
+check( 'bootstrap describes every object for the browser',
+	PCM_CRM_REST::bootstrap( new WP_REST_Request() )['objects']['contacts'],
+	array( 'label' => 'Contact', 'plural' => 'Contacts', 'icon' => 'id', 'color' => 5, 'page' => 'pcm-crm-contacts' ) );
 
 echo "\n--- route parameters are not shadowed by the body ---\n";
 // WordPress merges the JSON body ahead of URL parameters. The schedules table

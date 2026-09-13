@@ -27,11 +27,11 @@ function pcm_crm_project_roles() {
 			pcm_crm_pm_roles_table(),
 			array_merge(
 				array(
-					'project_id'         => array( 'type' => 'id',   'sf' => 'PCM_Project_Id__c', 'label' => 'Project' ),
+					'project_id'         => array( 'type' => 'id',   'sf' => 'PCM_Project_Id__c', 'label' => 'Project', 'lookup' => 'projects' ),
 					'party_type'         => array( 'type' => 'text', 'sf' => 'PCM_Party_Type__c', 'label' => 'Party', 'options' => 'pcm_crm_pm_party_type_values' ),
 					'user_id'            => array( 'type' => 'id',   'sf' => 'PCM_User__c', 'label' => 'Team Member', 'options' => 'pcm_crm_owner_options' ),
-					'contact_id'         => array( 'type' => 'id',   'sf' => 'PCM_Contact_Id__c', 'label' => 'Contact' ),
-					'partner_account_id' => array( 'type' => 'id',   'sf' => 'PCM_Partner_Account__c', 'label' => 'Partner Firm' ),
+					'contact_id'         => array( 'type' => 'id',   'sf' => 'PCM_Contact_Id__c', 'label' => 'Contact', 'lookup' => 'contacts', 'lookup_filter' => array( 'account_id' => 'partner_account_id' ) ),
+					'partner_account_id' => array( 'type' => 'id',   'sf' => 'PCM_Partner_Account__c', 'label' => 'Partner Firm', 'lookup' => 'accounts' ),
 					'role'               => array( 'type' => 'text', 'sf' => 'PCM_Role__c', 'label' => 'Role', 'options' => 'pcm_crm_pm_roles' ),
 					'is_primary'         => array( 'type' => 'bool', 'sf' => 'PCM_Is_Primary__c', 'label' => 'Primary' ),
 					'bill_rate'          => array( 'type' => 'decimal', 'sf' => 'PCM_Bill_Rate__c', 'label' => 'Bill Rate', 'ui' => 'currency' ),

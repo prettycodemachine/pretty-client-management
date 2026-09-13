@@ -125,4 +125,7 @@ pcm_crm_register_object( 'accounts', array(
 	'sf'            => 'Account',
 	'group_options' => array( 'type', 'industry', 'billing_state', 'owner_id' ),
 	'related'       => 'fetch',
+	'icon'          => 'building',
+	'color'         => 1,
+	'page'          => 'pcm-crm-accounts',
 ) );

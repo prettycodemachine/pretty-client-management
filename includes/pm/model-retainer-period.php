@@ -18,7 +18,7 @@ function pcm_crm_retainer_periods() {
 			pcm_crm_pm_periods_table(),
 			array_merge(
 				array(
-					'project_id'         => array( 'type' => 'id',    'sf' => 'PCM_Project_Id__c', 'label' => 'Project' ),
+					'project_id'         => array( 'type' => 'id',    'sf' => 'PCM_Project_Id__c', 'label' => 'Project', 'lookup' => 'projects' ),
 					'period_start'       => array( 'type' => 'date',  'sf' => 'PCM_Period_Start__c', 'label' => 'Period Start' ),
 					'period_end'         => array( 'type' => 'date',  'sf' => 'PCM_Period_End__c', 'label' => 'Period End' ),
 					'allotted_hours'     => array( 'type' => 'hours', 'sf' => 'PCM_Allotted_Hours__c', 'label' => 'Allotted Hours', 'ui' => 'hours' ),

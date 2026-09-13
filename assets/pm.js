@@ -65,8 +65,6 @@
 		hints: function (name) {
 			var hints = {};
 
-			if (name === 'account_id') { hints.lookup = 'accounts'; }
-			if (name === 'opportunity_id') { hints.lookup = 'opportunities'; }
 			if (name === 'owner_id') { hints.options = app.helpers.ownerOptions(); }
 			if (name === 'name' || name === 'description' || name === 'health_note') { hints.wide = true; }
 
@@ -124,7 +122,6 @@
 		hints: function (name) {
 			var hints = {};
 
-			if (name === 'project_id') { hints.lookup = 'projects'; }
 			if (name === 'assignee_user_id') { hints.options = app.helpers.ownerOptions(); }
 			if (name === 'name' || name === 'description') { hints.wide = true; }
 
@@ -164,8 +161,6 @@
 		hints: function (name) {
 			var hints = {};
 
-			if (name === 'project_id') { hints.lookup = 'projects'; }
-			if (name === 'owner_contact_id') { hints.lookup = 'contacts'; }
 			if (name === 'owner_id') { hints.options = app.helpers.ownerOptions(); }
 			if (name === 'title' || name === 'description' || name === 'mitigation' || name === 'resolution') { hints.wide = true; }
 
@@ -206,9 +201,6 @@
 		hints: function (name) {
 			var hints = {};
 
-			if (name === 'project_id') { hints.lookup = 'projects'; }
-			if (name === 'contact_id') { hints.lookup = 'contacts'; }
-			if (name === 'partner_account_id') { hints.lookup = 'accounts'; }
 			if (name === 'user_id') { hints.options = app.helpers.ownerOptions(); }
 			if (name === 'description') { hints.wide = true; }
 
@@ -263,8 +255,6 @@
 		hints: function (name) {
 			var hints = {};
 
-			if (name === 'project_id') { hints.lookup = 'projects'; }
-			if (name === 'task_id') { hints.lookup = 'project_tasks'; }
 			if (name === 'user_id') { hints.options = app.helpers.ownerOptions(); }
 			if (name === 'description') { hints.wide = true; }
 

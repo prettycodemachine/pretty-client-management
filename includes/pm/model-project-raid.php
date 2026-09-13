@@ -16,7 +16,7 @@ function pcm_crm_project_raid() {
 			pcm_crm_pm_raid_table(),
 			array_merge(
 				array(
-					'project_id'       => array( 'type' => 'id',   'sf' => 'PCM_Project_Id__c', 'label' => 'Project' ),
+					'project_id'       => array( 'type' => 'id',   'sf' => 'PCM_Project_Id__c', 'label' => 'Project', 'lookup' => 'projects' ),
 					'raid_type'        => array( 'type' => 'text', 'sf' => 'PCM_Kind__c', 'label' => 'Kind', 'options' => 'pcm_crm_pm_raid_types' ),
 					'title'            => array( 'type' => 'text', 'sf' => 'PCM_Title__c', 'label' => 'Title' ),
 					'status'           => array( 'type' => 'text', 'sf' => 'PCM_Status__c', 'label' => 'Status', 'options' => 'pcm_crm_pm_raid_statuses' ),
@@ -29,7 +29,7 @@ function pcm_crm_project_raid() {
 					'raised_date'      => array( 'type' => 'date', 'sf' => 'PCM_Raised_Date__c', 'label' => 'Raised' ),
 					'due_date'         => array( 'type' => 'date', 'sf' => 'PCM_Due_Date__c', 'label' => 'Review By' ),
 					'resolved_date'    => array( 'type' => 'date', 'sf' => 'PCM_Resolved_Date__c', 'label' => 'Resolved', 'readonly' => true ),
-					'owner_contact_id' => array( 'type' => 'id',   'sf' => 'PCM_Owner_Contact__c', 'label' => 'Owned By (Contact)' ),
+					'owner_contact_id' => array( 'type' => 'id',   'sf' => 'PCM_Owner_Contact__c', 'label' => 'Owned By (Contact)', 'lookup' => 'contacts' ),
 					'mitigation'       => array( 'type' => 'longtext', 'sf' => 'PCM_Mitigation__c', 'label' => 'Mitigation' ),
 					'resolution'       => array( 'type' => 'longtext', 'sf' => 'PCM_Resolution__c', 'label' => 'Resolution' ),
 					'description'      => array( 'type' => 'longtext', 'sf' => 'PCM_Description__c', 'label' => 'Detail' ),

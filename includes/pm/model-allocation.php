@@ -18,7 +18,7 @@ function pcm_crm_allocations() {
 			pcm_crm_pm_allocations_table(),
 			array_merge(
 				array(
-					'project_id'    => array( 'type' => 'id',    'sf' => 'PCM_Project_Id__c', 'label' => 'Project' ),
+					'project_id'    => array( 'type' => 'id',    'sf' => 'PCM_Project_Id__c', 'label' => 'Project', 'lookup' => 'projects' ),
 					'user_id'       => array( 'type' => 'id',    'sf' => 'PCM_User__c', 'label' => 'Person', 'options' => 'pcm_crm_owner_options' ),
 					'week_start'    => array( 'type' => 'date',  'sf' => 'PCM_Week_Start__c', 'label' => 'Week Beginning' ),
 					'planned_hours' => array( 'type' => 'hours', 'sf' => 'PCM_Planned_Hours__c', 'label' => 'Planned Hours', 'ui' => 'hours' ),

@@ -23,8 +23,9 @@ function pcm_crm_activities() {
 				// travels as a custom field rather than as the wrong standard.
 				'activity_date' => array( 'type' => 'datetime', 'sf' => 'Activity_Logged_Date__c', 'label' => 'Logged Date' ),
 				'due_date'      => array( 'type' => 'date', 'sf' => 'ActivityDate', 'label' => 'Due Date' ),
-				'who_id'        => array( 'type' => 'id',   'sf' => 'PCM_Contact_Id__c', 'label' => 'Contact' ),
-				'what_id'       => array( 'type' => 'id',   'sf' => 'PCM_Related_Id__c', 'label' => 'Related Record' ),
+				'who_id'        => array( 'type' => 'id',   'sf' => 'PCM_Contact_Id__c', 'label' => 'Contact', 'lookup' => 'contacts' ),
+				// Polymorphic: what_type names the object, as a singular.
+				'what_id'       => array( 'type' => 'id',   'sf' => 'PCM_Related_Id__c', 'label' => 'Related Record', 'lookup' => 'polymorphic' ),
 				'what_type'     => array( 'type' => 'text', 'sf' => 'PCM_Related_Type__c', 'label' => 'Related To' ),
 				'description'   => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Details' ),
 				'is_completed'  => array( 'type' => 'bool', 'sf' => 'IsClosed', 'label' => 'Completed' ),
@@ -154,4 +155,7 @@ pcm_crm_register_object( 'activities', array(
 	// Built from the record in hand rather than fetched: an activity's only
 	// related records are the ones its own who_id and what_id already name.
 	'related'       => 'local',
+	'icon'          => 'calendar-alt',
+	'color'         => 6,
+	'page'          => 'pcm-crm-activities',
 ) );

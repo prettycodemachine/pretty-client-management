@@ -441,7 +441,125 @@ class PCM_CRM_REST {
 		// grouped query rather than one query per row. Anything added here is
 		// underscore-prefixed by convention and so is dropped again by the
 		// model's sanitiser on the way back in — a save cannot write one.
-		return apply_filters( 'pcm_crm_expand_items', array_values( $pcm_items ), $pcm_object );
+		return self::expand_lookups( $pcm_object, apply_filters( 'pcm_crm_expand_items', array_values( $pcm_items ), $pcm_object ) );
+	}
+
+	/**
+	 * A plural slug for a model's singular object name.
+	 *
+	 * Appending an s is wrong for half the objects here — opportunity, activity,
+	 * time_entry — so the answer comes from the models themselves.
+	 */
+	public static function slug_for( $pcm_object ) {
+		foreach ( self::models() as $pcm_slug => $pcm_model ) {
+			if ( $pcm_model->object() === $pcm_object ) {
+				return $pcm_slug;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * A name for every lookup on every row, as _<column>_name.
+	 *
+	 * The record page renders any lookup as a link with the record's name, so it
+	 * needs one predictable key per column rather than the handful of aliases
+	 * that grew up per object (_account_name, _contact_name). Those are reused
+	 * where they exist, and everything else is resolved in one query per target
+	 * object for the whole page.
+	 */
+	protected static function expand_lookups( $pcm_object, array $pcm_items ) {
+		$pcm_model = self::model( self::slug_for( $pcm_object ) );
+
+		if ( ! $pcm_model || ! $pcm_items ) {
+			return $pcm_items;
+		}
+
+		$pcm_aliases = array(
+			'account_id'         => '_account_name',
+			'primary_contact_id' => '_contact_name',
+			'who_id'             => '_contact_name',
+			'opportunity_id'     => '_opportunity_name',
+			'project_id'         => '_project_name',
+			'owner_contact_id'   => '_owner_contact_name',
+		);
+
+		$pcm_lookups = array();
+
+		foreach ( $pcm_model->fields() as $pcm_column => $pcm_def ) {
+			if ( ! empty( $pcm_def['lookup'] ) ) {
+				$pcm_lookups[ $pcm_column ] = $pcm_def['lookup'];
+			}
+		}
+
+		// First pass: reuse an alias, or note the id to resolve.
+		$pcm_wanted = array();
+		$pcm_target = function ( $pcm_item, $pcm_column, $pcm_lookup ) {
+			if ( 'polymorphic' !== $pcm_lookup ) {
+				return $pcm_lookup;
+			}
+
+			$pcm_type = isset( $pcm_item['what_type'] ) ? (string) $pcm_item['what_type'] : '';
+
+			return '' === $pcm_type ? '' : self::slug_for( $pcm_type );
+		};
+
+		foreach ( $pcm_items as $pcm_i => $pcm_item ) {
+			foreach ( $pcm_lookups as $pcm_column => $pcm_lookup ) {
+				$pcm_key = '_' . $pcm_column . '_name';
+
+				if ( isset( $pcm_item[ $pcm_key ] ) ) {
+					continue;
+				}
+
+				if ( isset( $pcm_aliases[ $pcm_column ] ) && ! empty( $pcm_item[ $pcm_aliases[ $pcm_column ] ] ) ) {
+					$pcm_items[ $pcm_i ][ $pcm_key ] = $pcm_item[ $pcm_aliases[ $pcm_column ] ];
+					continue;
+				}
+
+				$pcm_id   = isset( $pcm_item[ $pcm_column ] ) ? (int) $pcm_item[ $pcm_column ] : 0;
+				$pcm_slug = $pcm_target( $pcm_item, $pcm_column, $pcm_lookup );
+
+				if ( $pcm_id && $pcm_slug ) {
+					$pcm_wanted[ $pcm_slug ][ $pcm_id ] = true;
+				}
+			}
+		}
+
+		$pcm_labels = array();
+
+		foreach ( $pcm_wanted as $pcm_slug => $pcm_ids ) {
+			$pcm_parent = self::model( $pcm_slug );
+
+			if ( ! $pcm_parent ) {
+				continue;
+			}
+
+			foreach ( $pcm_parent->get_many( array_keys( $pcm_ids ) ) as $pcm_id => $pcm_row ) {
+				$pcm_labels[ $pcm_slug ][ $pcm_id ] = pcm_crm_record_label( $pcm_slug, $pcm_row );
+			}
+		}
+
+		// Second pass: fill what was resolved. A missing parent reads as empty
+		// rather than as a notice, the way the aliases already do.
+		foreach ( $pcm_items as $pcm_i => $pcm_item ) {
+			foreach ( $pcm_lookups as $pcm_column => $pcm_lookup ) {
+				$pcm_key = '_' . $pcm_column . '_name';
+
+				if ( isset( $pcm_items[ $pcm_i ][ $pcm_key ] ) ) {
+					continue;
+				}
+
+				$pcm_id   = isset( $pcm_item[ $pcm_column ] ) ? (int) $pcm_item[ $pcm_column ] : 0;
+				$pcm_slug = $pcm_target( $pcm_item, $pcm_column, $pcm_lookup );
+
+				$pcm_items[ $pcm_i ][ $pcm_key ] = ( $pcm_id && isset( $pcm_labels[ $pcm_slug ][ $pcm_id ] ) )
+					? $pcm_labels[ $pcm_slug ][ $pcm_id ] : '';
+			}
+		}
+
+		return $pcm_items;
 	}
 
 	/**
@@ -454,7 +572,7 @@ class PCM_CRM_REST {
 	protected static function expand_custom_relationships( $pcm_object, array $pcm_item ) {
 		static $pcm_cache = array();
 
-		$pcm_slug = $pcm_object . 's';
+		$pcm_slug = self::slug_for( $pcm_object );
 
 		foreach ( pcm_crm_custom_fields( $pcm_slug ) as $pcm_field ) {
 			if ( 'relationship' !== $pcm_field['type'] || empty( $pcm_field['related'] ) ) {
@@ -589,6 +707,7 @@ class PCM_CRM_REST {
 			'templates'         => pcm_crm_template_choices(),
 			'sequences'         => pcm_crm_sequence_choices(),
 			'weekdays'          => pcm_crm_weekdays(),
+			'objects'           => pcm_crm_object_directory(),
 		) ) );
 	}
 
@@ -668,7 +787,7 @@ class PCM_CRM_REST {
 
 			// How to draw the control, where that differs from how the value
 			// is stored: a currency and a plain number are both decimals.
-			foreach ( array( 'ui', 'related', 'help', 'custom' ) as $pcm_hint ) {
+			foreach ( array( 'ui', 'related', 'help', 'custom', 'lookup', 'lookup_filter' ) as $pcm_hint ) {
 				if ( ! empty( $pcm_def[ $pcm_hint ] ) ) {
 					$pcm_field[ $pcm_hint ] = $pcm_def[ $pcm_hint ];
 				}

@@ -15,11 +15,11 @@ function pcm_crm_projects() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'account_id'            => array( 'type' => 'id',   'sf' => 'PCM_Account_Id__c', 'label' => 'Account' ),
+				'account_id'            => array( 'type' => 'id',   'sf' => 'PCM_Account_Id__c', 'label' => 'Account', 'lookup' => 'accounts' ),
 				// Optional on purpose: internal work has no account and no
 				// opportunity behind it, and refusing to record it would just
 				// move it somewhere this cannot see.
-				'opportunity_id'        => array( 'type' => 'id',   'sf' => 'PCM_Opportunity_Id__c', 'label' => 'Opportunity' ),
+				'opportunity_id'        => array( 'type' => 'id',   'sf' => 'PCM_Opportunity_Id__c', 'label' => 'Opportunity', 'lookup' => 'opportunities', 'lookup_filter' => array( 'account_id' => 'account_id' ) ),
 				'name'                  => array( 'type' => 'text', 'sf' => 'PCM_Name__c', 'label' => 'Project Name' ),
 				'project_code'          => array( 'type' => 'text', 'sf' => 'PCM_Code__c', 'label' => 'Project Code' ),
 				'project_type'          => array( 'type' => 'text', 'sf' => 'PCM_Type__c', 'label' => 'Project Type', 'options' => 'pcm_crm_pm_project_types' ),

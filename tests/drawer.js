@@ -196,18 +196,20 @@ const children = {
 const listKey = { project_tasks: 'tasks', project_raid: 'raid', project_roles: 'roles', time_entries: 'time', activities: 'activities' };
 
 function field(key, type, label) { return { key, type: type || 'text', label: label || key }; }
+// A lookup column, carrying the target the server declares beside it.
+function lookup(key, target) { return { key, type: 'id', label: key, lookup: target }; }
 
 // /schema, as the real one serves it: fields plus a layout per reportable object.
 const schema = {
 	projects: {
-		label: 'project', fields: [field('name'), field('account_id', 'id'), field('opportunity_id', 'id'), field('project_type'), field('stage_name'), field('health'), field('description', 'longtext')],
+		label: 'project', fields: [field('name'), lookup('account_id', 'accounts'), lookup('opportunity_id', 'opportunities'), field('project_type'), field('stage_name'), field('health'), field('description', 'longtext')],
 		layout: [{ title: '', fields: ['name', 'account_id', 'opportunity_id', 'project_type', 'stage_name', 'health'] }, { title: 'Notes', fields: ['description'] }],
 		related: [], groupOptions: ['stage_name'], groupBy: 'stage_name',
 	},
-	project_tasks: { label: 'project_task', fields: [field('name'), field('project_id', 'id'), field('status'), field('is_milestone', 'bool'), field('due_date', 'date')], layout: [{ title: '', fields: ['name', 'project_id', 'status', 'is_milestone', 'due_date'] }], related: [] },
-	project_raid: { label: 'project_raid', fields: [field('title'), field('project_id', 'id'), field('raid_type'), field('status')], layout: [{ title: '', fields: ['title', 'project_id', 'raid_type', 'status'] }], related: [] },
-	project_roles: { label: 'project_role', fields: [field('project_id', 'id'), field('party_type'), field('user_id', 'id'), field('contact_id', 'id'), field('role')], layout: [{ title: '', fields: ['project_id', 'party_type', 'user_id', 'contact_id', 'role'] }], related: [] },
-	time_entries: { label: 'time_entry', fields: [field('project_id', 'id'), field('user_id', 'id'), field('entry_date', 'date'), field('hours', 'hours'), field('description', 'longtext')], layout: [{ title: '', fields: ['project_id', 'user_id', 'entry_date', 'hours'] }], related: [] },
+	project_tasks: { label: 'project_task', fields: [field('name'), lookup('project_id', 'projects'), field('status'), field('is_milestone', 'bool'), field('due_date', 'date')], layout: [{ title: '', fields: ['name', 'project_id', 'status', 'is_milestone', 'due_date'] }], related: [] },
+	project_raid: { label: 'project_raid', fields: [field('title'), lookup('project_id', 'projects'), field('raid_type'), field('status')], layout: [{ title: '', fields: ['title', 'project_id', 'raid_type', 'status'] }], related: [] },
+	project_roles: { label: 'project_role', fields: [lookup('project_id', 'projects'), field('party_type'), field('user_id', 'id'), lookup('contact_id', 'contacts'), field('role')], layout: [{ title: '', fields: ['project_id', 'party_type', 'user_id', 'contact_id', 'role'] }], related: [] },
+	time_entries: { label: 'time_entry', fields: [lookup('project_id', 'projects'), field('user_id', 'id'), field('entry_date', 'date'), field('hours', 'hours'), field('description', 'longtext')], layout: [{ title: '', fields: ['project_id', 'user_id', 'entry_date', 'hours'] }], related: [] },
 	activities: { label: 'activity', fields: [field('subject'), field('activity_type'), field('status')], layout: [{ title: '', fields: ['subject', 'activity_type', 'status'] }], related: [] },
 	accounts: { label: 'account', fields: [field('name')], layout: [{ title: '', fields: ['name'] }], related: [] },
 	contacts: { label: 'contact', fields: [field('first_name')], layout: [{ title: '', fields: ['first_name'] }], related: [] },

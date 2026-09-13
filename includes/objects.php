@@ -40,6 +40,14 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  *                                  'local' to build them from the record in
  *                                  hand, '' for a record with no related tab.
  *     @type string   $module       Owning module slug, '' for core.
+ *     @type string   $icon         Dashicon name, without the prefix. Marks
+ *                                  the object everywhere it appears — record
+ *                                  headers, lookup pills, related cards — so
+ *                                  one entry screen is not mistaken for another.
+ *     @type int      $color        Which of the theme's chart ramp tokens the
+ *                                  object wears (1–8), so it follows the theme.
+ *     @type string   $page         Admin page slug a record of this object
+ *                                  opens on, '' for none.
  * }
  */
 function pcm_crm_register_object( $pcm_slug, array $pcm_args ) {
@@ -60,6 +68,9 @@ function pcm_crm_register_object( $pcm_slug, array $pcm_args ) {
 		'group_options' => array(),
 		'related'       => '',
 		'module'        => '',
+		'icon'          => 'media-default',
+		'color'         => 1,
+		'page'          => '',
 	), $pcm_args );
 }
 
@@ -104,6 +115,26 @@ function pcm_crm_object_is( $pcm_slug, $pcm_flag ) {
 	$pcm_object = pcm_crm_object( $pcm_slug );
 
 	return $pcm_object && ! empty( $pcm_object[ $pcm_flag ] );
+}
+
+/**
+ * What the browser needs to draw an object it does not otherwise know about:
+ * slug => label, plural, icon, colour token and the page its records open on.
+ */
+function pcm_crm_object_directory() {
+	$pcm_out = array();
+
+	foreach ( pcm_crm_objects() as $pcm_slug => $pcm_object ) {
+		$pcm_out[ $pcm_slug ] = array(
+			'label'  => $pcm_object['label'],
+			'plural' => $pcm_object['plural'],
+			'icon'   => $pcm_object['icon'],
+			'color'  => (int) $pcm_object['color'],
+			'page'   => $pcm_object['page'],
+		);
+	}
+
+	return $pcm_out;
 }
 
 /**

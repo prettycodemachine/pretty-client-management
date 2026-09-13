@@ -458,7 +458,12 @@ function pcm_crm_record_label( $pcm_object, array $pcm_row ) {
 		return $pcm_row['subject'] ? $pcm_row['subject'] : $pcm_row['activity_type'];
 	}
 
-	return isset( $pcm_row['name'] ) ? $pcm_row['name'] : ( '#' . $pcm_row['id'] );
+	if ( ! empty( $pcm_row['name'] ) ) {
+		return $pcm_row['name'];
+	}
+
+	// A RAID entry is titled rather than named.
+	return ! empty( $pcm_row['title'] ) ? $pcm_row['title'] : ( '#' . $pcm_row['id'] );
 }
 
 function pcm_crm_email_footer_link( $pcm_page ) {

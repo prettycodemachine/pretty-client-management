@@ -15,7 +15,7 @@ function pcm_crm_project_tasks() {
 			pcm_crm_pm_tasks_table(),
 			array_merge(
 				array(
-					'project_id'       => array( 'type' => 'id',   'sf' => 'PCM_Project_Id__c', 'label' => 'Project' ),
+					'project_id'       => array( 'type' => 'id',   'sf' => 'PCM_Project_Id__c', 'label' => 'Project', 'lookup' => 'projects' ),
 					// Shipped, with no UI behind it. Sub-tasks are a real want
 					// and a column is free; a tree editor is not.
 					'parent_id'        => array( 'type' => 'id',   'sf' => 'PCM_Parent_Id__c', 'label' => 'Parent Task', 'internal' => true ),

@@ -21,8 +21,8 @@ function pcm_crm_time_entries() {
 			pcm_crm_pm_time_table(),
 			array_merge(
 				array(
-					'project_id'         => array( 'type' => 'id',    'sf' => 'PCM_Project_Id__c', 'label' => 'Project' ),
-					'task_id'            => array( 'type' => 'id',    'sf' => 'PCM_Task_Id__c', 'label' => 'Task' ),
+					'project_id'         => array( 'type' => 'id',    'sf' => 'PCM_Project_Id__c', 'label' => 'Project', 'lookup' => 'projects' ),
+					'task_id'            => array( 'type' => 'id',    'sf' => 'PCM_Task_Id__c', 'label' => 'Task', 'lookup' => 'project_tasks', 'lookup_filter' => array( 'project_id' => 'project_id' ) ),
 					// Resolved when the entry is written, so burn-down is an
 					// indexed sum on one column rather than a date-range scan.
 					'retainer_period_id' => array( 'type' => 'id',    'sf' => 'PCM_Period_Id__c', 'label' => 'Retainer Period', 'readonly' => true ),

@@ -10,7 +10,7 @@ function pcm_crm_contacts() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'account_id'            => array( 'type' => 'id',   'sf' => 'PCM_Account_Id__c', 'label' => 'Account' ),
+				'account_id'            => array( 'type' => 'id',   'sf' => 'PCM_Account_Id__c', 'label' => 'Account', 'lookup' => 'accounts' ),
 				'salutation'            => array( 'type' => 'text', 'sf' => 'Salutation', 'label' => 'Salutation' ),
 				'first_name'            => array( 'type' => 'text', 'sf' => 'FirstName', 'label' => 'First Name' ),
 				'last_name'             => array( 'type' => 'text', 'sf' => 'LastName', 'label' => 'Last Name' ),
@@ -190,4 +190,7 @@ pcm_crm_register_object( 'contacts', array(
 	'sf'            => 'Contact',
 	'group_options' => array( 'lead_source', 'account_id', 'title', 'owner_id' ),
 	'related'       => 'fetch',
+	'icon'          => 'id',
+	'color'         => 5,
+	'page'          => 'pcm-crm-contacts',
 ) );

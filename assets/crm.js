@@ -1868,8 +1868,8 @@
 	 * Presentation that the column type cannot imply.
 	 *
 	 * Kept small and per object rather than stored with the layout: which
-	 * field is a lookup and which is conditional is a fact about the data
-	 * model, not a choice someone makes when arranging a form.
+	 * field is wide and which is conditional is a fact about the data model,
+	 * not a choice someone makes when arranging a form.
 	 */
 	function fieldHints(object, name) {
 		// An object that ships its own hints answers for itself; the map below
@@ -1885,17 +1885,11 @@
 			activities: ['subject', 'description']
 		};
 
-		var lookups = {
-			account_id: 'accounts',
-			primary_contact_id: 'contacts',
-			who_id: 'contacts'
-		};
-
+		// Which fields are lookups, and at what, is served with the schema —
+		// it is a fact about the model, declared beside the column.
 		var hints = {};
 
 		if ((wide[object] || []).indexOf(name) !== -1) { hints.wide = true; }
-		if (lookups[name]) { hints.lookup = lookups[name]; }
-		if (name === 'what_id') { hints.lookupPair = true; }
 		if (name === 'owner_id') { hints.options = ownerOptions(); }
 
 		if (name === 'closed_lost_reason') {
@@ -1946,7 +1940,7 @@
 		});
 		var control;
 
-		if (field.lookupPair) {
+		if (field.lookup === 'polymorphic') {
 			return relatedToControl(field, values);
 		}
 

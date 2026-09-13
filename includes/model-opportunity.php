@@ -10,8 +10,10 @@ function pcm_crm_opportunities() {
 	if ( null === $pcm_model ) {
 		$pcm_fields = array_merge(
 			array(
-				'account_id'         => array( 'type' => 'id',   'sf' => 'PCM_Account_Id__c', 'label' => 'Account' ),
-				'primary_contact_id' => array( 'type' => 'id',   'sf' => 'PCM_Contact_Id__c', 'label' => 'Primary Contact' ),
+				'account_id'         => array( 'type' => 'id',   'sf' => 'PCM_Account_Id__c', 'label' => 'Account', 'lookup' => 'accounts' ),
+				// Narrowed to the deal's account in the picker, since the primary contact
+				// is almost always someone there — with Show all for when they are not.
+				'primary_contact_id' => array( 'type' => 'id',   'sf' => 'PCM_Contact_Id__c', 'label' => 'Primary Contact', 'lookup' => 'contacts', 'lookup_filter' => array( 'account_id' => 'account_id' ) ),
 				'name'               => array( 'type' => 'text', 'sf' => 'Name', 'label' => 'Opportunity Name' ),
 				'stage_name'         => array( 'type' => 'text', 'sf' => 'StageName', 'label' => 'Stage', 'options' => 'pcm_crm_stage_names' ),
 				'amount'             => array( 'type' => 'decimal', 'sf' => 'Amount', 'label' => 'Amount' ),
@@ -168,4 +170,7 @@ pcm_crm_register_object( 'opportunities', array(
 	'sf'            => 'Opportunity',
 	'group_options' => array( 'stage_name', 'type', 'lead_source', 'forecast_category', 'owner_id' ),
 	'related'       => 'fetch',
+	'icon'          => 'awards',
+	'color'         => 7,
+	'page'          => 'pcm-crm-opportunities',
 ) );

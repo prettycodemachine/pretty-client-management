@@ -18,7 +18,7 @@ function pcm_crm_status_reports() {
 			pcm_crm_pm_reports_table(),
 			array_merge(
 				array(
-					'project_id'     => array( 'type' => 'id',   'sf' => 'PCM_Project_Id__c', 'label' => 'Project' ),
+					'project_id'     => array( 'type' => 'id',   'sf' => 'PCM_Project_Id__c', 'label' => 'Project', 'lookup' => 'projects' ),
 					'template_id'    => array( 'type' => 'id',   'sf' => 'PCM_Template_Id__c', 'label' => 'Template' ),
 					'subject'        => array( 'type' => 'text', 'sf' => 'PCM_Subject__c', 'label' => 'Subject' ),
 					// 'raw' so the rendered HTML is stored verbatim: a text

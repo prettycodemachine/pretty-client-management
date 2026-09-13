@@ -33,6 +33,9 @@ pcm_crm_register_object( 'projects', array(
 	'group_options' => array( 'stage_name', 'project_type', 'health', 'account_id', 'owner_id' ),
 	'related'       => 'fetch',
 	'module'        => 'pm',
+	'icon'          => 'portfolio',
+	'color'         => 2,
+	'page'          => 'pcm-crm-projects',
 ) );
 
 pcm_crm_register_object( 'project_tasks', array(
@@ -45,6 +48,9 @@ pcm_crm_register_object( 'project_tasks', array(
 	'sf'            => 'PCM_Project_Task__c',
 	'group_options' => array( 'status', 'assignee_user_id', 'project_id' ),
 	'module'        => 'pm',
+	'icon'          => 'yes-alt',
+	'color'         => 8,
+	'page'          => 'pcm-crm-project-tasks',
 ) );
 
 pcm_crm_register_object( 'project_raid', array(
@@ -57,6 +63,9 @@ pcm_crm_register_object( 'project_raid', array(
 	'sf'            => 'PCM_Project_RAID__c',
 	'group_options' => array( 'raid_type', 'status', 'impact', 'project_id' ),
 	'module'        => 'pm',
+	'icon'          => 'warning',
+	'color'         => 4,
+	'page'          => 'pcm-crm-raid',
 ) );
 
 pcm_crm_register_object( 'project_roles', array(
@@ -69,6 +78,8 @@ pcm_crm_register_object( 'project_roles', array(
 	'sf'            => 'PCM_Project_Role__c',
 	'group_options' => array( 'party_type', 'role', 'project_id' ),
 	'module'        => 'pm',
+	'icon'          => 'groups',
+	'color'         => 6,
 ) );
 
 pcm_crm_register_object( 'time_entries', array(
@@ -81,6 +92,9 @@ pcm_crm_register_object( 'time_entries', array(
 	'sf'            => 'PCM_Time_Entry__c',
 	'group_options' => array( 'project_id', 'user_id', 'is_billable', 'task_id' ),
 	'module'        => 'pm',
+	'icon'          => 'clock',
+	'color'         => 3,
+	'page'          => 'pcm-crm-time',
 ) );
 
 pcm_crm_register_object( 'allocations', array(
@@ -93,6 +107,8 @@ pcm_crm_register_object( 'allocations', array(
 	'sf'            => 'PCM_Allocation__c',
 	'group_options' => array( 'user_id', 'project_id', 'role' ),
 	'module'        => 'pm',
+	'icon'          => 'chart-bar',
+	'color'         => 5,
 ) );
 
 // Machinery rather than records anyone reports on: a period is bookkeeping behind
@@ -105,6 +121,8 @@ pcm_crm_register_object( 'retainer_periods', array(
 	'exportable' => true,
 	'sf'         => 'PCM_Retainer_Period__c',
 	'module'     => 'pm',
+	'icon'          => 'backup',
+	'color'         => 3,
 ) );
 
 pcm_crm_register_object( 'status_reports', array(
@@ -114,4 +132,6 @@ pcm_crm_register_object( 'status_reports', array(
 	'exportable' => true,
 	'sf'         => 'PCM_Status_Report__c',
 	'module'     => 'pm',
+	'icon'          => 'media-document',
+	'color'         => 1,
 ) );
