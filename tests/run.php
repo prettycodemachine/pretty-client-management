@@ -1943,6 +1943,7 @@ $pcm_clean = pcm_crm_pm_clean_type( array(
 		array( 'name' => 'Billed', 'is_closed' => '1' ),
 	),
 	'time'      => array( 'rate_required' => '1', 'billable_default' => '1', 'description_required' => '1' ),
+	'time_posted' => '1',
 	'defaults'  => array( 'default_bill_rate' => '140', 'default_cost_rate' => '' ),
 ), '' );
 check( 'a posted type is trimmed and kept', array( $pcm_clean['label'], $pcm_clean['archetype'], $pcm_clean['active'] ), array( 'Studio Time', 'tm', 1 ) );
@@ -1950,6 +1951,10 @@ check( 'blank and repeated stages are dropped, and the rest numbered in order',
 	array( wp_list_pluck( $pcm_clean['stages'], 'name' ), wp_list_pluck( $pcm_clean['stages'], 'order' ) ), array( array( 'Booked', 'Billed' ), array( 10, 20 ) ) );
 check( 'only rules that differ from the process are stored', $pcm_clean['time'], array( 'description_required' => 1 ) );
 check( 'and only defaults that were given', $pcm_clean['defaults'], array( 'default_bill_rate' => 140.0 ) );
+check( 'a new type posts no rules, and inherits every one',
+	isset( pcm_crm_pm_clean_type( array( 'label' => 'Y', 'archetype' => 'tm' ), '' )['time'] ), false );
+check( 'stages left as the process has them are not stored',
+	isset( pcm_crm_pm_clean_type( array( 'label' => 'Y', 'archetype' => 'internal', 'stages' => pcm_crm_pm_archetype( 'internal' )['stages'] ), '' )['stages'] ), false );
 check( 'a type needs a name',
 	pcm_crm_pm_clean_type( array( 'label' => '', 'archetype' => 'tm' ), '' )->get_error_code(), 'pcm_crm_pm_type_label' );
 check( 'and a process that exists',

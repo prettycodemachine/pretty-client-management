@@ -174,7 +174,17 @@ function pcm_crm_pm_clean_type( array $pcm_post, $pcm_key ) {
 		$pcm_order += 10;
 	}
 
-	if ( ! empty( $pcm_post['reset_stages'] ) ) {
+	$pcm_archetype_def = pcm_crm_pm_archetype( $pcm_archetype );
+
+	// Stages identical to the process's own are not stored, so the type keeps
+	// following the process — and a reset stores nothing for the same reason.
+	$pcm_strip = function ( array $pcm_set ) {
+		return array_map( function ( $pcm_stage ) {
+			return array( $pcm_stage['name'], (int) $pcm_stage['is_active'], (int) $pcm_stage['is_closed'], (int) $pcm_stage['is_renewal'] );
+		}, array_values( $pcm_set ) );
+	};
+
+	if ( ! empty( $pcm_post['reset_stages'] ) || $pcm_strip( $pcm_stages ) === $pcm_strip( $pcm_archetype_def['stages'] ) ) {
 		$pcm_stages = array();
 	}
 
@@ -182,10 +192,12 @@ function pcm_crm_pm_clean_type( array $pcm_post, $pcm_key ) {
 		return new WP_Error( 'pcm_crm_pm_type_closing', __( 'At least one stage has to close a project, or nothing would ever finish.', 'pcm-crm' ) );
 	}
 
-	$pcm_archetype_def = pcm_crm_pm_archetype( $pcm_archetype );
-	$pcm_time          = array();
+	$pcm_time = array();
 
-	if ( empty( $pcm_post['reset_time'] ) ) {
+	// Only a form that showed the rules posts them: an unticked box posts
+	// nothing, so a form without the section would otherwise read as every
+	// rule switched off.
+	if ( empty( $pcm_post['reset_time'] ) && ! empty( $pcm_post['time_posted'] ) ) {
 		foreach ( array_keys( $pcm_archetype_def['time'] ) as $pcm_rule ) {
 			$pcm_value = empty( $pcm_post['time'][ $pcm_rule ] ) ? 0 : 1;
 
@@ -522,6 +534,7 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 			<div class="pcm-crm-card">
 				<h2><?php esc_html_e( 'Time entry', 'pcm-crm' ); ?></h2>
 				<p class="description"><?php esc_html_e( 'How time is logged against projects of this type. Each starts from the process, and is applied when an entry is saved.', 'pcm-crm' ); ?></p>
+				<input type="hidden" name="time_posted" value="1">
 				<table class="form-table" role="presentation">
 					<?php foreach ( pcm_crm_pm_time_rule_labels() as $pcm_rule => $pcm_label ) : ?>
 						<?php if ( ! isset( $pcm_time[ $pcm_rule ] ) ) { continue; } ?>
