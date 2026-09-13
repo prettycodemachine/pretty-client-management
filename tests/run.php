@@ -1775,5 +1775,42 @@ check( 'a missing parent comes out empty rather than as a notice',
 
 delete_option( PCM_CRM_MODULES_OPTION );
 
+echo "\n--- setup registry ---\n";
+$pcm_nav = pcm_crm_setup_nav();
+check( 'every core group has pages', array_keys( $pcm_nav ), array( 'crm', 'automation', 'data', 'platform' ) );
+check( 'an old tab link still names its page', isset( pcm_crm_settings_tabs()['fields'] ), true );
+check( 'the app-backed pages are not tabs', isset( pcm_crm_settings_tabs()['templates'] ), false );
+check( 'a tab page links through the Setup screen', pcm_crm_setup_url( 'fields' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-settings&tab=fields' );
+// Emails and drill-downs already link to this slug.
+check( 'an app-backed page keeps its own slug', pcm_crm_setup_url( 'recycle' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-recycle-bin' );
+check( 'the bin is recognised as Setup under a renamed parent', pcm_crm_is_setup_screen( 'setup_page_pcm-crm-recycle-bin' ), true );
+check( 'a record screen is not Setup', pcm_crm_is_setup_screen( 'crm_page_pcm-crm-contacts' ), false );
+$_GET['tab'] = 'nonsense';
+check( 'an unknown tab falls back to Home', pcm_crm_current_setup_key(), 'home' );
+$_GET['tab'] = 'theme';
+check( 'a known tab is the current page', pcm_crm_current_setup_key(), 'theme' );
+check( 'an app-backed slug resolves to its page', pcm_crm_current_setup_key( 'pcm-crm-schedules' ), 'schedules' );
+unset( $_GET['tab'] );
+
+ob_start();
+pcm_crm_render_settings();
+$pcm_html = ob_get_clean();
+check( 'Home renders the frame', false !== strpos( $pcm_html, 'class="wrap pcm-crm pcm-setup"' ), true );
+check( 'Home says the Projects module is off', false !== strpos( $pcm_html, 'This module is switched off.' ), true );
+check( 'Home closes every div it opens', substr_count( $pcm_html, '<div' ), substr_count( $pcm_html, '</div>' ) );
+
+ob_start();
+pcm_crm_screen( 'templates', 'Email Templates', '', array( 'setup' => 'templates' ) );
+$pcm_html = ob_get_clean();
+check( 'an app screen inside Setup still mounts the app', false !== strpos( $pcm_html, 'data-view="templates"' ), true );
+check( 'and draws no app bar', false !== strpos( $pcm_html, 'pcm-crm-appbar' ), false );
+check( 'and closes every div', substr_count( $pcm_html, '<div' ), substr_count( $pcm_html, '</div>' ) );
+
+ob_start();
+pcm_crm_screen( 'contacts', 'Contacts' );
+$pcm_html = ob_get_clean();
+check( 'a work screen carries the app bar', false !== strpos( $pcm_html, 'class="pcm-crm-appbar"' ), true );
+check( 'with its own screen marked current', (bool) preg_match( '/page=pcm-crm-contacts"\s+class="is-active"/', $pcm_html ), true );
+
 echo "\n" . ( $fail ? "$fail FAILED\n" : "All checks passed\n" );
 exit( $fail ? 1 : 0 );

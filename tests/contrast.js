@@ -82,6 +82,10 @@ console.log(`Checking ${themes.length + 1} themes\n`);
 	// half of a timestamp — so it gets the text threshold, not the 3:1 a
 	// border would be held to.
 	check(name, 'muted on paper', t.gray, t.paper, 4.5);
+	// Setup's band is the page ink turned into a ground, with paper on it, and
+	// its nav headings are body text on the tint.
+	check(name, 'setup band text', t.paper, t.ink, 4.5);
+	check(name, 'setup nav heading on tint', t.body, t['paper-tint'], 4.5);
 	console.log('');
 });
 

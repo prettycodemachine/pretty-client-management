@@ -46,10 +46,10 @@ function pcm_crm_menu() {
 
 	/* The setup --------------------------------------------------------- */
 	add_menu_page(
-		__( 'CRM Setup', 'pcm-crm' ),
-		__( 'CRM Setup', 'pcm-crm' ),
+		__( 'Setup', 'pcm-crm' ),
+		__( 'Setup', 'pcm-crm' ),
 		$pcm_cap,
-		'pcm-crm-settings',
+		PCM_CRM_SETUP_SLUG,
 		'pcm_crm_render_settings',
 		'dashicons-admin-generic',
 		// 28 rather than 27: the Projects module claims 27 when it is switched
@@ -57,19 +57,24 @@ function pcm_crm_menu() {
 		28
 	);
 
+	add_submenu_page( PCM_CRM_SETUP_SLUG, __( 'Setup Home', 'pcm-crm' ), __( 'Setup Home', 'pcm-crm' ), $pcm_cap, PCM_CRM_SETUP_SLUG, 'pcm_crm_render_settings' );
+
 	// Page slugs are unchanged on purpose: a notification email links to
 	// page=pcm-crm-contacts and a drill-down to page=pcm-crm-reports, and
-	// moving a screen between menus must not break a link already sent.
-	$pcm_setup = array(
-		'pcm-crm-settings'    => array( __( 'Settings', 'pcm-crm' ), 'pcm_crm_render_settings' ),
-		'pcm-crm-templates'   => array( __( 'Email Templates', 'pcm-crm' ), 'pcm_crm_render_templates' ),
-		'pcm-crm-sequences'   => array( __( 'Sequences', 'pcm-crm' ), 'pcm_crm_render_sequences' ),
-		'pcm-crm-schedules'   => array( __( 'Scheduled Reports', 'pcm-crm' ), 'pcm_crm_render_schedules' ),
-		'pcm-crm-recycle-bin' => array( __( 'Recycle Bin', 'pcm-crm' ), 'pcm_crm_render_recycle_bin' ),
+	// moving a screen between menus must not break a link already sent. The
+	// app-backed Setup pages keep theirs for the same reason, and stay in the
+	// sidebar because they are the ones visited most.
+	$pcm_renderers = array(
+		'pcm-crm-templates'   => 'pcm_crm_render_templates',
+		'pcm-crm-sequences'   => 'pcm_crm_render_sequences',
+		'pcm-crm-schedules'   => 'pcm_crm_render_schedules',
+		'pcm-crm-recycle-bin' => 'pcm_crm_render_recycle_bin',
 	);
 
-	foreach ( $pcm_setup as $pcm_slug => $pcm_page ) {
-		add_submenu_page( 'pcm-crm-settings', $pcm_page[0], $pcm_page[0], $pcm_cap, $pcm_slug, $pcm_page[1] );
+	foreach ( pcm_crm_setup_pages() as $pcm_page ) {
+		if ( isset( $pcm_renderers[ $pcm_page['page'] ] ) ) {
+			add_submenu_page( PCM_CRM_SETUP_SLUG, $pcm_page['label'], $pcm_page['label'], $pcm_cap, $pcm_page['page'], $pcm_renderers[ $pcm_page['page'] ] );
+		}
 	}
 }
 add_action( 'admin_menu', 'pcm_crm_menu' );
@@ -105,6 +110,10 @@ function pcm_crm_admin_assets( $pcm_hook ) {
 
 	wp_enqueue_style( 'pcm-crm', pcm_crm_asset( 'crm.css' ), array( 'pcm-crm-fonts' ), null );
 
+	if ( pcm_crm_is_setup_screen( $pcm_hook ) ) {
+		wp_enqueue_style( 'pcm-crm-setup', pcm_crm_asset( 'setup.css' ), array( 'pcm-crm' ), null );
+	}
+
 	// The settings screen is a plain WordPress form; it needs the skin but not
 	// the app, and loading the app there would mount it against no container.
 	if ( false !== strpos( $pcm_hook, 'pcm-crm-settings' ) ) {
@@ -131,16 +140,32 @@ add_action( 'admin_enqueue_scripts', 'pcm_crm_admin_assets' );
  * data-view tells crm.js which screen to build; everything else about the page
  * is the same, so there is one shell rather than eight near-copies.
  */
-function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '' ) {
+function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '', array $pcm_args = array() ) {
 	if ( ! pcm_crm_user_can() ) {
 		wp_die( esc_html__( 'You do not have access to the CRM.', 'pcm-crm' ) );
 	}
+
+	// A Setup page that is an app screen underneath — templates, the bin — draws
+	// inside the Setup frame, which carries its title and description, so the
+	// shell below keeps only the actions row.
+	$pcm_setup = isset( $pcm_args['setup'] ) ? $pcm_args['setup'] : '';
+
+	if ( $pcm_setup ) {
+		pcm_crm_setup_open( $pcm_setup );
+	}
 	?>
-	<div class="wrap pcm-crm" data-view="<?php echo esc_attr( $pcm_view ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
-		<div class="pcm-crm-head">
+	<div class="<?php echo $pcm_setup ? 'pcm-crm pcm-crm-embedded' : 'wrap pcm-crm'; ?>" data-view="<?php echo esc_attr( $pcm_view ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
+		<?php if ( ! $pcm_setup ) : ?>
+			<?php pcm_crm_app_bar( $pcm_view, isset( $pcm_args['app'] ) ? $pcm_args['app'] : 'crm' ); ?>
+		<?php endif; ?>
+		<div class="pcm-crm-head<?php echo $pcm_setup ? ' pcm-crm-head-embedded' : ''; ?>">
 			<div>
-				<h1><?php echo esc_html( $pcm_title ); ?></h1>
-				<?php if ( $pcm_subtitle ) : ?>
+				<?php if ( ! $pcm_setup ) : ?>
+					<h1><?php echo esc_html( $pcm_title ); ?></h1>
+					<?php if ( $pcm_subtitle ) : ?>
+						<p class="pcm-crm-sub"><?php echo esc_html( $pcm_subtitle ); ?></p>
+					<?php endif; ?>
+				<?php elseif ( $pcm_subtitle ) : ?>
 					<p class="pcm-crm-sub"><?php echo esc_html( $pcm_subtitle ); ?></p>
 				<?php endif; ?>
 			</div>
@@ -154,6 +179,82 @@ function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '' ) {
 		<div class="pcm-crm-drawer" data-role="drawer" hidden></div>
 		<div class="pcm-crm-scrim" data-role="scrim" hidden></div>
 	</div>
+	<?php
+	if ( $pcm_setup ) {
+		pcm_crm_setup_close();
+	}
+}
+
+/**
+ * The screens each app offers, in bar order: slug => array( label, view ).
+ *
+ * A filter rather than a list inside pcm_crm_app_bar(), so the Projects module
+ * adds its app without core naming it, and a switched-off module leaves no bar.
+ */
+function pcm_crm_apps() {
+	return apply_filters( 'pcm_crm_apps', array(
+		'crm' => array(
+			'label' => __( 'CRM', 'pcm-crm' ),
+			'items' => array(
+				'pcm-crm'               => array( __( 'Dashboard', 'pcm-crm' ), 'dashboard' ),
+				'pcm-crm-accounts'      => array( __( 'Accounts', 'pcm-crm' ), 'accounts' ),
+				'pcm-crm-contacts'      => array( __( 'Contacts', 'pcm-crm' ), 'contacts' ),
+				'pcm-crm-opportunities' => array( __( 'Opportunities', 'pcm-crm' ), 'opportunities' ),
+				'pcm-crm-pipeline'      => array( __( 'Pipeline', 'pcm-crm' ), 'pipeline' ),
+				'pcm-crm-activities'    => array( __( 'Activities', 'pcm-crm' ), 'activities' ),
+				'pcm-crm-reports'       => array( __( 'Reports', 'pcm-crm' ), 'reports' ),
+			),
+		),
+	) );
+}
+
+/**
+ * The bar across the top of a work screen: which app you are in, its screens,
+ * and the door to Setup.
+ *
+ * It is what makes a record screen read as part of an app rather than a lone
+ * WordPress page — and, with Setup drawn in its own frame, what makes the two
+ * unmistakable for each other.
+ */
+function pcm_crm_app_bar( $pcm_view, $pcm_app ) {
+	$pcm_apps = pcm_crm_apps();
+
+	if ( ! isset( $pcm_apps[ $pcm_app ] ) ) {
+		return;
+	}
+	?>
+	<nav class="pcm-crm-appbar" aria-label="<?php echo esc_attr( $pcm_apps[ $pcm_app ]['label'] ); ?>">
+		<span class="pcm-crm-appbar-name"><?php echo esc_html( $pcm_apps[ $pcm_app ]['label'] ); ?></span>
+		<?php if ( count( $pcm_apps ) > 1 ) : ?>
+			<span class="pcm-crm-appbar-switch">
+				<?php foreach ( $pcm_apps as $pcm_key => $pcm_other ) : ?>
+					<?php if ( $pcm_key !== $pcm_app ) : ?>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . key( $pcm_other['items'] ) ) ); ?>">
+							<?php
+							/* translators: %s: app name */
+							echo esc_html( sprintf( __( 'Go to %s', 'pcm-crm' ), $pcm_other['label'] ) );
+							?>
+						</a>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</span>
+		<?php endif; ?>
+		<ul class="pcm-crm-appbar-items">
+			<?php foreach ( $pcm_apps[ $pcm_app ]['items'] as $pcm_slug => $pcm_item ) : ?>
+				<li>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $pcm_slug ) ); ?>"
+						class="<?php echo $pcm_item[1] === $pcm_view ? 'is-active' : ''; ?>"
+						<?php echo $pcm_item[1] === $pcm_view ? 'aria-current="page"' : ''; ?>>
+						<?php echo esc_html( $pcm_item[0] ); ?>
+					</a>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<a class="pcm-crm-appbar-setup" href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>">
+			<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
+			<?php esc_html_e( 'Setup', 'pcm-crm' ); ?>
+		</a>
+	</nav>
 	<?php
 }
 
@@ -182,23 +283,19 @@ function pcm_crm_render_activities() {
 }
 
 function pcm_crm_render_recycle_bin() {
-	pcm_crm_screen(
-		'recycle',
-		__( 'Recycle Bin', 'pcm-crm' ),
-		__( 'Deleting a record in the CRM marks it deleted rather than removing it. This is where those go.', 'pcm-crm' )
-	);
+	pcm_crm_screen( 'recycle', __( 'Recycle Bin', 'pcm-crm' ), '', array( 'setup' => 'recycle' ) );
 }
 
 function pcm_crm_render_templates() {
-	pcm_crm_screen( 'templates', __( 'Email Templates', 'pcm-crm' ), __( 'Reusable emails, with contact, account and opportunity variables.', 'pcm-crm' ) );
+	pcm_crm_screen( 'templates', __( 'Email Templates', 'pcm-crm' ), '', array( 'setup' => 'templates' ) );
 }
 
 function pcm_crm_render_sequences() {
-	pcm_crm_screen( 'sequences', __( 'Sequences', 'pcm-crm' ), __( 'A short run of templates, spaced out. Any reply logged against the contact stops it.', 'pcm-crm' ) );
+	pcm_crm_screen( 'sequences', __( 'Sequences', 'pcm-crm' ), '', array( 'setup' => 'sequences' ) );
 }
 
 function pcm_crm_render_schedules() {
-	pcm_crm_screen( 'schedules', __( 'Scheduled Reports', 'pcm-crm' ), pcm_crm_cron_note() );
+	pcm_crm_screen( 'schedules', __( 'Scheduled Reports', 'pcm-crm' ), pcm_crm_cron_note(), array( 'setup' => 'schedules' ) );
 }
 
 /**

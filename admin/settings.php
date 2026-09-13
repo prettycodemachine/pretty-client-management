@@ -96,26 +96,25 @@ function pcm_crm_register_settings() {
 add_action( 'admin_init', 'pcm_crm_register_settings' );
 
 /**
- * The settings tabs, in the order they matter.
+ * The pages on the main Setup screen, as ?tab= key => label.
+ *
+ * Derived from the Setup registry (includes/setup.php) rather than listed here,
+ * so a module's pages count without this file naming them.
  */
 function pcm_crm_settings_tabs() {
-	return array(
-		'form'     => __( 'Contact Form', 'pcm-crm' ),
-		'export'   => __( 'Data Export', 'pcm-crm' ),
-		'fields'   => __( 'Fields & Layouts', 'pcm-crm' ),
-		'pipeline' => __( 'Pipeline', 'pcm-crm' ),
-		'theme'    => __( 'Theme', 'pcm-crm' ),
-		// The tab that switches a module on cannot live inside the module.
-		'modules'  => __( 'Modules', 'pcm-crm' ),
-		'samples'  => __( 'Sample Data', 'pcm-crm' ),
-	);
+	$pcm_tabs = array();
+
+	foreach ( pcm_crm_setup_pages() as $pcm_key => $pcm_page ) {
+		if ( PCM_CRM_SETUP_SLUG === $pcm_page['page'] ) {
+			$pcm_tabs[ $pcm_key ] = $pcm_page['label'];
+		}
+	}
+
+	return $pcm_tabs;
 }
 
 function pcm_crm_current_settings_tab() {
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
-	$pcm_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'form';
-
-	return isset( pcm_crm_settings_tabs()[ $pcm_tab ] ) ? $pcm_tab : 'form';
+	return pcm_crm_current_setup_key();
 }
 
 function pcm_crm_settings_url( $pcm_tab ) {
@@ -178,52 +177,7 @@ function pcm_crm_settings_assets( $pcm_hook ) {
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_settings_assets' );
 
-function pcm_crm_render_settings() {
-	if ( ! pcm_crm_user_can() ) {
-		wp_die( esc_html__( 'You do not have access to the CRM.', 'pcm-crm' ) );
-	}
-
-	$pcm_tab = pcm_crm_current_settings_tab();
-	?>
-	<div class="wrap pcm-crm pcm-crm-settings" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
-		<div class="pcm-crm-head">
-			<div>
-				<h1><?php esc_html_e( 'CRM Settings', 'pcm-crm' ); ?></h1>
-			</div>
-		</div>
-
-		<div class="pcm-crm-tabs" role="tablist">
-			<?php foreach ( pcm_crm_settings_tabs() as $pcm_slug => $pcm_label ) : ?>
-				<a class="pcm-crm-tab<?php echo $pcm_slug === $pcm_tab ? ' is-active' : ''; ?>"
-					href="<?php echo esc_url( pcm_crm_settings_url( $pcm_slug ) ); ?>"
-					role="tab" aria-selected="<?php echo $pcm_slug === $pcm_tab ? 'true' : 'false'; ?>">
-					<?php echo esc_html( $pcm_label ); ?>
-				</a>
-			<?php endforeach; ?>
-		</div>
-
-		<?php
-		settings_errors();
-
-		if ( 'export' === $pcm_tab ) {
-			pcm_crm_render_export_tab();
-		} elseif ( 'fields' === $pcm_tab ) {
-			pcm_crm_render_fields_tab();
-		} elseif ( 'theme' === $pcm_tab ) {
-			pcm_crm_render_theme_tab();
-		} elseif ( 'samples' === $pcm_tab ) {
-			pcm_crm_render_samples_tab();
-		} elseif ( 'modules' === $pcm_tab ) {
-			pcm_crm_render_modules_tab();
-		} elseif ( 'pipeline' === $pcm_tab ) {
-			pcm_crm_render_pipeline_tab();
-		} else {
-			pcm_crm_render_form_tab();
-		}
-		?>
-	</div>
-	<?php
-}
+// pcm_crm_render_settings() lives in includes/setup.php, with the frame it draws.
 
 /* ---------------------------------------------------------------------------
    Contact form tab

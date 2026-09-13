@@ -26,13 +26,16 @@ function pcm_crm_pm_menu() {
 		27
 	);
 
-	// Only the screens that have a view behind them. The dashboard, the board
-	// and the resourcing grid are registered in pm.js as they are built; a menu
-	// item whose view does not exist yet renders the app's "Unknown screen"
-	// fallback, which is a worse answer than not offering it.
+	// Only the screens that have a view behind them. Tasks and the RAID log are
+	// plain object lists registered in pm.js; the dashboard, the board and the
+	// resourcing grid are added as they are built — a menu item whose view does
+	// not exist yet renders the app's "Unknown screen" fallback, which is a worse
+	// answer than not offering it.
 	$pcm_pages = array(
 		'pcm-crm-projects' => array( __( 'All Projects', 'pcm-crm' ), 'pcm_crm_pm_render_projects' ),
+		'pcm-crm-project-tasks' => array( __( 'Tasks', 'pcm-crm' ), 'pcm_crm_pm_render_tasks' ),
 		'pcm-crm-time'     => array( __( 'Time', 'pcm-crm' ), 'pcm_crm_pm_render_time' ),
+		'pcm-crm-raid'     => array( __( 'RAID Log', 'pcm-crm' ), 'pcm_crm_pm_render_raid' ),
 	);
 
 	foreach ( $pcm_pages as $pcm_slug => $pcm_page ) {
@@ -46,12 +49,38 @@ add_action( 'admin_menu', 'pcm_crm_pm_menu' );
    -------------------------------------------------------------------------- */
 
 function pcm_crm_pm_render_projects() {
-	pcm_crm_screen( 'projects', __( 'Projects', 'pcm-crm' ), __( 'Every project, with the account and opportunity behind it.', 'pcm-crm' ) );
+	pcm_crm_screen( 'projects', __( 'Projects', 'pcm-crm' ), __( 'Every project, with the account and opportunity behind it.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+}
+
+function pcm_crm_pm_render_tasks() {
+	pcm_crm_screen( 'project_tasks', __( 'Tasks', 'pcm-crm' ), __( 'Tasks and milestones across every project.', 'pcm-crm' ), array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_time() {
-	pcm_crm_screen( 'time_entries', __( 'Time', 'pcm-crm' ) );
+	pcm_crm_screen( 'time_entries', __( 'Time', 'pcm-crm' ), '', array( 'app' => 'projects' ) );
 }
+
+function pcm_crm_pm_render_raid() {
+	pcm_crm_screen( 'project_raid', __( 'RAID Log', 'pcm-crm' ), __( 'Risks, assumptions, issues and dependencies, worst first.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+}
+
+/**
+ * The Projects app's bar.
+ */
+function pcm_crm_pm_app( $pcm_apps ) {
+	$pcm_apps['projects'] = array(
+		'label' => __( 'Projects', 'pcm-crm' ),
+		'items' => array(
+			'pcm-crm-projects'      => array( __( 'Projects', 'pcm-crm' ), 'projects' ),
+			'pcm-crm-project-tasks' => array( __( 'Tasks', 'pcm-crm' ), 'project_tasks' ),
+			'pcm-crm-time'          => array( __( 'Time', 'pcm-crm' ), 'time_entries' ),
+			'pcm-crm-raid'          => array( __( 'RAID Log', 'pcm-crm' ), 'project_raid' ),
+		),
+	);
+
+	return $pcm_apps;
+}
+add_filter( 'pcm_crm_apps', 'pcm_crm_pm_app' );
 
 /**
  * The module's own script and stylesheet.
@@ -71,7 +100,7 @@ function pcm_crm_pm_assets( $pcm_hook ) {
 
 	// The settings screen is a plain WordPress form with no app mounted, so it
 	// takes the skin and not the script — same reasoning as the core enqueue.
-	if ( false !== strpos( $pcm_hook, 'pcm-crm-settings' ) ) {
+	if ( false !== strpos( $pcm_hook, PCM_CRM_SETUP_SLUG ) ) {
 		return;
 	}
 

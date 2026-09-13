@@ -1,0 +1,180 @@
+/* ==========================================================================
+   PCM CRM — Setup frame
+
+   Setup is a different place from the apps, and should look it at a glance:
+   a dark band where the apps have a heading rule, a grouped nav down the side
+   where they have a bar of screens, and flat hairline cards where they have
+   the offset shadow. Everything still reads from the theme tokens, so a dark
+   or neon theme moves Setup with the rest.
+   ========================================================================== */
+
+.pcm-setup {
+  /* The ink as a ground, not ink-deep: in the dark themes the deep ink is a
+     near-black meant for text on light, and paper on it fails. Ink on paper is
+     the pairing every theme already guarantees, so reversing it is safe. */
+  --pcm-setup-band: var(--pcm-ink);
+  --pcm-setup-band-text: var(--pcm-paper);
+}
+
+/* The band ------------------------------------------------------------------ */
+.pcm-setup-band {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 14px 0 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--pcm-setup-band);
+  color: var(--pcm-setup-band-text);
+}
+.pcm-setup-mark {
+  width: 40px;
+  height: 40px;
+  font-size: 26px;
+  line-height: 40px;
+  text-align: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--pcm-setup-band-text);
+}
+.pcm-setup-heading { flex: 1 1 auto; min-width: 0; }
+.pcm-setup .pcm-setup-band h1 {
+  color: var(--pcm-setup-band-text);
+  font-size: 1.6rem;
+  margin: 0;
+}
+.pcm-setup-crumbs {
+  margin: 0 0 2px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pcm-setup-band-text);
+  opacity: 0.85;
+}
+.pcm-setup .pcm-setup-crumbs a,
+.pcm-setup .pcm-setup-exits a {
+  color: var(--pcm-setup-band-text);
+  text-decoration: none;
+}
+.pcm-setup .pcm-setup-crumbs a:hover,
+.pcm-setup .pcm-setup-exits a:hover { text-decoration: underline; color: var(--pcm-setup-band-text); }
+.pcm-setup-exits { display: flex; gap: 14px; font-weight: 700; font-size: 0.9rem; }
+
+/* Layout -------------------------------------------------------------------- */
+.pcm-setup-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.pcm-setup-nav {
+  position: sticky;
+  top: 46px;
+  padding: 12px;
+  border: 1px solid var(--pcm-line);
+  border-radius: 10px;
+  background: var(--pcm-paper-tint);
+}
+.pcm-setup .pcm-setup-find {
+  width: 100%;
+  height: var(--pcm-control);
+  margin-bottom: 10px;
+  padding: 0 10px;
+  border: 1px solid var(--pcm-line);
+  border-radius: 8px;
+  background: var(--pcm-paper);
+  color: var(--pcm-ink);
+}
+.pcm-setup-nav h2 {
+  margin: 14px 0 4px;
+  padding: 0 8px;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  /* Body rather than the muted grey: the grey on the tint misses 4.5:1 in
+     three themes, and these headings carry text. */
+  color: var(--pcm-body);
+}
+.pcm-setup-nav ul { margin: 0; padding: 0; list-style: none; }
+.pcm-setup-nav li { margin: 0; }
+.pcm-setup-nav li[hidden],
+.pcm-setup-nav-group[hidden] { display: none !important; }
+.pcm-setup .pcm-setup-nav a {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--pcm-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.pcm-setup .pcm-setup-nav a:hover { background: var(--pcm-paper); color: var(--pcm-ink); }
+.pcm-setup .pcm-setup-nav a.is-active {
+  background: var(--pcm-paper);
+  color: var(--pcm-ink-deep);
+  box-shadow: inset 3px 0 0 var(--pcm-blue-deep);
+}
+.pcm-setup-nav-home { margin-bottom: 4px; }
+
+.pcm-setup-main { min-width: 0; }
+.pcm-setup-desc { margin: 0 0 16px; color: var(--pcm-body); font-size: 0.95rem; }
+
+/* Setup cards are flat: the offset shadow is the apps' signature. */
+.pcm-setup .pcm-crm-card {
+  border-width: 1px;
+  border-color: var(--pcm-line);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+/* Sub-navigation left inside a page — the object picker on Fields & Layouts. */
+.pcm-setup .pcm-crm-tabs { margin-bottom: 18px; }
+
+/* An app screen drawn inside Setup — templates, the bin. */
+.pcm-setup .pcm-crm-embedded { margin-right: 0; }
+.pcm-setup .pcm-crm-head-embedded {
+  padding-top: 0;
+  border-bottom: 0;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.pcm-setup .pcm-crm-head-embedded:empty { display: none; }
+
+/* Home ---------------------------------------------------------------------- */
+.pcm-setup-home {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.pcm-setup-tile {
+  padding: 16px 18px;
+  border: 1px solid var(--pcm-line);
+  border-radius: 10px;
+  background: var(--pcm-paper);
+}
+.pcm-setup .pcm-setup-tile h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.pcm-setup-tile > p { margin: 0 0 10px; font-size: 0.9rem; }
+.pcm-setup-tile ul { margin: 0; padding: 0; list-style: none; }
+.pcm-setup-tile li { margin: 0 0 8px; }
+.pcm-setup .pcm-setup-tile li a { font-weight: 700; }
+.pcm-setup-tile li span { display: block; font-size: 0.84rem; color: var(--pcm-gray); }
+.pcm-setup-tile.is-off li span { color: var(--pcm-body); }
+.pcm-setup-tile.is-off { background: var(--pcm-paper-tint); border-style: dashed; }
+.pcm-setup-off { font-weight: 600; }
+
+@media (max-width: 782px) {
+  .pcm-setup-layout { grid-template-columns: 1fr; }
+  .pcm-setup-nav { position: static; }
+  .pcm-setup-band { padding: 12px 14px; }
+  .pcm-setup .pcm-setup-band h1 { font-size: 1.3rem; }
+}
+
+@media print {
+  .pcm-setup-nav,
+  .pcm-setup-exits { display: none !important; }
+  .pcm-setup-layout { display: block; }
+}

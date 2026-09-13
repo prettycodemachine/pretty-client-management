@@ -1576,3 +1576,65 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   border-radius: 6px;
   border: 1px solid var(--pcm-line);
 }
+
+/* App bar -------------------------------------------------------------------
+   Which app you are in and its screens, with Setup at the far end. Drawn in
+   the accent so a work screen is never mistaken for Setup's dark band. */
+.pcm-crm-appbar {
+  display: flex;
+  align-items: center;
+  gap: 6px 18px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 6px 10px 6px 16px;
+  border: 2px solid var(--pcm-ink);
+  border-radius: 12px;
+  background: var(--pcm-paper);
+  box-shadow: 4px 4px 0 var(--pcm-accent);
+}
+.pcm-crm-appbar-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--pcm-accent-deep);
+}
+.pcm-crm-appbar-switch { font-size: 0.8rem; }
+.pcm-crm-appbar-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pcm-crm-appbar-items li { margin: 0; }
+.pcm-crm .pcm-crm-appbar-items a,
+.pcm-crm .pcm-crm-appbar-setup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  color: var(--pcm-ink);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.pcm-crm .pcm-crm-appbar-items a:hover,
+.pcm-crm .pcm-crm-appbar-setup:hover { background: var(--pcm-paper-tint); color: var(--pcm-ink); }
+.pcm-crm .pcm-crm-appbar-items a.is-active {
+  background: var(--pcm-paper-tint);
+  box-shadow: inset 0 -3px 0 var(--pcm-accent-deep);
+}
+.pcm-crm .pcm-crm-appbar-setup { color: var(--pcm-gray); }
+.pcm-crm-appbar-setup .dashicons { font-size: 17px; width: 17px; height: 17px; }
+
+@media (max-width: 782px) {
+  .pcm-crm-appbar-items { flex-wrap: nowrap; overflow-x: auto; order: 3; flex-basis: 100%; }
+  .pcm-crm .pcm-crm-appbar-items a { white-space: nowrap; }
+}
+
+@media print {
+  .pcm-crm-appbar { display: none !important; }
+}
