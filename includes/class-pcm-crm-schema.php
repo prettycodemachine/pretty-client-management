@@ -17,7 +17,7 @@ class PCM_CRM_Schema {
 	 * differs, so an rsync deploy (which never fires the activation hook)
 	 * still picks the change up on the next page load.
 	 */
-	const VERSION = '1.9.0';
+	const VERSION = '1.10.0';
 
 	const OPTION = 'pcm_crm_db_version';
 
@@ -243,13 +243,20 @@ class PCM_CRM_Schema {
 			last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			is_deleted tinyint(1) NOT NULL DEFAULT 0,
 			is_test tinyint(1) NOT NULL DEFAULT 0,
+			-- The WordPress user id behind this contact's portal login, 0 until
+			-- the Client Portal module invites them. Kept here (rather than only
+			-- as user meta on the wp_users row) so staff can see and query portal
+			-- access from the Contact itself, the same reason owner_id lives on
+			-- every table instead of being looked up sideways.
+			portal_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY pcm_contact_email (email),
 			KEY pcm_contact_account (account_id),
 			KEY pcm_contact_owner (owner_id),
 			KEY pcm_contact_deleted (is_deleted),
 			KEY pcm_contact_test (is_test),
-			KEY pcm_contact_sf (sf_id)
+			KEY pcm_contact_sf (sf_id),
+			KEY pcm_contact_portal_user (portal_user_id)
 		) {$pcm_charset};";
 
 		/* Opportunity ------------------------------------------------------ */

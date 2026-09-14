@@ -135,3 +135,23 @@ pcm_crm_register_object( 'status_reports', array(
 	'icon'          => 'media-document',
 	'color'         => 1,
 ) );
+
+pcm_crm_register_object( 'help_tickets', array(
+	'model'         => 'pcm_crm_help_tickets',
+	'label'         => 'Help Ticket',
+	'plural'        => 'Help Tickets',
+	'reportable'    => true,
+	'exportable'    => true,
+	'recyclable'    => true,
+	'sf'            => 'PCM_Help_Ticket__c',
+	'group_options' => array( 'status', 'project_id', 'account_id' ),
+	// No related section: a ticket's only detail beyond its fields is its
+	// comment thread, which renders as its own tab (registerRecordTabs in
+	// assets/help-tickets.js) rather than through the generic related-list
+	// mechanism — there is nothing else a ticket has children of.
+	'related'       => '',
+	'module'        => 'pm',
+	'icon'          => 'sos',
+	'color'         => 4,
+	'page'          => 'pcm-crm-help-tickets',
+) );

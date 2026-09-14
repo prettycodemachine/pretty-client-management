@@ -240,7 +240,7 @@ async function main() {
 	// Tab buttons carry data-tab as well, and come first in the tree.
 	const panels = () => drawer.querySelectorAll('.pcm-crm-panel[data-tab]');
 	const tabIds = panels().map(p => p.dataset.tab).filter(t => t !== 'details');
-	check('every related list gets a tab, and the project its summary', tabIds, ['tasks', 'raid', 'roles', 'time', 'activities', 'burn']);
+	check('every related list gets a tab, and the project its summary and documents', tabIds, ['tasks', 'raid', 'roles', 'time', 'activities', 'burn', 'documents']);
 
 	/* Click an existing row in each list, then New in each. */
 	for (const object of Object.keys(children)) {

@@ -1332,6 +1332,100 @@
 
 	app.registerView('timesheet', { render: renderTimesheet, load: loadTimesheet });
 
+	/* Project documents ---------------------------------------------------------
+	   A second, independent registerRecordTabs('projects', ...) call rather than
+	   folding into the burn-down one above — recordTabs collects every provider
+	   for an object and concatenates their tabs, so a second call is exactly as
+	   valid as adding a second entry inside the first, and keeps this unrelated
+	   concern out of that function.
+	   --------------------------------------------------------------------- */
+	app.registerRecordTabs('projects', function (record, related) {
+		var node = el('div.pcm-crm-documents');
+		node.appendChild(documentsPanel(record, related && related.documents ? related.documents : []));
+		return [{ id: 'documents', label: 'Documents', node: node }];
+	});
+
+	function humanSize(bytes) {
+		bytes = Number(bytes || 0);
+		if (bytes < 1024) { return bytes + ' B'; }
+		if (bytes < 1024 * 1024) { return Math.round(bytes / 1024) + ' KB'; }
+		return (Math.round(bytes / (1024 * 1024) * 10) / 10) + ' MB';
+	}
+
+	function documentsPanel(record, documents) {
+		var wrap = el('div.pcm-crm-doc-panel');
+		var list = el('div.pcm-crm-related-rows');
+
+		function draw(rows) {
+			app.helpers.clear(list);
+
+			if (!rows.length) {
+				list.appendChild(el('p.pcm-crm-related-empty', { text: 'No documents yet.' }));
+				return;
+			}
+
+			rows.forEach(function (row) {
+				list.appendChild(el('div.pcm-crm-related-row.pcm-crm-doc-row', {}, [
+					el('span.pcm-crm-cell.pcm-crm-cell-primary', { text: row.label || row._filename }),
+					el('span.pcm-crm-cell', { text: row._filename }),
+					el('span.pcm-crm-cell', { text: humanSize(row._filesize) }),
+					el('a.pcm-btn.pcm-btn-quiet.pcm-btn-sm', {
+						// A plain link, not fetch() — the nonce travels as a query
+						// param since no custom header can ride a browser navigation,
+						// which is what rest_cookie_check_errors() checks for.
+						href: (window.PCM_CRM && window.PCM_CRM.root ? window.PCM_CRM.root : '') + '/pm/documents/' + row.id + '/download?_wpnonce=' + encodeURIComponent((window.PCM_CRM && window.PCM_CRM.nonce) || ''),
+						text: 'Download'
+					}),
+					el('button.pcm-btn.pcm-btn-quiet.pcm-btn-sm', {
+						type: 'button',
+						text: 'Remove',
+						onclick: function () {
+							if (!window.confirm('Remove this document?')) { return; }
+
+							app.helpers.api('/pm/documents/' + row.id, { method: 'DELETE' }).then(function () {
+								rows = rows.filter(function (r) { return r.id !== row.id; });
+								draw(rows);
+							}).catch(function (error) { window.alert(error.message); });
+						}
+					})
+				]));
+			});
+		}
+
+		draw(documents);
+
+		var addButton = el('button.pcm-btn.pcm-btn-primary.pcm-btn-sm', {
+			type: 'button',
+			text: 'Upload',
+			onclick: function () {
+				if (!window.wp || !window.wp.media) { return; }
+
+				var frame = window.wp.media({ title: 'Choose a file', button: { text: 'Add to project' }, multiple: true });
+
+				frame.on('select', function () {
+					frame.state().get('selection').each(function (model) {
+						var attachment = model.toJSON();
+
+						app.helpers.api('/pm/projects/' + record.id + '/documents', {
+							method: 'POST',
+							body: { attachment_id: attachment.id, label: attachment.title || attachment.filename || '' }
+						}).then(function (row) {
+							documents = documents.concat([row]);
+							draw(documents);
+						}).catch(function (error) { window.alert(error.message); });
+					});
+				});
+
+				frame.open();
+			}
+		});
+
+		wrap.appendChild(addButton);
+		wrap.appendChild(list);
+
+		return wrap;
+	}
+
 	// Exposed for tests/pm-views.js, which lifts the pure helpers out by name
 	// rather than keeping a copy that would go stale.
 	window.PCM_CRM_PM = {

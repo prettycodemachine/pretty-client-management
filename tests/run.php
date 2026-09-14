@@ -1226,12 +1226,18 @@ check( 'an unregistered module is off rather than an error', pcm_crm_module_acti
 // registered module. A missing key would fall back to the default, which would
 // make a module defaulting to on impossible to switch off.
 check( 'saving with nothing ticked writes an explicit off',
-	pcm_crm_sanitize_modules( array() ), array( 'pm' => 0 ) );
+	pcm_crm_sanitize_modules( array() ), array( 'pm' => 0, 'portal' => 0 ) );
 check( 'and a tick writes an explicit on',
-	pcm_crm_sanitize_modules( array( 'pm' => '1' ) ), array( 'pm' => 1 ) );
+	pcm_crm_sanitize_modules( array( 'pm' => '1' ) ), array( 'pm' => 1, 'portal' => 0 ) );
+// portal requires pm — ticking it without pm is refused, the way
+// pcm_crm_module_active() would refuse it anyway.
+check( 'a module cannot outlive a requirement unticked in the same save',
+	pcm_crm_sanitize_modules( array( 'portal' => '1' ) ), array( 'pm' => 0, 'portal' => 0 ) );
+check( 'but stays on when its requirement is ticked too',
+	pcm_crm_sanitize_modules( array( 'pm' => '1', 'portal' => '1' ) ), array( 'pm' => 1, 'portal' => 1 ) );
 // A module that has been removed should not leave a setting nothing reads.
 check( 'an unknown key is dropped',
-	pcm_crm_sanitize_modules( array( 'pm' => 1, 'ghost' => 1 ) ), array( 'pm' => 1 ) );
+	pcm_crm_sanitize_modules( array( 'pm' => 1, 'portal' => 1, 'ghost' => 1 ) ), array( 'pm' => 1, 'portal' => 1 ) );
 
 // The switched-off surface. These are what "it leaves the navigation" means in
 // terms anything can check.
@@ -1285,7 +1291,7 @@ check( 'and so does the arithmetic', function_exists( 'pcm_crm_pm_week_start' ),
 
 echo "\n--- pm schema ---\n";
 
-check( 'the version was bumped so the type migration runs', PCM_CRM_Schema::VERSION, '1.9.0' );
+check( 'the version was bumped for the portal_user_id column', PCM_CRM_Schema::VERSION, '1.10.0' );
 check( 'ten core tables and eight of the module\'s',
 	array( count( $pcm_all_defs ), count( $pcm_pm_only ) ), array( 18, 8 ) );
 
@@ -1504,7 +1510,7 @@ check( 'and core still comes first',
 
 check( 'a project has related lists to fetch', pcm_crm_object( 'projects' )['related'], 'fetch' );
 check( 'and accounts gained a second provider for them',
-	count( pcm_crm_related_providers()['accounts'] ), 2 );
+	count( pcm_crm_related_providers()['accounts'] ), 3 );
 check( 'as did opportunities', count( pcm_crm_related_providers()['opportunities'] ), 2 );
 
 echo "\n--- project merge tokens ---\n";
@@ -1920,6 +1926,193 @@ check( 'a partner firm with no named person reads as the firm',
 check( 'a missing parent comes out empty rather than as a notice',
 	pcm_crm_pm_decorate( 'time_entry', array( array( 'project_id' => 999, 'user_id' => 0 ) ), $pcm_maps, $pcm_users )[0]['_project_name'],
 	'' );
+
+echo "\n--- help tickets ---\n";
+
+class PCM_Ticket_WPDB extends FakeWPDB {
+	function get_row( $q = '', $o = null ) {
+		if ( false !== strpos( $q, 'pcm_crm_contacts' ) && preg_match( '/id = (\d+)/', $q, $m ) && 7 === (int) $m[1] ) {
+			return array( 'id' => 7, 'first_name' => 'Sam', 'last_name' => 'Lee', 'email' => 'sam@acme.test' );
+		}
+
+		if ( false !== strpos( $q, 'pcm_crm_projects' ) && preg_match( '/id = (\d+)/', $q, $m ) ) {
+			$pcm_projects = array( 12 => 5, 13 => 6 );
+			if ( ! isset( $pcm_projects[ (int) $m[1] ] ) ) { return null; }
+			return array( 'id' => (int) $m[1], 'account_id' => $pcm_projects[ (int) $m[1] ], 'name' => 'P' . $m[1] );
+		}
+
+		if ( false !== strpos( $q, 'pcm_crm_help_ticket_comments' ) && preg_match( '/id = (\d+)/', $q, $m ) ) {
+			$pcm_comments = array(
+				1 => array( 'id' => 1, 'ticket_id' => 50, 'parent_id' => 0 ),
+				2 => array( 'id' => 2, 'ticket_id' => 50, 'parent_id' => 1 ),
+				3 => array( 'id' => 3, 'ticket_id' => 99, 'parent_id' => 0 ),
+			);
+			return isset( $pcm_comments[ (int) $m[1] ] ) ? $pcm_comments[ (int) $m[1] ] : null;
+		}
+
+		return null;
+	}
+
+	function get_results( $q = '', $o = null ) {
+		// project_roles find(): a client role for contact 7 on project 12 only.
+		if ( false !== strpos( $q, 'pcm_crm_project_roles' ) ) {
+			if ( false !== strpos( $q, "party_type = 'client'" )
+				&& false !== strpos( $q, 'contact_id = 7' )
+				&& false !== strpos( $q, 'project_id = 12' ) ) {
+				return array( array( 'id' => 1, 'project_id' => 12, 'contact_id' => 7, 'party_type' => 'client' ) );
+			}
+			return array();
+		}
+
+		return array();
+	}
+}
+
+$pcm_real_wpdb = $GLOBALS['wpdb'];
+$GLOBALS['wpdb'] = new PCM_Ticket_WPDB();
+
+check( 'a contact with a client role on the project passes',
+	pcm_crm_pm_contact_is_client_on( 7, 12 ), true );
+check( 'a contact with no role there does not',
+	pcm_crm_pm_contact_is_client_on( 7, 13 ), false );
+check( 'neither does an id of zero', pcm_crm_pm_contact_is_client_on( 0, 12 ), false );
+
+$pcm_ticket_valid = function ( array $pcm_row ) {
+	$pcm_result = pcm_crm_pm_validate_ticket( null, 'help_ticket', array_merge( array(
+		'subject' => 'Login is broken', 'status' => 'To Do', 'contact_id' => 7, 'project_id' => 12,
+	), $pcm_row ), 0 );
+
+	return is_wp_error( $pcm_result ) ? $pcm_result->get_error_code() : 'ok';
+};
+
+check( 'a well-formed ticket is fine', $pcm_ticket_valid( array() ), 'ok' );
+check( 'a ticket needs a subject', $pcm_ticket_valid( array( 'subject' => '' ) ), 'pcm_crm_ticket_subject_required' );
+check( 'and a real status', $pcm_ticket_valid( array( 'status' => 'Wontfix' ) ), 'pcm_crm_ticket_bad_status' );
+check( 'and a contact', $pcm_ticket_valid( array( 'contact_id' => 0 ) ), 'pcm_crm_ticket_no_contact' );
+check( 'the contact has to actually be a client on that project',
+	$pcm_ticket_valid( array( 'project_id' => 13 ) ), 'pcm_crm_ticket_contact_not_on_project' );
+
+check( 'account_id follows project_id on insert',
+	pcm_crm_pm_apply_ticket( array( 'project_id' => 12 ), 'help_ticket', 0 )['account_id'], 5 );
+check( 'and stays in step on update, from the row being changed',
+	pcm_crm_pm_apply_ticket( array( 'project_id' => 13 ), 'help_ticket', 9 )['account_id'], 6 );
+check( 'a new ticket defaults to To Do',
+	pcm_crm_pm_apply_ticket( array( 'project_id' => 12 ), 'help_ticket', 0 )['status'], 'To Do' );
+check( 'an explicit status on create is kept',
+	pcm_crm_pm_apply_ticket( array( 'project_id' => 12, 'status' => 'In Progress' ), 'help_ticket', 0 )['status'], 'In Progress' );
+
+echo "\n--- ticket comments ---\n";
+
+$GLOBALS['pcm_test_current_user'] = (object) array( 'ID' => 4, 'roles' => array( 'pcm_client' ) );
+check( 'a client comment is stamped as one',
+	pcm_crm_pm_stamp_comment( array(), 'help_ticket_comment' )['is_client_comment'], 1 );
+
+$GLOBALS['pcm_test_current_user'] = (object) array( 'ID' => 1, 'roles' => array( 'administrator' ) );
+check( 'a staff comment is not', pcm_crm_pm_stamp_comment( array(), 'help_ticket_comment' )['is_client_comment'], 0 );
+check( 'and an unrelated object is untouched',
+	isset( pcm_crm_pm_stamp_comment( array(), 'project' )['is_client_comment'] ), false );
+
+$pcm_comment_valid = function ( array $pcm_row ) {
+	$pcm_result = pcm_crm_pm_validate_comment( null, 'help_ticket_comment', array_merge( array(
+		'ticket_id' => 50, 'body' => 'Looking into it.',
+	), $pcm_row ), 0 );
+
+	return is_wp_error( $pcm_result ) ? $pcm_result->get_error_code() : 'ok';
+};
+
+check( 'a plain comment is fine', $pcm_comment_valid( array() ), 'ok' );
+check( 'a comment needs a ticket', $pcm_comment_valid( array( 'ticket_id' => 0 ) ), 'pcm_crm_comment_no_ticket' );
+check( 'and something to say', $pcm_comment_valid( array( 'body' => '   ' ) ), 'pcm_crm_comment_empty' );
+check( 'a reply to a top-level comment on its own ticket is fine',
+	$pcm_comment_valid( array( 'parent_id' => 1 ) ), 'ok' );
+check( 'but not a reply on the wrong ticket',
+	$pcm_comment_valid( array( 'parent_id' => 3 ) ), 'pcm_crm_comment_bad_parent' );
+check( 'and not a reply to a reply — one level deep only',
+	$pcm_comment_valid( array( 'parent_id' => 2 ) ), 'pcm_crm_comment_too_deep' );
+
+echo "\n--- project documents ---\n";
+
+$GLOBALS['pcm_test_attachments'] = array( 400 );
+
+$pcm_doc_valid = function ( array $pcm_row ) {
+	$pcm_result = pcm_crm_pm_validate_document( null, 'project_document', array_merge( array(
+		'project_id' => 12, 'attachment_id' => 400,
+	), $pcm_row ), 0 );
+
+	return is_wp_error( $pcm_result ) ? $pcm_result->get_error_code() : 'ok';
+};
+
+check( 'a document naming a real attachment is fine', $pcm_doc_valid( array() ), 'ok' );
+check( 'a document needs a project', $pcm_doc_valid( array( 'project_id' => 0 ) ), 'pcm_crm_document_no_project' );
+check( 'and a file that actually exists',
+	$pcm_doc_valid( array( 'attachment_id' => 999 ) ), 'pcm_crm_document_missing_file' );
+
+echo "\n--- portal permission context ---\n";
+
+// help_ticket/comment/document are 'pm' schema — always loaded regardless of
+// the switch — but pcm_crm_portal_context() lives in the portal module's
+// gated 'files', so it needs the module actually switched on and reloaded,
+// the same step the pm section above took for its own files.
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1, 'portal' => 1 ) );
+pcm_crm_load_modules();
+
+unset( $GLOBALS['pcm_test_current_user'] );
+check( 'no session at all is refused', pcm_crm_portal_context()->get_error_code(), 'pcm_crm_portal_login_required' );
+
+$GLOBALS['pcm_test_current_user'] = (object) array( 'ID' => 9, 'roles' => array( 'administrator' ) );
+check( 'a logged-in staff member is not a client', pcm_crm_portal_context()->get_error_code(), 'pcm_crm_portal_wrong_role' );
+
+$GLOBALS['pcm_test_current_user'] = (object) array( 'ID' => 10, 'roles' => array( 'pcm_client' ) );
+check( 'a client with no linked contact is refused', pcm_crm_portal_context()->get_error_code(), 'pcm_crm_portal_unlinked' );
+
+update_user_meta( 10, 'pcm_crm_contact_id', 7 );
+check( 'linked but with no project yet', pcm_crm_portal_context()->get_error_code(), 'pcm_crm_portal_no_project' );
+
+// A second client role, on a different project — the portal shows both, not
+// a single most-recent one.
+class PCM_Portal_WPDB extends PCM_Ticket_WPDB {
+	function get_results( $q = '', $o = null ) {
+		if ( false !== strpos( $q, 'pcm_crm_project_roles' )
+			&& false !== strpos( $q, "party_type = 'client'" )
+			&& false !== strpos( $q, 'contact_id = 7' ) ) {
+			return array(
+				array( 'id' => 2, 'project_id' => 13, 'contact_id' => 7, 'party_type' => 'client', 'created_date' => '2026-02-01 00:00:00' ),
+				array( 'id' => 1, 'project_id' => 12, 'contact_id' => 7, 'party_type' => 'client', 'created_date' => '2026-01-01 00:00:00' ),
+			);
+		}
+
+		return parent::get_results( $q, $o );
+	}
+
+	function get_row( $q = '', $o = null ) {
+		if ( false !== strpos( $q, 'pcm_crm_contacts' ) && preg_match( '/id = (\d+)/', $q, $m ) && 7 === (int) $m[1] ) {
+			return array( 'id' => 7, 'first_name' => 'Sam', 'last_name' => 'Lee' );
+		}
+
+		return parent::get_row( $q, $o );
+	}
+}
+$GLOBALS['wpdb'] = new PCM_Portal_WPDB();
+
+check( 'a contact with client roles on two projects sees both',
+	pcm_crm_portal_projects_for_contact( 7 ), array( 13, 12 ) );
+
+$pcm_context = pcm_crm_portal_context();
+check( 'and the resolved context carries every project, not one',
+	is_wp_error( $pcm_context ) ? $pcm_context->get_error_code() : $pcm_context['project_ids'],
+	array( 13, 12 ) );
+
+check( 'the safe summary drops every rate, cost and dollar figure',
+	array_keys( pcm_crm_portal_safe_summary( array(
+		'type_label' => 'Retainer', 'logged_hours' => 10, 'billable_hours' => 8, 'unbilled_hours' => 2,
+		'billable_value' => 900, 'unbilled_value' => 100, 'cost_value' => 300,
+		'budget_amount' => 5000, 'budget_hours' => 20, 'estimate_hours' => 0,
+		'current_period' => null, 'next_milestone' => null,
+	) ) ),
+	array( 'type_label', 'logged_hours', 'billable_hours', 'budget_hours', 'estimate_hours', 'current_period', 'next_milestone' ) );
+
+unset( $GLOBALS['pcm_test_current_user'], $GLOBALS['pcm_test_user_meta'], $GLOBALS['pcm_test_attachments'] );
+$GLOBALS['wpdb'] = $pcm_real_wpdb;
 
 delete_option( PCM_CRM_MODULES_OPTION );
 

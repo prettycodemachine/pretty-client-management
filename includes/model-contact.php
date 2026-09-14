@@ -31,6 +31,11 @@ function pcm_crm_contacts() {
 				'do_not_contact'        => array( 'type' => 'bool', 'sf' => 'DoNotCall', 'label' => 'Do Not Contact' ),
 				'do_not_contact_reason' => array( 'type' => 'text', 'sf' => 'DoNotCallReason__c', 'label' => 'Do Not Contact Reason' ),
 				'description'           => array( 'type' => 'longtext', 'sf' => 'Description', 'label' => 'Notes' ),
+				// Set only by the Client Portal module's invite flow (includes/portal/portal-admin.php).
+				// 'internal' keeps it off the filter builder and the auto-generated
+				// layout; the record still carries it, which is all the Invite button's
+				// condition needs.
+				'portal_user_id'        => array( 'type' => 'id', 'label' => 'Portal User', 'internal' => true, 'readonly' => true ),
 			),
 			PCM_CRM_Model::system_fields(),
 			// Admin-defined fields are real columns, so they join the map as

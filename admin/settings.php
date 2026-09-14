@@ -144,6 +144,36 @@ function pcm_crm_sanitize_modules( $pcm_value ) {
 		$pcm_out[ $pcm_slug ] = empty( $pcm_value[ $pcm_slug ] ) ? 0 : 1;
 	}
 
+	// A module submitted on cannot outlive a requirement submitted off in the
+	// same save — pcm_crm_module_active() would refuse it anyway, so leaving
+	// the option saying otherwise would just be a setting that lies. Generic
+	// over 'requires', so a third module needing the same guarantee needs no
+	// code here.
+	foreach ( pcm_crm_modules() as $pcm_slug => $pcm_module ) {
+		if ( empty( $pcm_out[ $pcm_slug ] ) || empty( $pcm_module['requires'] ) ) {
+			continue;
+		}
+
+		foreach ( (array) $pcm_module['requires'] as $pcm_required ) {
+			if ( empty( $pcm_out[ $pcm_required ] ) ) {
+				$pcm_out[ $pcm_slug ] = 0;
+
+				add_settings_error(
+					PCM_CRM_MODULES_OPTION,
+					'pcm_crm_module_requires',
+					sprintf(
+						/* translators: 1: the module that was turned off, 2: the module it needs */
+						__( '“%1$s” needs “%2$s” switched on, so it was left off.', 'pcm-crm' ),
+						$pcm_module['label'],
+						pcm_crm_modules()[ $pcm_required ]['label']
+					)
+				);
+
+				break;
+			}
+		}
+	}
+
 	return $pcm_out;
 }
 
@@ -670,6 +700,15 @@ function pcm_crm_render_modules_tab() {
 
 		<table class="form-table" role="presentation">
 			<?php foreach ( $pcm_modules as $pcm_slug => $pcm_module ) : ?>
+				<?php
+				$pcm_missing = array();
+
+				foreach ( (array) ( isset( $pcm_module['requires'] ) ? $pcm_module['requires'] : array() ) as $pcm_required ) {
+					if ( ! pcm_crm_module_active( $pcm_required ) ) {
+						$pcm_missing[] = $pcm_modules[ $pcm_required ]['label'];
+					}
+				}
+				?>
 				<tr>
 					<th scope="row"><?php echo esc_html( $pcm_module['label'] ); ?></th>
 					<td>
@@ -677,10 +716,25 @@ function pcm_crm_render_modules_tab() {
 							<input type="checkbox"
 								name="<?php echo esc_attr( PCM_CRM_MODULES_OPTION ); ?>[<?php echo esc_attr( $pcm_slug ); ?>]"
 								value="1"
-								<?php checked( pcm_crm_module_active( $pcm_slug ) ); ?> />
+								<?php checked( pcm_crm_module_active( $pcm_slug ) ); ?>
+								<?php disabled( (bool) $pcm_missing ); ?> />
 							<?php esc_html_e( 'Enabled', 'pcm-crm' ); ?>
 						</label>
 						<p class="description"><?php echo esc_html( $pcm_module['description'] ); ?></p>
+						<?php if ( $pcm_missing ) : ?>
+							<?php /* A disabled-but-checked box is shown truthfully rather than
+							         hidden, so an admin who switched a dependency off after this
+							         one was on can see why it stopped working. */ ?>
+							<p class="description">
+								<?php
+								printf(
+									/* translators: %s: comma-separated module names */
+									esc_html__( 'Needs %s switched on first.', 'pcm-crm' ),
+									esc_html( implode( ', ', $pcm_missing ) )
+								);
+								?>
+							</p>
+						<?php endif; ?>
 					</td>
 				</tr>
 			<?php endforeach; ?>

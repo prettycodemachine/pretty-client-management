@@ -37,6 +37,7 @@ function pcm_crm_pm_menu() {
 		'pcm-crm-timesheet' => array( __( 'Timesheet', 'pcm-crm' ), 'pcm_crm_pm_render_timesheet' ),
 		'pcm-crm-time'     => array( __( 'Time Entries', 'pcm-crm' ), 'pcm_crm_pm_render_time' ),
 		'pcm-crm-raid'     => array( __( 'RAID Log', 'pcm-crm' ), 'pcm_crm_pm_render_raid' ),
+		'pcm-crm-help-tickets' => array( __( 'Help Tickets', 'pcm-crm' ), 'pcm_crm_pm_render_help_tickets' ),
 	);
 
 	foreach ( $pcm_pages as $pcm_slug => $pcm_page ) {
@@ -69,6 +70,10 @@ function pcm_crm_pm_render_raid() {
 	pcm_crm_screen( 'project_raid', __( 'RAID Log', 'pcm-crm' ), __( 'Risks, assumptions, issues and dependencies, worst first.', 'pcm-crm' ), array( 'app' => 'projects' ) );
 }
 
+function pcm_crm_pm_render_help_tickets() {
+	pcm_crm_screen( 'help_tickets', __( 'Help Tickets', 'pcm-crm' ), __( 'Support requests, raised by clients or logged on their behalf.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+}
+
 /**
  * The Projects app's bar.
  */
@@ -81,6 +86,7 @@ function pcm_crm_pm_app( $pcm_apps ) {
 			'pcm-crm-timesheet'     => array( __( 'Timesheet', 'pcm-crm' ), 'timesheet' ),
 			'pcm-crm-time'          => array( __( 'Time Entries', 'pcm-crm' ), 'time_entries' ),
 			'pcm-crm-raid'          => array( __( 'RAID Log', 'pcm-crm' ), 'project_raid' ),
+			'pcm-crm-help-tickets'  => array( __( 'Help Tickets', 'pcm-crm' ), 'help_tickets' ),
 		),
 	);
 
@@ -110,6 +116,17 @@ function pcm_crm_pm_assets( $pcm_hook ) {
 		return;
 	}
 
+	// The project record page's Documents tab drives a wp.media picker, which
+	// is not loaded on an admin page by default — enqueued here rather than
+	// only on the Projects screens, the same reasoning pm.css already uses,
+	// since a project can be reached from an Account or Opportunity page too.
+	wp_enqueue_media();
+
 	wp_enqueue_script( 'pcm-crm-pm', pcm_crm_asset( 'pm.js' ), array( 'pcm-crm' ), null, true );
+
+	// A separate file, not folded into pm.js: Help Tickets has nothing to do
+	// with project-type archetypes, which is what pm.js is mostly organised
+	// around. Depends on pcm-crm only — it needs none of pm.js's own helpers.
+	wp_enqueue_script( 'pcm-crm-help-tickets', pcm_crm_asset( 'help-tickets.js' ), array( 'pcm-crm' ), null, true );
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_pm_assets' );

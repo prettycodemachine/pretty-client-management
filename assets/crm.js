@@ -452,6 +452,9 @@
 	/** slug => [function (record, related, helpers)] returning extra record tabs. */
 	var recordTabs = {};
 
+	/** slug => [function (record, helpers)] returning extra header action nodes. */
+	var recordActions = {};
+
 	/** [function (key, values, scope)] run when a form field changes. */
 	var derivers = [];
 
@@ -1883,6 +1886,17 @@
 				href: recordUrl(object, record.id),
 				text: 'Open page'
 			}));
+		}
+
+		// A module adds a record-level action — Invite to Portal on a Contact —
+		// without this file knowing it exists, the same shape registerRecordTabs
+		// already gives a module for adding a tab.
+		if (!isNew && !current.editing) {
+			(recordActions[object] || []).forEach(function (provider) {
+				(provider(record, { api: api, el: el, reloadRecord: reloadRecord }) || []).forEach(function (node) {
+					actions.appendChild(node);
+				});
+			});
 		}
 
 		host.appendChild(el('div.pcm-crm-modal-head' + (isPage ? '.pcm-crm-record-head' : ''), {}, [
@@ -5099,6 +5113,9 @@
 		registerRelatedColumns: function (kind, fn) { relatedRenderers[kind] = fn; },
 		registerRecordTabs: function (slug, fn) {
 			(recordTabs[slug] = recordTabs[slug] || []).push(fn);
+		},
+		registerRecordActions: function (slug, fn) {
+			(recordActions[slug] = recordActions[slug] || []).push(fn);
 		},
 		registerDerived: function (fn) { derivers.push(fn); },
 		// The screen's containers, for a module view that draws its own screen.

@@ -247,3 +247,22 @@
 .pcm-crm-sheet-add { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
 .pcm-crm[data-theme="dark"] .pcm-crm-sheet-cell,
 .pcm-crm[data-theme="neon"] .pcm-crm-sheet-cell { background-color: var(--pcm-paper-tint); }
+
+/* Help Ticket comment thread -------------------------------------------------- */
+.pcm-crm-comment-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.pcm-crm-comment {
+  padding: 10px 14px;
+  border: 1px solid var(--pcm-line);
+  border-radius: 10px;
+  background: var(--pcm-paper-tint);
+}
+.pcm-crm-comment-reply { margin-left: 32px; background: var(--pcm-paper); }
+.pcm-crm-comment-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 0.82rem; }
+.pcm-crm-comment-body { margin: 0; white-space: pre-wrap; }
+.pcm-crm-thread-inner .pcm-crm-fields { margin-bottom: 10px; }
+
+/* Project documents ------------------------------------------------------------ */
+.pcm-crm-doc-panel { display: flex; flex-direction: column; gap: 12px; }
+.pcm-crm-doc-row {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) auto auto auto;
+}

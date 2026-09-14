@@ -45,6 +45,8 @@ function pcm_crm_pm_bootstrap( $pcm_boot ) {
 	// are the resourcing board's weeks.
 	$pcm_boot['weekStartsOn'] = (int) get_option( 'start_of_week', 1 );
 
+	$pcm_boot['ticketStatuses'] = pcm_crm_pm_ticket_statuses();
+
 	return $pcm_boot;
 }
 add_filter( 'pcm_crm_bootstrap', 'pcm_crm_pm_bootstrap' );
@@ -109,11 +111,52 @@ function pcm_crm_pm_related_project( $pcm_id ) {
 			'per_page' => 100,
 		) ) ),
 		'activities' => PCM_CRM_REST::expand( 'activity', pcm_crm_activities_for( 'project', $pcm_id ) ),
+		'tickets'    => PCM_CRM_REST::expand( 'help_ticket', pcm_crm_help_tickets()->find( array(
+			'filters'  => array( 'project_id' => $pcm_id ),
+			'orderby'  => 'last_modified_date',
+			'order'    => 'DESC',
+			'per_page' => 200,
+		) ) ),
+		// Not run through expand() — a document has nothing worth resolving
+		// against another CRM table, only against the Media Library, which is
+		// what pcm_crm_pm_documents_for() already does.
+		'documents'  => pcm_crm_pm_documents_for( $pcm_id ),
+	);
+}
+
+/**
+ * A project's Help Tickets, from its Account's or its Contact's own record
+ * page — registered as their own providers, not folded into core's
+ * pcm_crm_related_account()/pcm_crm_related_contact(), for the same reason
+ * pcm_crm_pm_related_projects_for_account() already stands apart from them: a
+ * module adding a list to a core object must not need to edit core's file.
+ */
+function pcm_crm_pm_related_tickets_for_account( $pcm_id ) {
+	return array(
+		'tickets' => PCM_CRM_REST::expand( 'help_ticket', pcm_crm_help_tickets()->find( array(
+			'filters'  => array( 'account_id' => $pcm_id ),
+			'orderby'  => 'last_modified_date',
+			'order'    => 'DESC',
+			'per_page' => 200,
+		) ) ),
+	);
+}
+
+function pcm_crm_pm_related_tickets_for_contact( $pcm_id ) {
+	return array(
+		'tickets' => PCM_CRM_REST::expand( 'help_ticket', pcm_crm_help_tickets()->find( array(
+			'filters'  => array( 'contact_id' => $pcm_id ),
+			'orderby'  => 'last_modified_date',
+			'order'    => 'DESC',
+			'per_page' => 200,
+		) ) ),
 	);
 }
 
 pcm_crm_register_related( 'accounts', 'pcm_crm_pm_related_projects_for_account' );
+pcm_crm_register_related( 'accounts', 'pcm_crm_pm_related_tickets_for_account' );
 pcm_crm_register_related( 'opportunities', 'pcm_crm_pm_related_projects_for_opportunity' );
+pcm_crm_register_related( 'contacts', 'pcm_crm_pm_related_tickets_for_contact' );
 pcm_crm_register_related( 'projects', 'pcm_crm_pm_related_project' );
 
 // Activities already reach a project without any registration: what_type is a

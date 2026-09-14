@@ -1,0 +1,123 @@
+/* ==========================================================================
+   Client Portal
+
+   Restates the CRM's palette literally, the way pcm_crm_email_wrapper() does
+   for email — this renders on the public front end, where crm.css (an
+   admin-only stylesheet) is never loaded. Light theme only: a portal visitor
+   is not offered the CRM's theme picker.
+   ========================================================================== */
+.pcm-portal {
+  --pcm-ink: #2c2c2e;
+  --pcm-body: #46464a;
+  --pcm-paper: #ffffff;
+  --pcm-paper-tint: #f4f8fc;
+  --pcm-accent-deep: #c94040;
+  --pcm-accent-deeper: #af3232;
+  --pcm-blue: #aac8e6;
+  --pcm-blue-deep: #3f6b96;
+  --pcm-green: #2f7d5d;
+  --pcm-line: rgba(42, 42, 46, 0.14);
+
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--pcm-body);
+}
+
+.pcm-portal * { box-sizing: border-box; }
+
+.pcm-portal h1, .pcm-portal h2, .pcm-portal h3 { color: var(--pcm-ink); margin: 0 0 0.5em; }
+.pcm-portal h1 { font-size: 1.5rem; }
+.pcm-portal h2 { font-size: 1.2rem; }
+.pcm-portal h3 { font-size: 1rem; margin-top: 24px; }
+
+.pcm-portal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.pcm-portal-project-name { font-weight: 700; color: var(--pcm-ink); }
+.pcm-portal-switcher { height: 40px; padding: 0 10px; border: 2px solid var(--pcm-ink); border-radius: 8px; background: #fff; }
+
+.pcm-portal-nav { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 2px solid var(--pcm-ink); margin-bottom: 20px; }
+.pcm-portal-tab {
+  padding: 9px 14px; border: 0; background: none; font-weight: 700; color: var(--pcm-body);
+  cursor: pointer; border-radius: 8px 8px 0 0;
+}
+.pcm-portal-tab.is-active { background: var(--pcm-paper-tint); color: var(--pcm-ink); box-shadow: inset 0 -3px 0 var(--pcm-accent-deep); }
+
+.pcm-portal-card { padding: 18px 20px; border: 2px solid var(--pcm-ink); border-radius: 12px; background: #fff; box-shadow: 5px 5px 0 var(--pcm-blue); }
+.pcm-portal-note { font-size: 0.86rem; color: var(--pcm-body); }
+.pcm-portal-muted { color: var(--pcm-body); font-size: 0.85rem; }
+.pcm-portal-empty, .pcm-portal-loading { color: var(--pcm-body); padding: 20px 0; }
+.pcm-portal-error {
+  padding: 14px 16px; border: 2px solid var(--pcm-accent-deep); border-radius: 10px;
+  background: #fbeeee; color: var(--pcm-accent-deeper);
+}
+
+.pcm-portal-meter { margin-bottom: 18px; }
+.pcm-portal-meter-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; font-size: 0.92rem; }
+.pcm-portal-meter-track { height: 12px; border: 2px solid var(--pcm-ink); border-radius: 999px; background: var(--pcm-paper-tint); overflow: hidden; }
+.pcm-portal-meter-fill { display: block; height: 100%; background: var(--pcm-green); }
+.pcm-portal-meter.is-over .pcm-portal-meter-fill { background: var(--pcm-accent-deep); }
+
+.pcm-portal-stats { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 10px 0 0; }
+.pcm-portal-stats dt { font-weight: 700; color: var(--pcm-body); }
+.pcm-portal-stats dd { margin: 0; color: var(--pcm-ink); }
+
+.pcm-portal-list { display: flex; flex-direction: column; gap: 2px; }
+.pcm-portal-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 12px 14px; border: 0; border-bottom: 1px solid var(--pcm-line);
+  background: none; cursor: pointer; text-decoration: none; color: inherit; font: inherit;
+}
+.pcm-portal-row:hover { background: var(--pcm-paper-tint); }
+.pcm-portal-row-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pcm-portal-row-body strong { color: var(--pcm-ink); }
+
+.pcm-portal-badge {
+  flex: 0 0 auto; padding: 3px 9px; border-radius: 999px; background: var(--pcm-paper-tint);
+  border: 1px solid var(--pcm-line); font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.03em; color: var(--pcm-body);
+}
+.pcm-portal-badge.is-to-do { color: var(--pcm-body); }
+.pcm-portal-badge.is-in-progress { background: #e8f1fb; color: var(--pcm-blue-deep); border-color: var(--pcm-blue-deep); }
+.pcm-portal-badge.is-client-testing { background: #fdf3e2; color: #a06a12; border-color: #a06a12; }
+.pcm-portal-badge.is-client-approved { background: #e8f5ee; color: var(--pcm-green); border-color: var(--pcm-green); }
+
+.pcm-portal-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border: 2px solid var(--pcm-ink);
+  border-radius: 10px; background: #fff; color: var(--pcm-ink); font-weight: 700; font-size: 0.9rem;
+  cursor: pointer; margin-bottom: 14px;
+}
+.pcm-portal-btn-primary { background: var(--pcm-accent-deep); border-color: var(--pcm-accent-deep); color: #fff; }
+.pcm-portal-btn-primary:hover { background: var(--pcm-accent-deeper); }
+.pcm-portal-btn:disabled { opacity: 0.5; cursor: default; }
+
+.pcm-portal-form, .pcm-portal-reply { display: flex; flex-direction: column; gap: 6px; }
+.pcm-portal-form label { font-weight: 700; font-size: 0.82rem; margin-top: 10px; }
+.pcm-portal-form input, .pcm-portal-form select, .pcm-portal-form textarea,
+.pcm-portal-reply textarea {
+  padding: 9px 12px; border: 2px solid var(--pcm-ink); border-radius: 10px; font: inherit; width: 100%;
+}
+.pcm-portal-form-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+
+.pcm-portal-back { border: 0; background: none; color: var(--pcm-blue-deep); font-weight: 700; cursor: pointer; padding: 0 0 12px; }
+.pcm-portal-description { white-space: pre-wrap; padding: 12px; background: var(--pcm-paper-tint); border-radius: 10px; }
+
+.pcm-portal-status-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 18px; }
+.pcm-portal-status-btn {
+  padding: 7px 12px; border: 2px solid var(--pcm-line); border-radius: 999px; background: #fff;
+  font-size: 0.82rem; font-weight: 700; cursor: pointer; color: var(--pcm-body);
+}
+.pcm-portal-status-btn.is-current { background: var(--pcm-ink); border-color: var(--pcm-ink); color: #fff; cursor: default; }
+
+.pcm-portal-thread { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.pcm-portal-comment { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--pcm-line); }
+.pcm-portal-comment.is-mine { background: #eef6ff; }
+.pcm-portal-comment.is-staff { background: var(--pcm-paper-tint); }
+.pcm-portal-comment.is-reply { margin-left: 28px; }
+.pcm-portal-comment-head { display: flex; justify-content: space-between; gap: 10px; font-size: 0.8rem; margin-bottom: 4px; }
+.pcm-portal-comment p { margin: 0; white-space: pre-wrap; }
+
+@media (max-width: 560px) {
+  .pcm-portal { padding: 16px 12px 40px; }
+  .pcm-portal-comment.is-reply { margin-left: 12px; }
+}

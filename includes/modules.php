@@ -48,6 +48,7 @@ function pcm_crm_modules() {
 					'pm/pm-picklists.php',
 					'pm/pm-weeks.php',
 					'pm/schema-pm.php',
+					'pm/schema-portal-data.php',
 					'pm/model-project.php',
 					'pm/model-project-task.php',
 					'pm/model-project-raid.php',
@@ -56,13 +57,36 @@ function pcm_crm_modules() {
 					'pm/model-allocation.php',
 					'pm/model-retainer-period.php',
 					'pm/model-status-report.php',
+					'pm/model-help-ticket.php',
+					'pm/model-ticket-comment.php',
+					'pm/model-project-document.php',
 				),
 				'files'       => array(
 					'pm/pm-objects.php',
 					'pm/pm-rest.php',
+					'pm/pm-tickets-rest.php',
 					'pm/pm-menu.php',
 					'pm/pm-settings.php',
 					'pm/pm-sample-data.php',
+				),
+			),
+			// Requires 'pm': a client has nothing to see or file a ticket
+			// against without a project. Enforced in the Modules tab
+			// (pcm_crm_sanitize_modules() and pcm_crm_render_modules_tab() in
+			// admin/settings.php) via the generic 'requires' key below, not by
+			// anything special-cased to this module — a third module needing
+			// the same guarantee needs no further plumbing.
+			'portal' => array(
+				'label'       => __( 'Client Portal', 'pcm-crm' ),
+				'description' => __( 'A login for your clients: their project\'s time, RAID log and documents, and Help Tickets they can raise and comment on themselves.', 'pcm-crm' ),
+				'default'     => 0,
+				'requires'    => array( 'pm' ),
+				'schema'      => array(),
+				'files'       => array(
+					'portal/permissions.php',
+					'portal/portal-rest.php',
+					'portal/portal-admin.php',
+					'portal/portal-front.php',
 				),
 			),
 		) );
@@ -89,6 +113,19 @@ function pcm_crm_module_active( $pcm_slug ) {
 	$pcm_on = isset( $pcm_saved[ $pcm_slug ] )
 		? (bool) $pcm_saved[ $pcm_slug ]
 		: (bool) $pcm_modules[ $pcm_slug ]['default'];
+
+	// Checked here, not only where the setting is saved: a module whose
+	// dependency has since gone off (however that happened) should behave as
+	// off itself, not merely warn about it on a settings screen nobody is
+	// looking at.
+	if ( $pcm_on && ! empty( $pcm_modules[ $pcm_slug ]['requires'] ) ) {
+		foreach ( (array) $pcm_modules[ $pcm_slug ]['requires'] as $pcm_required ) {
+			if ( ! pcm_crm_module_active( $pcm_required ) ) {
+				$pcm_on = false;
+				break;
+			}
+		}
+	}
 
 	return (bool) apply_filters( 'pcm_crm_module_active', $pcm_on, $pcm_slug );
 }

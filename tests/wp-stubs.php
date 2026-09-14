@@ -101,6 +101,7 @@ function wpautop( $pee, $br = true ) {
 	return $out;
 }
 function get_attached_file() { return ''; } function wp_kses_post( $s ) { return $s; }
+function wp_strip_all_tags( $s ) { return trim( strip_tags( (string) $s ) ); }
 function plugin_dir_path( $f ) { return dirname( $f ) . '/'; }
 function plugin_dir_url() { return 'https://example.com/plugin/'; }
 function add_query_arg( $k, $v = null, $u = null ) { return is_array($k) ? $u : $u . '?' . $k . '=' . $v; }
@@ -128,7 +129,20 @@ function wp_enqueue_media() {} function wp_create_nonce() { return 'nonce'; }
 function rest_url( $n ) { return 'https://example.com/wp-json/' . $n; }
 function add_menu_page() {} function add_submenu_page() {} function wp_nonce_url( $u ) { return $u; }
 function checked() {} function selected() {} function submit_button() {} function settings_fields() {}
-function settings_errors() {} function wp_editor() {} function wp_get_current_user() { return (object) array( 'user_email' => 'a@b.c' ); }
+function add_settings_error() {}
+function get_pages() { return array(); }
+function settings_errors() {} function wp_editor() {}
+function wp_get_current_user() {
+	return isset( $GLOBALS['pcm_test_current_user'] )
+		? $GLOBALS['pcm_test_current_user']
+		: (object) array( 'ID' => 0, 'user_email' => 'a@b.c', 'roles' => array() );
+}
+function is_user_logged_in() { return ! empty( $GLOBALS['pcm_test_current_user'] ) && ! empty( $GLOBALS['pcm_test_current_user']->ID ); }
+function get_user_meta( $id, $key = '', $single = false ) {
+	return isset( $GLOBALS['pcm_test_user_meta'][ $id ][ $key ] ) ? $GLOBALS['pcm_test_user_meta'][ $id ][ $key ] : '';
+}
+function update_user_meta( $id, $key, $value ) { $GLOBALS['pcm_test_user_meta'][ $id ][ $key ] = $value; return true; }
+function get_post( $id ) { return in_array( (int) $id, isset( $GLOBALS['pcm_test_attachments'] ) ? $GLOBALS['pcm_test_attachments'] : array(), true ) ? (object) array( 'ID' => (int) $id ) : null; }
 function esc_attr_e( $s ) { echo $s; }
 function esc_textarea( $s ) { return htmlspecialchars( (string) $s, ENT_QUOTES ); }
 function wp_get_attachment_image() { return ''; } function antispambot( $s ) { return $s; }

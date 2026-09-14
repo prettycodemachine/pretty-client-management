@@ -25,7 +25,8 @@ const fs = require('fs');
 const path = require('path');
 
 const pmSrc = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pm.js'), 'utf8');
-const crmSrc = fs.readFileSync(path.join(__dirname, '..', 'assets', 'crm.js'), 'utf8');
+const ticketsSrc = fs.readFileSync(path.join(__dirname, '..', 'assets', 'help-tickets.js'), 'utf8');
+const crmSrc = fs.readFileSync(path.join(__dirname, '..', 'assets', 'crm.js'), 'utf8') + '\n' + ticketsSrc;
 
 let failed = 0;
 function check(label, got, want) {
@@ -116,9 +117,14 @@ const app = {
 const win = { PCM_CRM_App: app };
 // eslint-disable-next-line no-new-func
 new Function('window', 'document', pmSrc)(win, { });
+// Loaded against the same stub app and the same registered store, so
+// help_tickets is checked by every generic sweep below exactly like every
+// pm.js object — it is a separate file for organisation only, not a separate
+// contract.
+new Function('window', 'document', ticketsSrc)(win, { });
 
-check('pm.js registers every object a project record can open',
-	Object.keys(registered.objects).sort(), ['project_raid', 'project_roles', 'project_tasks', 'projects', 'time_entries']);
+check('pm.js and help-tickets.js register every object a project record can open',
+	Object.keys(registered.objects).sort(), ['help_tickets', 'project_raid', 'project_roles', 'project_tasks', 'projects', 'time_entries']);
 
 // Core's own object map, read out of crm.js, so a child pointing at a core
 // object (activities) counts as resolved.
@@ -150,6 +156,11 @@ const sampleRows = {
 	time_entries: {
 		id: 3, entry_date: '2026-09-11', hours: 1.5, is_billable: 1, project_id: 12,
 		_project_name: 'Acme retainer', _user_name: 'Dana', description: 'Config'
+	},
+	help_tickets: {
+		id: 8, project_id: 12, account_id: 5, contact_id: 7, subject: 'Login is broken',
+		status: 'In Progress', _project_id_name: 'Acme retainer', _contact_id_name: 'Sam Lee',
+		_owner_name: 'Dana', last_modified_date: '2026-09-12 09:00:00'
 	}
 };
 
@@ -230,7 +241,8 @@ const relatedRows = {
 	tasks: { name: 'Kickoff', status: 'Done', is_milestone: 0, due_date: '2026-09-01' },
 	raid: { title: 'Data quality', raid_type: 'Risk', status: 'Open', severity: 6 },
 	roles: { _person_name: 'Dana', _party_label: 'Internal', party_type: 'internal', role: 'Lead', _org_name: 'PCM' },
-	time: sampleRows.time_entries
+	time: sampleRows.time_entries,
+	tickets: sampleRows.help_tickets
 };
 
 Object.keys(registered.columns).forEach(kind => {
@@ -253,8 +265,8 @@ Object.keys(registered.columns).forEach(kind => {
 
 const helpers = { firstStage: 'Qualification', closeDate: '2026-10-01', activity: o => Object.assign({ activity_type: 'Call' }, o) };
 
-check('a project is offered from an account and from the deal it came from',
-	Object.keys(registered.children).sort(), ['accounts', 'opportunities', 'projects']);
+check('a project is offered from an account and a deal, and tickets from an account and a contact too',
+	Object.keys(registered.children).sort(), ['accounts', 'contacts', 'opportunities', 'projects']);
 
 const fromAccount = registered.children.accounts[0]({ id: 5 }, helpers)[0];
 check('a project created from an account is linked to it', fromAccount.prefill.account_id, 5);
