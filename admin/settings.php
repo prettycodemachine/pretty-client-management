@@ -1039,6 +1039,10 @@ function pcm_crm_render_layout_chip( $pcm_object, $pcm_model, $pcm_name, $pcm_pl
 function pcm_crm_render_samples_tab() {
 	$pcm_counts  = pcm_crm_sample_data_counts();
 	$pcm_allowed = pcm_crm_seed_allowed();
+	// The four core objects and stage history aren't all in the object registry
+	// (history has no page of its own to browse), so they keep an explicit label
+	// here; everything else — the Projects module's tables — reads its plural
+	// label straight from pcm_crm_register_object() rather than duplicating it.
 	$pcm_labels  = array(
 		'accounts'      => __( 'Accounts', 'pcm-crm' ),
 		'contacts'      => __( 'Contacts', 'pcm-crm' ),
@@ -1046,6 +1050,17 @@ function pcm_crm_render_samples_tab() {
 		'activities'    => __( 'Activities', 'pcm-crm' ),
 		'history'       => __( 'Stage history', 'pcm-crm' ),
 	);
+	foreach ( array_keys( $pcm_counts ) as $pcm_key ) {
+		if ( isset( $pcm_labels[ $pcm_key ] ) ) {
+			continue;
+		}
+
+		$pcm_object = pcm_crm_object( $pcm_key );
+
+		if ( $pcm_object && ! empty( $pcm_object['plural'] ) ) {
+			$pcm_labels[ $pcm_key ] = $pcm_object['plural'];
+		}
+	}
 	?>
 	<div class="pcm-crm-card">
 		<h2><?php esc_html_e( 'What is in the database', 'pcm-crm' ); ?></h2>
@@ -1086,7 +1101,7 @@ function pcm_crm_render_samples_tab() {
 			<?php
 			printf(
 				/* translators: %s: link to the Recycle Bin screen */
-				esc_html__( 'Deleting a record marks it deleted rather than removing the row, the way Salesforce\'s recycle bin does. Those are counted separately because they are not live data — and they can be restored or removed for good in the %s.', 'pcm-crm' ),
+				esc_html__( 'Deleting a record marks it deleted rather than removing the row. Those are counted separately because they are not live data — and they can be restored or removed for good in the %s.', 'pcm-crm' ),
 				'<a href="' . esc_url( admin_url( 'admin.php?page=pcm-crm-recycle-bin' ) ) . '">' . esc_html__( 'Recycle Bin', 'pcm-crm' ) . '</a>'
 			);
 			?>
