@@ -236,8 +236,11 @@ function pcm_crm_run_report( $pcm_object, $pcm_group_by, array $pcm_args = array
 
 	$pcm_sum = $pcm_model->has_field( 'amount' ) ? 'amount' : '';
 
+	// Expanded the same way the list endpoint is — otherwise a report's Account
+	// and Owner columns (and any other lookup) come back blank, since raw rows
+	// carry only the foreign key id.
 	return array(
-		'rows'   => $pcm_model->find( $pcm_args ),
+		'rows'   => PCM_CRM_REST::expand( $pcm_model->object(), $pcm_model->find( $pcm_args ) ),
 		'groups' => $pcm_group_by ? $pcm_model->group_by( $pcm_group_by, $pcm_args, $pcm_sum ) : array(),
 		'total'  => $pcm_model->count( $pcm_args ),
 		'sum'    => $pcm_sum ? $pcm_model->sum( 'amount', $pcm_args ) : 0,

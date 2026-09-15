@@ -1355,12 +1355,21 @@
 		}).catch(showError);
 	}
 
-	function buildTable(object, def, items, overrideActions) {
+	function buildTable(object, def, items, overrideActions, reload) {
 		var head = el('tr');
 
 		// A view can supply its own row actions — the recycle bin's Restore and
 		// Delete forever belong to the bin, not to the object.
 		var actions = overrideActions || (def.rowActions ? def.rowActions() : null);
+
+		// Sorting has to re-run whichever load function actually built this
+		// table. Reports and the recycle bin share buildTable with the plain
+		// list view but query different endpoints (or different filters), so
+		// hardcoding loadList(object) here re-fetched the wrong data — most
+		// visibly on Reports, where it silently dropped back to the list
+		// endpoint and only looked like it worked because that endpoint
+		// happens to expand lookups like Account and Owner.
+		var doReload = reload || function () { loadList(object); };
 
 		def.columns.forEach(function (column) {
 			var sorted = state.query.orderby === column.key;
@@ -1376,7 +1385,7 @@
 						state.query.orderby = column.key;
 						state.query.order = 'DESC';
 					}
-					loadList(object);
+					doReload();
 				}
 			}, [
 				column.label,
@@ -4505,7 +4514,7 @@
 							.catch(showError);
 					}
 				}
-			]));
+			], loadRecycleBin));
 
 			dom.body.appendChild(el('div.pcm-crm-form-actions', {}, [
 				el('button.pcm-btn.pcm-btn-danger', {
@@ -4888,7 +4897,7 @@
 			}
 
 			if (data.rows.length) {
-				dom.body.appendChild(buildTable(report.object, def, data.rows));
+				dom.body.appendChild(buildTable(report.object, def, data.rows, null, loadReport));
 			} else {
 				dom.body.appendChild(el('div.pcm-crm-empty', {}, [el('p', { text: 'No records match these filters.' })]));
 			}
