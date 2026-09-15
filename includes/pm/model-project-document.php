@@ -22,6 +22,10 @@ function pcm_crm_project_documents() {
 			array_merge(
 				array(
 					'project_id'    => array( 'type' => 'id', 'sf' => 'PCM_Project_Id__c', 'label' => 'Project', 'lookup' => 'projects' ),
+					// 0 for a project-library document; set for a file attached to
+					// a Help Ticket instead — see schema-portal-data.php's docblock
+					// on the column.
+					'ticket_id'     => array( 'type' => 'id', 'label' => 'Help Ticket', 'lookup' => 'help_tickets', 'internal' => true ),
 					// Points at wp_posts (the Media Library), not a CRM table —
 					// deliberately no 'lookup', since expand() has nothing to
 					// resolve it against and the browser already has the
@@ -62,16 +66,38 @@ function pcm_crm_pm_validate_document( $pcm_error, $pcm_object, $pcm_row, $pcm_i
 add_filter( 'pcm_crm_validate', 'pcm_crm_pm_validate_document', 10, 4 );
 
 /**
- * A project's documents with enough about the underlying file to list and
- * download it — filename, size, mime type — resolved from the Media Library
- * rather than stored a second time on the row.
+ * A project's own document library — never a ticket's attachments, which
+ * live in the same table (ticket_id set instead of 0) but belong to the
+ * ticket's own attachment list, not this one. See
+ * pcm_crm_pm_attachments_for_ticket() for those.
+ *
+ * Enough about the underlying file to list and download it — filename, size,
+ * mime type — resolved from the Media Library rather than stored a second
+ * time on the row.
  */
 function pcm_crm_pm_documents_for( $pcm_project_id ) {
 	$pcm_rows = pcm_crm_project_documents()->find( array(
-		'filters'  => array( 'project_id' => (int) $pcm_project_id ),
+		'filters'  => array( 'project_id' => (int) $pcm_project_id, 'ticket_id' => 0 ),
 		'orderby'  => 'created_date',
 		'order'    => 'DESC',
 		'per_page' => 200,
+	) );
+
+	return array_map( 'pcm_crm_pm_decorate_document', $pcm_rows );
+}
+
+/**
+ * The files attached to one Help Ticket — a screenshot or a document a
+ * client or staff member added when raising or replying to it, rather than
+ * describing it in words. Same underlying table and decoration as the
+ * project's own document library, filtered the other way.
+ */
+function pcm_crm_pm_attachments_for_ticket( $pcm_ticket_id ) {
+	$pcm_rows = pcm_crm_project_documents()->find( array(
+		'filters'  => array( 'ticket_id' => (int) $pcm_ticket_id ),
+		'orderby'  => 'created_date',
+		'order'    => 'ASC',
+		'per_page' => 100,
 	) );
 
 	return array_map( 'pcm_crm_pm_decorate_document', $pcm_rows );

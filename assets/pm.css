@@ -263,6 +263,17 @@
 
 /* Project documents ------------------------------------------------------------ */
 .pcm-crm-doc-panel { display: flex; flex-direction: column; gap: 12px; }
+.pcm-crm-doc-layout { display: flex; gap: 20px; align-items: flex-start; }
+.pcm-crm-doc-layout > .pcm-crm-related-rows { flex: 1 1 320px; min-width: 0; }
+.pcm-crm-doc-preview { flex: 1 1 360px; min-width: 0; border: 1px solid var(--pcm-line); border-radius: 10px; padding: 14px; }
+.pcm-crm-doc-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.pcm-crm-doc-preview-img { max-width: 100%; max-height: 420px; display: block; margin: 0 auto; }
+.pcm-crm-doc-preview-frame { width: 100%; height: 480px; border: 0; }
 .pcm-crm-doc-row {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) auto auto auto;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) auto auto;
+}
+.pcm-crm-doc-row.is-active { background: var(--pcm-paper-tint); box-shadow: inset 3px 0 0 var(--pcm-accent-deep); }
+
+@media (max-width: 900px) {
+  .pcm-crm-doc-layout { flex-direction: column; }
 }

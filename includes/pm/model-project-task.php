@@ -1,8 +1,10 @@
 <?php
 /**
- * Project task, and milestone.
+ * Project task.
  *
- * One table with an is_milestone flag: a milestone is a task with no duration.
+ * Milestones are their own object (model-project-milestone.php) — this used
+ * to double as one via an is_milestone flag, which the schema still carries
+ * as a harmless leftover column but nothing here reads or writes any more.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -21,7 +23,6 @@ function pcm_crm_project_tasks() {
 					'parent_id'        => array( 'type' => 'id',   'sf' => 'PCM_Parent_Id__c', 'label' => 'Parent Task', 'internal' => true ),
 					'name'             => array( 'type' => 'text', 'sf' => 'PCM_Name__c', 'label' => 'Task' ),
 					'status'           => array( 'type' => 'text', 'sf' => 'PCM_Status__c', 'label' => 'Status', 'options' => 'pcm_crm_pm_task_statuses' ),
-					'is_milestone'     => array( 'type' => 'bool', 'sf' => 'PCM_Is_Milestone__c', 'label' => 'Milestone' ),
 					'assignee_user_id' => array( 'type' => 'id',   'sf' => 'PCM_Assignee__c', 'label' => 'Assigned To', 'options' => 'pcm_crm_owner_options' ),
 					'start_date'       => array( 'type' => 'date', 'sf' => 'PCM_Start_Date__c', 'label' => 'Start Date' ),
 					'due_date'         => array( 'type' => 'date', 'sf' => 'PCM_Due_Date__c', 'label' => 'Due Date' ),

@@ -35,6 +35,7 @@ class PCM_CRM_PM_Sample_Data {
 		return array(
 			'projects'         => count( $projects ),
 			'project_tasks'    => $this->seed_tasks( $projects ),
+			'project_milestones' => $this->seed_milestones( $projects ),
 			'project_raid'     => $this->seed_raid( $projects ),
 			'project_roles'    => $this->seed_roles( $projects, $pcm_context ),
 			'retainer_periods' => $this->seed_periods( $projects ),
@@ -243,7 +244,7 @@ class PCM_CRM_PM_Sample_Data {
 	}
 
 	/* -------------------------------------------------------------------
-	   Tasks and milestones
+	   Tasks
 	   ------------------------------------------------------------------- */
 
 	private function seed_tasks( array $pcm_projects ) {
@@ -257,8 +258,6 @@ class PCM_CRM_PM_Sample_Data {
 			'Monthly health check', 'Backlog grooming', 'Release regression pass',
 			'Permission audit', 'Sandbox refresh', 'Stakeholder check-in',
 		);
-
-		$milestones = array( 'Design sign-off', 'Go live', 'Phase one complete', 'Contract renewal' );
 
 		$model = pcm_crm_project_tasks();
 		$count = 0;
@@ -294,26 +293,37 @@ class PCM_CRM_PM_Sample_Data {
 				$count++;
 			}
 
-			// One or two milestones each, because the health rules key off an
-			// overdue one and a project with none can never demonstrate that.
+		}
+
+		return $count;
+	}
+
+	/**
+	 * One or two milestones per project — its own table, its own seeder,
+	 * since a milestone is no longer a project_task row (see
+	 * model-project-milestone.php).
+	 */
+	private function seed_milestones( array $pcm_projects ) {
+		$milestones = array( 'Design sign-off', 'Go live', 'Phase one complete', 'Contract renewal' );
+		$model      = pcm_crm_project_milestones();
+		$count      = 0;
+
+		foreach ( $pcm_projects as $project ) {
 			foreach ( (array) array_slice( $milestones, 0, mt_rand( 1, 2 ) ) as $position => $name ) {
 				$due = $project['end_offset'] - ( $position * mt_rand( 20, 45 ) );
 
 				$id = $model->insert( array(
-					'project_id'       => $project['id'],
-					'name'             => $name,
-					'status'           => $project['is_closed'] ? 'Done' : ( $due < 0 ? 'In Progress' : 'Not Started' ),
-					'is_milestone'     => 1,
-					'assignee_user_id' => $project['owner_id'],
-					'due_date'         => $this->days( $due, 'Y-m-d' ),
-					'sort_order'       => 100 + $position,
+					'project_id' => $project['id'],
+					'name'       => $name,
+					'status'     => $project['is_closed'] || $due < ( 0 - $project['start_offset'] ) ? 'Done' : 'Planned',
+					'due_date'   => $this->days( $due, 'Y-m-d' ),
 				) );
 
 				if ( is_wp_error( $id ) ) {
 					continue;
 				}
 
-				$this->stamp( pcm_crm_pm_tasks_table(), $id, $this->days( $project['start_offset'] ) );
+				$this->stamp( pcm_crm_pm_milestones_table(), $id, $this->days( $project['start_offset'] ) );
 				$count++;
 			}
 		}
@@ -344,16 +354,28 @@ class PCM_CRM_PM_Sample_Data {
 	   ------------------------------------------------------------------- */
 
 	private function seed_raid( array $pcm_projects ) {
+		// [ type, title, mitigation, detail ] — detail is the fuller "what this
+		// actually is" write-up (the RAID log's description field), kept
+		// distinct from mitigation, which is what's being done about it.
 		$entries = array(
-			array( 'Risk', 'Key admin is on leave during go-live', 'Cover agreed with the client’s second admin.' ),
-			array( 'Risk', 'Legacy data quality is worse than sampled', 'Extra cleansing pass scheduled before migration.' ),
-			array( 'Risk', 'Third-party API rate limits may throttle the sync', 'Batching and retry logic in the integration design.' ),
-			array( 'Issue', 'Sandbox refresh wiped test configuration', 'Rebuilt from the deployment package; now scripted.' ),
-			array( 'Issue', 'Reports returning duplicates after the merge', 'Root cause traced to the matching rule.' ),
-			array( 'Assumption', 'Client provides content for the portal pages', 'Confirmed in the kickoff; dates in the plan.' ),
-			array( 'Assumption', 'No changes to the approval process mid-project', 'Reviewed at each steering call.' ),
-			array( 'Dependency', 'Security review sign-off from the client’s IT', 'Booked for the week before UAT.' ),
-			array( 'Dependency', 'Data extract from the legacy finance system', 'Owner named; weekly chase in the status report.' ),
+			array( 'Risk', 'Key admin is on leave during go-live', 'Cover agreed with the client’s second admin.',
+				'The client’s primary Salesforce admin is out for two weeks spanning the planned cutover, and they are the only one who has previously run a production deploy for this org.' ),
+			array( 'Risk', 'Legacy data quality is worse than sampled', 'Extra cleansing pass scheduled before migration.',
+				'The initial 5% sample looked clean, but a fuller pass turned up duplicate contact records and inconsistent picklist values across roughly 15% of accounts.' ),
+			array( 'Risk', 'Third-party API rate limits may throttle the sync', 'Batching and retry logic in the integration design.',
+				'The vendor’s published rate limit is lower than our expected peak sync volume during month-end, which could delay records reaching Salesforce by several hours.' ),
+			array( 'Issue', 'Sandbox refresh wiped test configuration', 'Rebuilt from the deployment package; now scripted.',
+				'A routine sandbox refresh removed custom metadata and flow activations that had been configured by hand, costing the team roughly a day of rework.' ),
+			array( 'Issue', 'Reports returning duplicates after the merge', 'Root cause traced to the matching rule.',
+				'Several standard reports began showing duplicate rows after the account merge went live; affected users have been told results may be off until this is resolved.' ),
+			array( 'Assumption', 'Client provides content for the portal pages', 'Confirmed in the kickoff; dates in the plan.',
+				'The build assumes the client’s marketing team supplies final copy and images for each portal page rather than the project team drafting placeholder content.' ),
+			array( 'Assumption', 'No changes to the approval process mid-project', 'Reviewed at each steering call.',
+				'The approval workflow being automated is assumed to stay as documented in discovery; a policy change mid-build would mean re-mapping the flow logic.' ),
+			array( 'Dependency', 'Security review sign-off from the client’s IT', 'Booked for the week before UAT.',
+				'The client’s internal security team must review the integration’s auth flow and data handling before UAT can start; the review has not yet been scheduled.' ),
+			array( 'Dependency', 'Data extract from the legacy finance system', 'Owner named; weekly chase in the status report.',
+				'Migration cannot begin until the client’s finance system owner exports a full historical extract; the project has no access to that system directly.' ),
 		);
 
 		$model = pcm_crm_project_raid();
@@ -382,6 +404,7 @@ class PCM_CRM_PM_Sample_Data {
 					'raised_date' => $this->days( $raised, 'Y-m-d' ),
 					'due_date'    => $this->days( $raised + mt_rand( 14, 60 ), 'Y-m-d' ),
 					'mitigation'  => $entry[2],
+					'description' => $entry[3],
 					'owner_id'    => $project['owner_id'],
 				) );
 
@@ -566,7 +589,7 @@ class PCM_CRM_PM_Sample_Data {
 
 		foreach ( $pcm_projects as $project ) {
 			$tasks = pcm_crm_project_tasks()->find( array(
-				'filters'  => array( 'project_id' => $project['id'], 'is_milestone' => 0 ),
+				'filters'  => array( 'project_id' => $project['id'] ),
 				'per_page' => 20,
 			) );
 

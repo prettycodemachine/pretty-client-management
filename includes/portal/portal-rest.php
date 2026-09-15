@@ -68,6 +68,19 @@ function pcm_crm_portal_register_routes() {
 		'permission_callback' => 'pcm_crm_portal_permission_ticket',
 	) );
 
+	register_rest_route( PCM_CRM_REST::NS, '/portal/tickets/(?P<pcm_id>\d+)/attachments', array(
+		array(
+			'methods'             => 'GET',
+			'callback'            => 'pcm_crm_portal_rest_list_attachments',
+			'permission_callback' => 'pcm_crm_portal_permission_ticket',
+		),
+		array(
+			'methods'             => 'POST',
+			'callback'            => 'pcm_crm_portal_rest_create_attachment',
+			'permission_callback' => 'pcm_crm_portal_permission_ticket',
+		),
+	) );
+
 	register_rest_route( PCM_CRM_REST::NS, '/portal/tickets/(?P<pcm_id>\d+)/comments', array(
 		array(
 			'methods'             => 'GET',
@@ -160,7 +173,10 @@ function pcm_crm_portal_rest_documents( WP_REST_Request $pcm_request ) {
 }
 
 function pcm_crm_portal_rest_download( WP_REST_Request $pcm_request ) {
-	pcm_crm_stream_document( absint( pcm_crm_project_documents()->get( absint( $pcm_request->get_url_params()['pcm_id'] ) )['attachment_id'] ) );
+	pcm_crm_stream_document(
+		absint( pcm_crm_project_documents()->get( absint( $pcm_request->get_url_params()['pcm_id'] ) )['attachment_id'] ),
+		'inline' === $pcm_request->get_param( 'disposition' )
+	);
 }
 
 function pcm_crm_portal_rest_list_tickets( WP_REST_Request $pcm_request ) {
@@ -227,6 +243,25 @@ function pcm_crm_portal_rest_update_status( WP_REST_Request $pcm_request ) {
 	}
 
 	return rest_ensure_response( pcm_crm_help_tickets()->get( $pcm_id ) );
+}
+
+function pcm_crm_portal_rest_list_attachments( WP_REST_Request $pcm_request ) {
+	$pcm_id = absint( $pcm_request->get_url_params()['pcm_id'] );
+
+	return rest_ensure_response( pcm_crm_pm_attachments_for_ticket( $pcm_id ) );
+}
+
+/**
+ * A client attaching a screenshot or a document to their own ticket — the
+ * portal's twin of pcm_crm_pm_rest_create_attachment() in
+ * pm-tickets-rest.php, permission_callback already having confirmed the
+ * ticket is one of the caller's own.
+ */
+function pcm_crm_portal_rest_create_attachment( WP_REST_Request $pcm_request ) {
+	$pcm_id     = absint( $pcm_request->get_url_params()['pcm_id'] );
+	$pcm_ticket = pcm_crm_help_tickets()->get( $pcm_id );
+
+	return pcm_crm_pm_handle_ticket_attachment_upload( $pcm_ticket );
 }
 
 function pcm_crm_portal_rest_list_comments( WP_REST_Request $pcm_request ) {

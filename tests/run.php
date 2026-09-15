@@ -1268,14 +1268,14 @@ $pcm_all_defs = $pcm_defs_method->invoke( null, '' );
 $pcm_pm_only = array();
 
 foreach ( $pcm_all_defs as $pcm_def ) {
-	if ( preg_match( '/pcm_crm_(projects|project_tasks|project_raid|project_roles|time_entries|retainer_periods|allocations|status_reports) \(/', $pcm_def ) ) {
+	if ( preg_match( '/pcm_crm_(projects|project_tasks|project_raid|project_milestones|project_roles|time_entries|retainer_periods|allocations|status_reports) \(/', $pcm_def ) ) {
 		$pcm_pm_only[] = $pcm_def;
 	}
 }
 
 $pcm_pm_defs = implode( "\n", $pcm_pm_only );
 
-foreach ( array( 'projects', 'project_tasks', 'project_raid', 'project_roles',
+foreach ( array( 'projects', 'project_tasks', 'project_raid', 'project_milestones', 'project_roles',
 	'time_entries', 'retainer_periods', 'allocations', 'status_reports' ) as $pcm_table ) {
 	check( "the {$pcm_table} table is defined even with the module off",
 		false !== strpos( $pcm_pm_defs, 'pcm_crm_' . $pcm_table . ' (' ), true );
@@ -1291,14 +1291,14 @@ check( 'and so does the arithmetic', function_exists( 'pcm_crm_pm_week_start' ),
 
 echo "\n--- pm schema ---\n";
 
-check( 'the version was bumped for the portal_user_id column', PCM_CRM_Schema::VERSION, '1.10.0' );
-check( 'ten core tables and eight of the module\'s',
-	array( count( $pcm_all_defs ), count( $pcm_pm_only ) ), array( 18, 8 ) );
+check( 'the version was bumped for the portal_user_id column', PCM_CRM_Schema::VERSION, '1.12.0' );
+check( 'ten core tables and nine of the module\'s',
+	array( count( $pcm_all_defs ), count( $pcm_pm_only ) ), array( 19, 9 ) );
 
 // dbDelta re-adds an index on every run if the KEY is not named, and wants two
 // spaces after PRIMARY KEY. Both are easy to get wrong and silent when wrong.
 check( 'every PM table names its primary key the way dbDelta wants',
-	substr_count( $pcm_pm_defs, 'PRIMARY KEY  (id)' ), 8 );
+	substr_count( $pcm_pm_defs, 'PRIMARY KEY  (id)' ), 9 );
 check( 'no unnamed KEY anywhere in the PM tables',
 	(bool) preg_match( '/\n\t\t(?:UNIQUE )?KEY \(/', $pcm_pm_defs ), false );
 
@@ -1351,7 +1351,7 @@ if ( preg_match_all( '/(\w+) varchar\((\d+)\)/', $pcm_pm_defs, $pcm_widths, PREG
 check( 'no indexed varchar is wider than utf8mb4 allows', $pcm_too_wide, array() );
 
 check( 'every PM table can be marked as test data',
-	substr_count( $pcm_pm_defs, 'is_test tinyint(1) NOT NULL DEFAULT 0' ), 8 );
+	substr_count( $pcm_pm_defs, 'is_test tinyint(1) NOT NULL DEFAULT 0' ), 9 );
 
 /* ---------------------------------------------------------------------------
    Project stages
@@ -1840,7 +1840,7 @@ pcm_test_add_filter( 'pcm_crm_sample_tables', 'pcm_crm_pm_sample_tables' );
 
 $pcm_sample_tables = pcm_crm_sample_tables();
 
-check( 'the sweep covers core and the module', count( $pcm_sample_tables ), 13 );
+check( 'the sweep covers core and the module', count( $pcm_sample_tables ), 14 );
 check( 'including projects', isset( $pcm_sample_tables['projects'] ), true );
 // Seeded rows have to stay removable after the module is switched off, which is
 // why this filter is registered from the always-loaded schema file.

@@ -401,7 +401,7 @@
 		label: 'Task',
 		plural: 'Tasks',
 		title: function (row) { return row.name || 'Task'; },
-		kicker: function (row) { return row._project_name || (Number(row.is_milestone) ? 'Milestone' : 'Task'); },
+		kicker: function (row) { return row._project_name || 'Task'; },
 		kickerLink: projectLink,
 		highlights: function (row) {
 			return [
@@ -421,9 +421,6 @@
 		filters: function () {
 			return [
 				{ key: 'status', label: 'Status', options: app.helpers.options(state.boot.taskStatuses || [], true), blank: 'Any status' },
-				{ key: 'is_milestone', label: 'Milestone', options: [
-					{ value: '', label: 'Either' }, { value: '1', label: 'Milestones' }, { value: '0', label: 'Tasks' }
-				] },
 				{ key: 'due_date', label: 'Due', range: 'date' }
 			];
 		},
@@ -433,6 +430,38 @@
 			if (name === 'assignee_user_id') { hints.options = app.helpers.ownerOptions(); }
 			if (name === 'name' || name === 'description') { hints.wide = true; }
 
+			return hints;
+		}
+	});
+
+	app.registerObject('project_milestones', {
+		label: 'Milestone',
+		plural: 'Milestones',
+		title: function (row) { return row.name || 'Milestone'; },
+		kicker: function (row) { return row._project_name || 'Milestone'; },
+		kickerLink: projectLink,
+		highlights: function (row) {
+			return [
+				{ label: 'Status', value: row.status },
+				{ label: 'Due', value: app.helpers.formatDate(row.due_date) },
+				{ label: 'Completed', value: app.helpers.formatDate(row.completed_date) }
+			];
+		},
+		columns: [
+			{ key: 'name', label: 'Milestone', strong: true },
+			{ key: '_project_name', label: 'Project', link: 'project_id' },
+			{ key: 'status', label: 'Status', badge: true },
+			{ key: 'due_date', label: 'Due', due: true }
+		],
+		filters: function () {
+			return [
+				{ key: 'status', label: 'Status', options: app.helpers.options(state.boot.milestoneStatuses || [], true), blank: 'Any status' },
+				{ key: 'due_date', label: 'Due', range: 'date' }
+			];
+		},
+		hints: function (name) {
+			var hints = {};
+			if (name === 'name' || name === 'description') { hints.wide = true; }
 			return hints;
 		}
 	});
@@ -720,7 +749,15 @@
 		return [
 			{ text: row.name, strong: true },
 			{ badge: row.status },
-			{ text: Number(row.is_milestone) ? 'Milestone' : '—' },
+			{ text: row._assignee_name || '—' },
+			{ text: app.helpers.formatDate(row.due_date) }
+		];
+	});
+
+	app.registerRelatedColumns('milestones', function (row) {
+		return [
+			{ text: row.name, strong: true },
+			{ badge: row.status },
 			{ text: app.helpers.formatDate(row.due_date) }
 		];
 	});
@@ -770,6 +807,12 @@
 				label: 'RAID Entry',
 				object: 'project_raid',
 				prefill: { project_id: record.id, raid_type: 'Risk', status: 'Open', probability: 'Medium', impact: 'Medium' }
+			},
+			{
+				id: 'milestones',
+				label: 'Milestone',
+				object: 'project_milestones',
+				prefill: { project_id: record.id, status: 'Planned' }
 			},
 			{
 				id: 'roles',
@@ -1340,9 +1383,10 @@
 	   concern out of that function.
 	   --------------------------------------------------------------------- */
 	app.registerRecordTabs('projects', function (record, related) {
+		var documents = related && related.documents ? related.documents : [];
 		var node = el('div.pcm-crm-documents');
-		node.appendChild(documentsPanel(record, related && related.documents ? related.documents : []));
-		return [{ id: 'documents', label: 'Documents', node: node }];
+		node.appendChild(documentsPanel(record, documents));
+		return [{ id: 'documents', label: 'Documents', node: node, count: documents.length }];
 	});
 
 	function humanSize(bytes) {
@@ -1352,44 +1396,89 @@
 		return (Math.round(bytes / (1024 * 1024) * 10) / 10) + ' MB';
 	}
 
+	function documentUrl(row, disposition) {
+		var root = window.PCM_CRM && window.PCM_CRM.root ? window.PCM_CRM.root : '';
+		var nonce = (window.PCM_CRM && window.PCM_CRM.nonce) || '';
+		return root + '/pm/documents/' + row.id + '/download?disposition=' + disposition + '&_wpnonce=' + encodeURIComponent(nonce);
+	}
+
+	function documentPreviewNode(row) {
+		var mime = row._mime_type || '';
+
+		if (0 === mime.indexOf('image/')) {
+			return el('img.pcm-crm-doc-preview-img', { src: documentUrl(row, 'inline'), alt: row.label || row._filename });
+		}
+
+		if ('application/pdf' === mime) {
+			return el('iframe.pcm-crm-doc-preview-frame', { src: documentUrl(row, 'inline'), title: row.label || row._filename });
+		}
+
+		return el('p.pcm-crm-related-empty', { text: 'No preview available for this file type.' });
+	}
+
+	/**
+	 * Documents get a real preview pane, not just a link, because a client or
+	 * a teammate deciding whether this is the right file has to open it in a
+	 * new tab otherwise — this shows it in place, still routed through
+	 * pcm_crm_stream_document() rather than a raw Media Library URL.
+	 */
 	function documentsPanel(record, documents) {
+		var reloadRecord = app.helpers.reloadRecord;
 		var wrap = el('div.pcm-crm-doc-panel');
 		var list = el('div.pcm-crm-related-rows');
+		var preview = el('div.pcm-crm-doc-preview');
+		var selectedId = 0;
+
+		function showPreview(row) {
+			selectedId = row.id;
+			app.helpers.clear(preview);
+
+			preview.appendChild(el('div.pcm-crm-doc-preview-head', {}, [
+				el('strong', { text: row.label || row._filename }),
+				el('a.pcm-btn.pcm-btn-quiet.pcm-btn-sm', {
+					// A plain link, not fetch() — the nonce travels as a query
+					// param since no custom header can ride a browser navigation,
+					// which is what rest_cookie_check_errors() checks for.
+					href: documentUrl(row, 'attachment'),
+					text: 'Download'
+				})
+			]));
+			preview.appendChild(documentPreviewNode(row));
+		}
 
 		function draw(rows) {
 			app.helpers.clear(list);
 
 			if (!rows.length) {
 				list.appendChild(el('p.pcm-crm-related-empty', { text: 'No documents yet.' }));
+				app.helpers.clear(preview);
+				selectedId = 0;
 				return;
 			}
 
 			rows.forEach(function (row) {
-				list.appendChild(el('div.pcm-crm-related-row.pcm-crm-doc-row', {}, [
+				list.appendChild(el('button.pcm-crm-related-row.pcm-crm-doc-row' + (row.id === selectedId ? '.is-active' : ''), {
+					type: 'button',
+					onclick: function () { showPreview(row); }
+				}, [
 					el('span.pcm-crm-cell.pcm-crm-cell-primary', { text: row.label || row._filename }),
 					el('span.pcm-crm-cell', { text: row._filename }),
 					el('span.pcm-crm-cell', { text: humanSize(row._filesize) }),
-					el('a.pcm-btn.pcm-btn-quiet.pcm-btn-sm', {
-						// A plain link, not fetch() — the nonce travels as a query
-						// param since no custom header can ride a browser navigation,
-						// which is what rest_cookie_check_errors() checks for.
-						href: (window.PCM_CRM && window.PCM_CRM.root ? window.PCM_CRM.root : '') + '/pm/documents/' + row.id + '/download?_wpnonce=' + encodeURIComponent((window.PCM_CRM && window.PCM_CRM.nonce) || ''),
-						text: 'Download'
-					}),
-					el('button.pcm-btn.pcm-btn-quiet.pcm-btn-sm', {
-						type: 'button',
+					el('span.pcm-btn.pcm-btn-quiet.pcm-btn-sm', {
 						text: 'Remove',
-						onclick: function () {
+						onclick: function (event) {
+							event.stopPropagation();
 							if (!window.confirm('Remove this document?')) { return; }
 
 							app.helpers.api('/pm/documents/' + row.id, { method: 'DELETE' }).then(function () {
-								rows = rows.filter(function (r) { return r.id !== row.id; });
-								draw(rows);
+								reloadRecord();
 							}).catch(function (error) { window.alert(error.message); });
 						}
 					})
 				]));
 			});
+
+			if (!selectedId) { showPreview(rows[0]); }
 		}
 
 		draw(documents);
@@ -1403,17 +1492,21 @@
 				var frame = window.wp.media({ title: 'Choose a file', button: { text: 'Add to project' }, multiple: true });
 
 				frame.on('select', function () {
-					frame.state().get('selection').each(function (model) {
+					var uploads = frame.state().get('selection').map(function (model) {
 						var attachment = model.toJSON();
 
-						app.helpers.api('/pm/projects/' + record.id + '/documents', {
+						return app.helpers.api('/pm/projects/' + record.id + '/documents', {
 							method: 'POST',
 							body: { attachment_id: attachment.id, label: attachment.title || attachment.filename || '' }
-						}).then(function (row) {
-							documents = documents.concat([row]);
-							draw(documents);
-						}).catch(function (error) { window.alert(error.message); });
+						});
 					});
+
+					// Uploads can span several files from one picker session; the
+					// related-list count (and this tab's own list) should reflect
+					// all of them, not just whichever call happened to finish last.
+					Promise.all(uploads).then(function () {
+						reloadRecord();
+					}).catch(function (error) { window.alert(error.message); });
 				});
 
 				frame.open();
@@ -1421,7 +1514,7 @@
 		});
 
 		wrap.appendChild(addButton);
-		wrap.appendChild(list);
+		wrap.appendChild(el('div.pcm-crm-doc-layout', {}, [list, preview]));
 
 		return wrap;
 	}

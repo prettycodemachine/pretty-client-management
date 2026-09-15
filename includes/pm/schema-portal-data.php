@@ -92,10 +92,20 @@ function pcm_crm_pm_portal_definitions( array $pcm_tables, $pcm_charset ) {
 	   WordPress Media Library (wp_posts), so it carries no 'lookup' — the
 	   browser already has the filename from the wp.media picker that uploaded
 	   it, and expand() has no CRM model to resolve it against.
+
+	   ticket_id is 0 for a project-library document and non-zero for a file a
+	   client or staff member attached to a Help Ticket — same table, same
+	   stream/decorate/permission code (pcm_crm_stream_document(),
+	   pcm_crm_pm_decorate_document(), pcm_crm_portal_permission_document()),
+	   because both are "a file that belongs to a project." The only place the
+	   distinction matters is which list a row shows up in — see
+	   pcm_crm_pm_documents_for()'s ticket_id = 0 filter and
+	   pcm_crm_pm_attachments_for_ticket() in model-project-document.php.
 	   ------------------------------------------------------------------- */
 	$pcm_tables[] = "CREATE TABLE {$pcm_docs} (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		project_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		ticket_id bigint(20) unsigned NOT NULL DEFAULT 0,
 		attachment_id bigint(20) unsigned NOT NULL DEFAULT 0,
 		label varchar(255) NOT NULL DEFAULT '',
 		owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -107,6 +117,7 @@ function pcm_crm_pm_portal_definitions( array $pcm_tables, $pcm_charset ) {
 		is_test tinyint(1) NOT NULL DEFAULT 0,
 		PRIMARY KEY  (id),
 		KEY pcm_doc_project (project_id),
+		KEY pcm_doc_ticket (ticket_id),
 		KEY pcm_doc_deleted (is_deleted),
 		KEY pcm_doc_test (is_test)
 	) {$pcm_charset};";

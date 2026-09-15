@@ -124,7 +124,7 @@ new Function('window', 'document', pmSrc)(win, { });
 new Function('window', 'document', ticketsSrc)(win, { });
 
 check('pm.js and help-tickets.js register every object a project record can open',
-	Object.keys(registered.objects).sort(), ['help_tickets', 'project_raid', 'project_roles', 'project_tasks', 'projects', 'time_entries']);
+	Object.keys(registered.objects).sort(), ['help_tickets', 'project_milestones', 'project_raid', 'project_roles', 'project_tasks', 'projects', 'time_entries']);
 
 // Core's own object map, read out of crm.js, so a child pointing at a core
 // object (activities) counts as resolved.
@@ -143,6 +143,10 @@ const sampleRows = {
 	project_raid: {
 		id: 5, project_id: 12, title: 'Data quality', raid_type: 'Risk', status: 'Open', severity: 6,
 		due_date: '2026-10-01', _project_name: 'Acme retainer'
+	},
+	project_milestones: {
+		id: 9, project_id: 12, name: 'Go live', status: 'Planned', due_date: '2026-11-01',
+		_project_name: 'Acme retainer'
 	},
 	project_roles: {
 		id: 6, project_id: 12, party_type: 'client', contact_id: 7, role: 'Business Owner',
@@ -239,6 +243,7 @@ Object.keys(registered.objects).forEach(slug => {
 const relatedRows = {
 	projects: sampleRows.projects,
 	tasks: { name: 'Kickoff', status: 'Done', is_milestone: 0, due_date: '2026-09-01' },
+	milestones: { name: 'Go live', status: 'Planned', due_date: '2026-11-01' },
 	raid: { title: 'Data quality', raid_type: 'Risk', status: 'Open', severity: 6 },
 	roles: { _person_name: 'Dana', _party_label: 'Internal', party_type: 'internal', role: 'Lead', _org_name: 'PCM' },
 	time: sampleRows.time_entries,

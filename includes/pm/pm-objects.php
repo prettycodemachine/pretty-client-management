@@ -68,6 +68,21 @@ pcm_crm_register_object( 'project_raid', array(
 	'page'          => 'pcm-crm-raid',
 ) );
 
+pcm_crm_register_object( 'project_milestones', array(
+	'model'         => 'pcm_crm_project_milestones',
+	'label'         => 'Milestone',
+	'plural'        => 'Milestones',
+	'reportable'    => true,
+	'exportable'    => true,
+	'recyclable'    => true,
+	'sf'            => 'PCM_Project_Milestone__c',
+	'group_options' => array( 'status', 'project_id' ),
+	'module'        => 'pm',
+	'icon'          => 'flag',
+	'color'         => 6,
+	'page'          => 'pcm-crm-milestones',
+) );
+
 pcm_crm_register_object( 'project_roles', array(
 	'model'         => 'pcm_crm_project_roles',
 	'label'         => 'Project Role',

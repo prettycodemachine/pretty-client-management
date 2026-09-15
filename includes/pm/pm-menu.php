@@ -37,6 +37,7 @@ function pcm_crm_pm_menu() {
 		'pcm-crm-timesheet' => array( __( 'Timesheet', 'pcm-crm' ), 'pcm_crm_pm_render_timesheet' ),
 		'pcm-crm-time'     => array( __( 'Time Entries', 'pcm-crm' ), 'pcm_crm_pm_render_time' ),
 		'pcm-crm-raid'     => array( __( 'RAID Log', 'pcm-crm' ), 'pcm_crm_pm_render_raid' ),
+		'pcm-crm-milestones' => array( __( 'Milestones', 'pcm-crm' ), 'pcm_crm_pm_render_milestones' ),
 		'pcm-crm-help-tickets' => array( __( 'Help Tickets', 'pcm-crm' ), 'pcm_crm_pm_render_help_tickets' ),
 	);
 
@@ -55,7 +56,7 @@ function pcm_crm_pm_render_projects() {
 }
 
 function pcm_crm_pm_render_tasks() {
-	pcm_crm_screen( 'project_tasks', __( 'Tasks', 'pcm-crm' ), __( 'Tasks and milestones across every project.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'project_tasks', __( 'Tasks', 'pcm-crm' ), __( 'Every task across every project.', 'pcm-crm' ), array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_timesheet() {
@@ -68,6 +69,10 @@ function pcm_crm_pm_render_time() {
 
 function pcm_crm_pm_render_raid() {
 	pcm_crm_screen( 'project_raid', __( 'RAID Log', 'pcm-crm' ), __( 'Risks, assumptions, issues and dependencies, worst first.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+}
+
+function pcm_crm_pm_render_milestones() {
+	pcm_crm_screen( 'project_milestones', __( 'Milestones', 'pcm-crm' ), __( 'What a client is waiting on next, across every project.', 'pcm-crm' ), array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_help_tickets() {
@@ -86,6 +91,7 @@ function pcm_crm_pm_app( $pcm_apps ) {
 			'pcm-crm-timesheet'     => array( __( 'Timesheet', 'pcm-crm' ), 'timesheet' ),
 			'pcm-crm-time'          => array( __( 'Time Entries', 'pcm-crm' ), 'time_entries' ),
 			'pcm-crm-raid'          => array( __( 'RAID Log', 'pcm-crm' ), 'project_raid' ),
+			'pcm-crm-milestones'   => array( __( 'Milestones', 'pcm-crm' ), 'project_milestones' ),
 			'pcm-crm-help-tickets'  => array( __( 'Help Tickets', 'pcm-crm' ), 'help_tickets' ),
 		),
 	);

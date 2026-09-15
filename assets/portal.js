@@ -70,6 +70,40 @@
 		});
 	}
 
+	/**
+	 * Upload one file, multipart — api()'s JSON body/Content-Type does not fit
+	 * a raw file, and the browser has to set its own boundary'd Content-Type
+	 * for FormData, so this is a separate small helper rather than an option
+	 * on api().
+	 */
+	function apiUpload(path, file) {
+		var body = new window.FormData();
+		body.append('file', file);
+
+		return window.fetch(cfg.root + path, {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { 'X-WP-Nonce': cfg.nonce },
+			body: body
+		}).then(function (response) {
+			return response.json().then(function (data) {
+				if (!response.ok) { throw new Error((data && data.message) || 'Something went wrong.'); }
+				return data;
+			});
+		});
+	}
+
+	/**
+	 * Every selected file, uploaded one after another rather than in parallel
+	 * — a burst of simultaneous multipart POSTs is exactly the kind of thing a
+	 * host's request-rate guard notices.
+	 */
+	function uploadAll(path, files) {
+		return files.reduce(function (chain, file) {
+			return chain.then(function () { return apiUpload(path, file); });
+		}, Promise.resolve());
+	}
+
 	function formatDate(value) {
 		if (!value) { return '—'; }
 		var d = new Date(String(value).replace(' ', 'T'));
@@ -94,7 +128,12 @@
 		var header = el('div.pcm-portal-header');
 		var body = el('div.pcm-portal-body');
 
-		header.appendChild(el('h1', { text: 'Your Project Portal' }));
+		header.appendChild(el('div.pcm-portal-heading', {}, [
+			el('h1', { text: state.me.contact_name || 'Your Portal' })
+		]));
+		header.appendChild(el('p.pcm-portal-kicker', { text: 'Client Portal' }));
+
+		var projectRow = el('div.pcm-portal-projectrow');
 
 		if (state.me.projects.length > 1) {
 			var switcher = el('select.pcm-portal-switcher', {
@@ -114,12 +153,32 @@
 				}));
 			});
 
-			header.appendChild(switcher);
+			projectRow.appendChild(switcher);
+			header.appendChild(projectRow);
 		} else if (state.me.projects.length === 1) {
-			header.appendChild(el('p.pcm-portal-project-name', { text: state.me.projects[0].name }));
+			projectRow.appendChild(el('p.pcm-portal-project-name', { text: state.me.projects[0].name }));
+			header.appendChild(projectRow);
 		}
 
+		var nav = renderNav(body);
+
+		shell.appendChild(header);
+		shell.appendChild(nav);
+		shell.appendChild(body);
+		root.appendChild(shell);
+
+		renderBody(body);
+	}
+
+	/**
+	 * The tab strip, kept in its own function so a tab click can update both
+	 * the active button and the body from one place — building it once inside
+	 * render() and never touching it again left the Summary tab looking
+	 * "selected" no matter which tab was actually showing.
+	 */
+	function renderNav(body) {
 		var nav = el('nav.pcm-portal-nav');
+
 		[
 			{ id: 'summary', label: 'Summary' },
 			{ id: 'raid', label: 'RAID Log' },
@@ -129,16 +188,21 @@
 			nav.appendChild(el('button.pcm-portal-tab' + (state.view === tab.id ? '.is-active' : ''), {
 				type: 'button',
 				text: tab.label,
-				onclick: function () { state.view = tab.id; state.ticket = 0; renderBody(body); }
+				'data-tab': tab.id,
+				onclick: function () {
+					state.view = tab.id;
+					state.ticket = 0;
+
+					Array.prototype.forEach.call(nav.querySelectorAll('.pcm-portal-tab'), function (btn) {
+						btn.classList.toggle('is-active', btn.getAttribute('data-tab') === tab.id);
+					});
+
+					renderBody(body);
+				}
 			}));
 		});
 
-		shell.appendChild(header);
-		shell.appendChild(nav);
-		shell.appendChild(body);
-		root.appendChild(shell);
-
-		renderBody(body);
+		return nav;
 	}
 
 	function renderBody(body) {
@@ -215,27 +279,70 @@
 
 			var list = el('div.pcm-portal-list');
 
-			rows.forEach(function (row) {
-				list.appendChild(el('div.pcm-portal-row', {}, [
-					el('span.pcm-portal-badge', { text: row.raid_type }),
-					el('div.pcm-portal-row-body', {}, [
-						el('strong', { text: row.title }),
-						el('span.pcm-portal-muted', { text: row.status || '' })
-					])
-				]));
-			});
+			rows.forEach(function (row) { list.appendChild(raidItem(row)); });
 
 			body.appendChild(list);
 		}).catch(function (error) { showError(body, error); });
+	}
+
+	function raidField(label, value) {
+		if (value === null || value === undefined || value === '') { return null; }
+
+		return el('div.pcm-portal-raid-field-pair', {}, [
+			el('span.pcm-portal-raid-field-label', { text: label }),
+			el('span.pcm-portal-raid-field-value', { text: value })
+		]);
+	}
+
+	function raidItem(row) {
+		var fields = el('div.pcm-portal-raid-fields');
+
+		[
+			raidField('Status', row.status),
+			raidField('Impact', row.impact),
+			raidField('Probability', row.probability),
+			raidField('Review by', row.due_date ? formatDate(row.due_date) : ''),
+			raidField('Owner', row._owner_contact_id_name),
+			raidField('Details', row.description),
+			raidField('Mitigation', row.mitigation),
+			raidField('Resolution', row.resolution)
+		].forEach(function (field) { if (field) { fields.appendChild(field); } });
+
+		return el('div.pcm-portal-raid-item', {}, [
+			el('div.pcm-portal-raid-head', {}, [
+				el('span.pcm-portal-badge', { text: row.raid_type }),
+				el('strong', { text: row.title })
+			]),
+			fields
+		]);
 	}
 
 	/* ---------------------------------------------------------------------
 	   Documents — list and download, never a bare Media Library URL.
 	   --------------------------------------------------------------------- */
 
+	function documentUrl(row, disposition) {
+		return cfg.root + '/portal/documents/' + row.id + '/download?disposition=' + disposition + '&_wpnonce=' + encodeURIComponent(cfg.nonce);
+	}
+
+	function documentPreviewNode(row) {
+		var mime = row._mime_type || '';
+
+		if (0 === mime.indexOf('image/')) {
+			return el('img.pcm-portal-doc-preview-img', { src: documentUrl(row, 'inline'), alt: row.label || row._filename });
+		}
+
+		if ('application/pdf' === mime) {
+			return el('iframe.pcm-portal-doc-preview-frame', { src: documentUrl(row, 'inline'), title: row.label || row._filename });
+		}
+
+		return el('p.pcm-portal-muted', { text: 'No preview available for this file type.' });
+	}
+
 	function loadDocuments(body) {
 		api('/portal/documents', { query: { project_id: state.project } }).then(function (rows) {
 			clear(body);
+			rows = rows.filter(function (row) { return !row._missing; });
 
 			if (!rows.length) {
 				body.appendChild(el('p.pcm-portal-empty', { text: 'No documents have been shared yet.' }));
@@ -243,21 +350,36 @@
 			}
 
 			var list = el('div.pcm-portal-list');
+			var preview = el('div.pcm-portal-card.pcm-portal-doc-preview');
 
-			rows.forEach(function (row) {
-				if (row._missing) { return; }
+			function showPreview(row) {
+				clear(preview);
+				preview.appendChild(el('div.pcm-portal-doc-preview-head', {}, [
+					el('strong', { text: row.label || row._filename }),
+					el('a.pcm-portal-btn', {
+						href: documentUrl(row, 'attachment'),
+						text: 'Download'
+					})
+				]));
+				preview.appendChild(documentPreviewNode(row));
+			}
 
-				list.appendChild(el('a.pcm-portal-row.pcm-portal-doc', {
-					href: cfg.root + '/portal/documents/' + row.id + '/download?_wpnonce=' + encodeURIComponent(cfg.nonce)
+			rows.forEach(function (row, index) {
+				var rowButton = el('button.pcm-portal-row', {
+					type: 'button',
+					onclick: function () { showPreview(row); }
 				}, [
 					el('div.pcm-portal-row-body', {}, [
 						el('strong', { text: row.label || row._filename }),
 						el('span.pcm-portal-muted', { text: row._filename })
 					])
-				]));
+				]);
+
+				list.appendChild(rowButton);
+				if (0 === index) { showPreview(row); }
 			});
 
-			body.appendChild(list);
+			body.appendChild(el('div.pcm-portal-doc-layout', {}, [list, preview]));
 		}).catch(function (error) { showError(body, error); });
 	}
 
@@ -310,13 +432,15 @@
 		});
 
 		var subject = el('input', { type: 'text', placeholder: 'What do you need help with?', required: true });
-		var description = el('textarea', { placeholder: 'Any detail that would help — steps, a link, a screenshot description.', rows: '5' });
+		var description = el('textarea', { placeholder: 'Any detail that would help — steps or a link.', rows: '5' });
+		var files = el('input', { type: 'file', multiple: true, accept: 'image/*,.pdf,.doc,.docx' });
 		var status = el('p.pcm-portal-note');
 
 		body.appendChild(el('form.pcm-portal-form', { onsubmit: function (e) { e.preventDefault(); } }, [
 			el('label', { text: 'Project' }), projectSelect,
 			el('label', { text: 'Subject' }), subject,
 			el('label', { text: 'Details' }), description,
+			el('label', { text: 'Attach files (optional)' }), files,
 			status,
 			el('div.pcm-portal-form-actions', {}, [
 				el('button.pcm-portal-btn.pcm-portal-btn-primary', {
@@ -332,8 +456,18 @@
 							method: 'POST',
 							body: { project_id: Number(projectSelect.value), subject: subject.value, description: description.value }
 						}).then(function (ticket) {
-							state.ticket = ticket.id;
-							renderBody(body);
+							var selected = Array.prototype.slice.call(files.files || []);
+
+							if (!selected.length) { state.ticket = ticket.id; renderBody(body); return; }
+
+							status.textContent = 'Uploading attachments…';
+
+							// The ticket exists whether or not an attachment upload
+							// fails, so a failed upload is surfaced but does not lose
+							// the ticket the client just filed.
+							uploadAll('/portal/tickets/' + ticket.id + '/attachments', selected)
+								.catch(function (error) { window.alert('The ticket was created, but a file did not upload: ' + error.message); })
+								.then(function () { state.ticket = ticket.id; renderBody(body); });
 						}).catch(function (error) {
 							status.textContent = error.message;
 							event.target.disabled = false;
@@ -348,14 +482,53 @@
 	function loadTicket(body) {
 		Promise.all([
 			api('/portal/tickets/' + state.ticket),
-			api('/portal/tickets/' + state.ticket + '/comments')
+			api('/portal/tickets/' + state.ticket + '/comments'),
+			api('/portal/tickets/' + state.ticket + '/attachments')
 		]).then(function (results) {
 			clear(body);
-			body.appendChild(ticketPanel(body, results[0], results[1]));
+			body.appendChild(ticketPanel(body, results[0], results[1], results[2]));
 		}).catch(function (error) { showError(body, error); });
 	}
 
-	function ticketPanel(body, ticket, comments) {
+	/**
+	 * A ticket's attachments as a small row list — the same preview-on-click
+	 * shape the Documents tab uses, reusing documentUrl()/documentPreviewNode()
+	 * rather than a parallel implementation, since a ticket attachment is a
+	 * project_documents row like any other (see model-project-document.php).
+	 */
+	function attachmentsBlock(rows) {
+		if (!rows.length) { return null; }
+
+		var list = el('div.pcm-portal-list');
+		var preview = el('div.pcm-portal-card.pcm-portal-doc-preview');
+
+		function showPreview(row) {
+			clear(preview);
+			preview.appendChild(el('div.pcm-portal-doc-preview-head', {}, [
+				el('strong', { text: row.label || row._filename }),
+				el('a.pcm-portal-btn', { href: documentUrl(row, 'attachment'), text: 'Download' })
+			]));
+			preview.appendChild(documentPreviewNode(row));
+		}
+
+		rows.forEach(function (row, index) {
+			list.appendChild(el('button.pcm-portal-row', {
+				type: 'button',
+				onclick: function () { showPreview(row); }
+			}, [
+				el('div.pcm-portal-row-body', {}, [
+					el('strong', { text: row.label || row._filename }),
+					el('span.pcm-portal-muted', { text: row._filename })
+				])
+			]));
+
+			if (0 === index) { showPreview(row); }
+		});
+
+		return el('div.pcm-portal-doc-layout', {}, [list, preview]);
+	}
+
+	function ticketPanel(body, ticket, comments, attachments) {
 		var wrap = el('div.pcm-portal-ticket');
 
 		wrap.appendChild(el('button.pcm-portal-back', {
@@ -385,6 +558,12 @@
 		wrap.appendChild(statusRow);
 
 		if (ticket.description) { wrap.appendChild(el('p.pcm-portal-description', { text: ticket.description })); }
+
+		var attachmentsNode = attachmentsBlock(attachments || []);
+		if (attachmentsNode) {
+			wrap.appendChild(el('h3', { text: 'Attachments' }));
+			wrap.appendChild(attachmentsNode);
+		}
 
 		var thread = el('div.pcm-portal-thread');
 		var byId = {};
@@ -416,21 +595,30 @@
 
 	function replyForm(body, ticketId) {
 		var text = el('textarea', { placeholder: 'Add a comment…', rows: '3' });
+		var files = el('input', { type: 'file', multiple: true, accept: 'image/*,.pdf,.doc,.docx' });
 		var status = el('span.pcm-portal-note');
 
 		return el('form.pcm-portal-reply', { onsubmit: function (e) { e.preventDefault(); } }, [
 			text,
+			el('label', { text: 'Attach files (optional)' }), files,
 			el('div.pcm-portal-form-actions', {}, [
 				el('button.pcm-portal-btn.pcm-portal-btn-primary', {
 					type: 'button',
 					text: 'Post comment',
 					onclick: function (event) {
-						if (!text.value.trim()) { return; }
+						var selected = Array.prototype.slice.call(files.files || []);
+
+						if (!text.value.trim() && !selected.length) { return; }
 
 						event.target.disabled = true;
 						status.textContent = 'Sending…';
 
-						api('/portal/tickets/' + ticketId + '/comments', { method: 'POST', body: { body: text.value } })
+						var posted = text.value.trim()
+							? api('/portal/tickets/' + ticketId + '/comments', { method: 'POST', body: { body: text.value } })
+							: Promise.resolve();
+
+						posted
+							.then(function () { return selected.length ? uploadAll('/portal/tickets/' + ticketId + '/attachments', selected) : null; })
 							.then(function () { state.ticket = ticketId; loadTicket(body); })
 							.catch(function (error) {
 								status.textContent = error.message;

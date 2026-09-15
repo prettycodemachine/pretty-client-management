@@ -52,6 +52,7 @@ function pcm_crm_modules() {
 					'pm/model-project.php',
 					'pm/model-project-task.php',
 					'pm/model-project-raid.php',
+					'pm/model-project-milestone.php',
 					'pm/model-project-role.php',
 					'pm/model-time-entry.php',
 					'pm/model-allocation.php',

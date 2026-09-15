@@ -71,6 +71,91 @@
 	});
 
 	/**
+	 * A multipart upload — app.helpers.api() JSON-encodes its body, which does
+	 * not fit a raw file, so this is a separate small POST rather than an
+	 * option on it. Same route a client's browser calls from the portal
+	 * (pcm_crm_pm_handle_ticket_attachment_upload() in pm-tickets-rest.php is
+	 * the shared handler behind both).
+	 */
+	function apiUpload(path, file) {
+		var body = new window.FormData();
+		body.append('file', file);
+
+		return window.fetch((window.PCM_CRM && window.PCM_CRM.root ? window.PCM_CRM.root : '') + path, {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { 'X-WP-Nonce': (window.PCM_CRM && window.PCM_CRM.nonce) || '' },
+			body: body
+		}).then(function (response) {
+			return response.json().then(function (data) {
+				if (!response.ok) { throw new Error((data && data.message) || 'Something went wrong.'); }
+				return data;
+			});
+		});
+	}
+
+	function uploadAll(path, files) {
+		return files.reduce(function (chain, file) {
+			return chain.then(function () { return apiUpload(path, file); });
+		}, Promise.resolve());
+	}
+
+	function documentUrl(row, disposition) {
+		var root = window.PCM_CRM && window.PCM_CRM.root ? window.PCM_CRM.root : '';
+		var nonce = (window.PCM_CRM && window.PCM_CRM.nonce) || '';
+		return root + '/pm/documents/' + row.id + '/download?disposition=' + disposition + '&_wpnonce=' + encodeURIComponent(nonce);
+	}
+
+	function attachmentPreviewNode(row) {
+		var mime = row._mime_type || '';
+
+		if (0 === mime.indexOf('image/')) {
+			return el('img.pcm-crm-doc-preview-img', { src: documentUrl(row, 'inline'), alt: row.label || row._filename });
+		}
+
+		if ('application/pdf' === mime) {
+			return el('iframe.pcm-crm-doc-preview-frame', { src: documentUrl(row, 'inline'), title: row.label || row._filename });
+		}
+
+		return el('p.pcm-crm-related-empty', { text: 'No preview available for this file type.' });
+	}
+
+	/**
+	 * Attachments as a small row list with a preview pane — the same shape
+	 * pm.js's Documents tab uses, since a ticket attachment is a
+	 * project_documents row like any other (model-project-document.php).
+	 */
+	function attachmentsPanel(attachments) {
+		if (!attachments.length) { return null; }
+
+		var list = el('div.pcm-crm-related-rows');
+		var preview = el('div.pcm-crm-doc-preview');
+
+		function showPreview(row) {
+			app.helpers.clear(preview);
+			preview.appendChild(el('div.pcm-crm-doc-preview-head', {}, [
+				el('strong', { text: row.label || row._filename }),
+				el('a.pcm-btn.pcm-btn-quiet.pcm-btn-sm', { href: documentUrl(row, 'attachment'), text: 'Download' })
+			]));
+			preview.appendChild(attachmentPreviewNode(row));
+		}
+
+		attachments.forEach(function (row, index) {
+			list.appendChild(el('button.pcm-crm-related-row', {
+				type: 'button',
+				onclick: function () { showPreview(row); }
+			}, [
+				el('span.pcm-crm-cell.pcm-crm-cell-primary', { text: row.label || row._filename }),
+				el('span.pcm-crm-cell', { text: row._filename })
+			]));
+
+			if (0 === index) { showPreview(row); }
+		});
+
+		return el('div.pcm-crm-doc-layout', {}, [list, preview]);
+	}
+
+	/**
 	 * The comment thread as a record tab — fetched once, redrawn after every
 	 * reply, badged by which side wrote it. is_client_comment is stamped
 	 * server-side (pcm_crm_pm_stamp_comment() in model-ticket-comment.php), so
@@ -80,9 +165,12 @@
 		var node = el('div.pcm-crm-thread', {}, [el('p.pcm-crm-loading', { text: 'Loading…' })]);
 
 		function load() {
-			app.helpers.api('/pm/tickets/' + record.id + '/comments').then(function (comments) {
+			Promise.all([
+				app.helpers.api('/pm/tickets/' + record.id + '/comments'),
+				app.helpers.api('/pm/tickets/' + record.id + '/attachments')
+			]).then(function (results) {
 				app.helpers.clear(node);
-				node.appendChild(threadPanel(record, comments, load));
+				node.appendChild(threadPanel(record, results[0], results[1], load));
 			}).catch(function (error) {
 				app.helpers.clear(node, el('div.pcm-crm-error', { text: 'Could not load comments: ' + error.message }));
 			});
@@ -106,8 +194,30 @@
 		]);
 	}
 
-	function threadPanel(record, comments, reload) {
+	function threadPanel(record, comments, attachments, reload) {
 		var wrap = el('div.pcm-crm-thread-inner');
+
+		var attachmentsNode = attachmentsPanel(attachments);
+		var uploadStatus = el('span.pcm-crm-muted');
+		var uploadInput = el('input', {
+			type: 'file',
+			multiple: true,
+			onchange: function () {
+				var selected = Array.prototype.slice.call(uploadInput.files || []);
+				if (!selected.length) { return; }
+
+				uploadStatus.textContent = 'Uploading…';
+
+				uploadAll('/pm/tickets/' + record.id + '/attachments', selected)
+					.then(function () { reload(); })
+					.catch(function (error) { uploadStatus.textContent = error.message; });
+			}
+		});
+
+		wrap.appendChild(el('h3', { text: 'Attachments' }));
+		if (attachmentsNode) { wrap.appendChild(attachmentsNode); }
+		wrap.appendChild(el('div.pcm-crm-form-actions', {}, [uploadInput, uploadStatus]));
+
 		var list = el('div.pcm-crm-comment-list');
 
 		var top = comments.filter(function (c) { return !Number(c.parent_id); });

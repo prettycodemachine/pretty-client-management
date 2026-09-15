@@ -27,6 +27,7 @@ function pcm_crm_pm_table( $pcm_name ) {
 function pcm_crm_pm_projects_table()     { return pcm_crm_pm_table( 'projects' ); }
 function pcm_crm_pm_tasks_table()        { return pcm_crm_pm_table( 'project_tasks' ); }
 function pcm_crm_pm_raid_table()         { return pcm_crm_pm_table( 'project_raid' ); }
+function pcm_crm_pm_milestones_table()   { return pcm_crm_pm_table( 'project_milestones' ); }
 function pcm_crm_pm_roles_table()        { return pcm_crm_pm_table( 'project_roles' ); }
 function pcm_crm_pm_time_table()         { return pcm_crm_pm_table( 'time_entries' ); }
 function pcm_crm_pm_periods_table()      { return pcm_crm_pm_table( 'retainer_periods' ); }
@@ -41,6 +42,7 @@ function pcm_crm_pm_tables() {
 		'projects'         => pcm_crm_pm_projects_table(),
 		'project_tasks'    => pcm_crm_pm_tasks_table(),
 		'project_raid'     => pcm_crm_pm_raid_table(),
+		'project_milestones' => pcm_crm_pm_milestones_table(),
 		'project_roles'    => pcm_crm_pm_roles_table(),
 		'time_entries'     => pcm_crm_pm_time_table(),
 		'retainer_periods' => pcm_crm_pm_periods_table(),
@@ -53,6 +55,7 @@ function pcm_crm_pm_definitions( array $pcm_tables, $pcm_charset ) {
 	$pcm_projects    = pcm_crm_pm_projects_table();
 	$pcm_tasks       = pcm_crm_pm_tasks_table();
 	$pcm_raid        = pcm_crm_pm_raid_table();
+	$pcm_milestones  = pcm_crm_pm_milestones_table();
 	$pcm_roles       = pcm_crm_pm_roles_table();
 	$pcm_time        = pcm_crm_pm_time_table();
 	$pcm_periods     = pcm_crm_pm_periods_table();
@@ -187,6 +190,31 @@ function pcm_crm_pm_definitions( array $pcm_tables, $pcm_charset ) {
 		KEY pcm_raid_due (due_date),
 		KEY pcm_raid_deleted (is_deleted),
 		KEY pcm_raid_test (is_test)
+	) {$pcm_charset};";
+
+	/* Project milestone -----------------------------------------------------
+	   Its own table — see model-project-milestone.php's docblock for why this
+	   used to be project_tasks.is_milestone and no longer is.
+	   ------------------------------------------------------------------- */
+	$pcm_tables[] = "CREATE TABLE {$pcm_milestones} (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		project_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		name varchar(255) NOT NULL DEFAULT '',
+		status varchar(40) NOT NULL DEFAULT '',
+		due_date date DEFAULT NULL,
+		completed_date date DEFAULT NULL,
+		description longtext,
+		owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		last_modified_by_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		last_modified_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		is_deleted tinyint(1) NOT NULL DEFAULT 0,
+		is_test tinyint(1) NOT NULL DEFAULT 0,
+		PRIMARY KEY  (id),
+		KEY pcm_milestone_project (project_id,status,due_date),
+		KEY pcm_milestone_deleted (is_deleted),
+		KEY pcm_milestone_test (is_test)
 	) {$pcm_charset};";
 
 	/* Project contact role ------------------------------------------------

@@ -45,6 +45,19 @@ function pcm_crm_pm_register_ticket_routes() {
 		'callback'            => 'pcm_crm_pm_rest_download_document',
 		'permission_callback' => array( 'PCM_CRM_REST', 'permission' ),
 	) );
+
+	register_rest_route( PCM_CRM_REST::NS, '/pm/tickets/(?P<pcm_id>\d+)/attachments', array(
+		array(
+			'methods'             => 'GET',
+			'callback'            => 'pcm_crm_pm_rest_list_attachments',
+			'permission_callback' => array( 'PCM_CRM_REST', 'permission' ),
+		),
+		array(
+			'methods'             => 'POST',
+			'callback'            => 'pcm_crm_pm_rest_create_attachment',
+			'permission_callback' => array( 'PCM_CRM_REST', 'permission' ),
+		),
+	) );
 }
 add_action( 'rest_api_init', 'pcm_crm_pm_register_ticket_routes' );
 
@@ -102,6 +115,67 @@ function pcm_crm_pm_rest_create_document( WP_REST_Request $pcm_request ) {
 	return rest_ensure_response( pcm_crm_pm_decorate_document( pcm_crm_project_documents()->get( $pcm_new_id ) ) );
 }
 
+function pcm_crm_pm_rest_list_attachments( WP_REST_Request $pcm_request ) {
+	$pcm_id = absint( $pcm_request->get_url_params()['pcm_id'] );
+
+	return rest_ensure_response( pcm_crm_pm_attachments_for_ticket( $pcm_id ) );
+}
+
+function pcm_crm_pm_rest_create_attachment( WP_REST_Request $pcm_request ) {
+	$pcm_id     = absint( $pcm_request->get_url_params()['pcm_id'] );
+	$pcm_ticket = pcm_crm_help_tickets()->get( $pcm_id );
+
+	if ( ! $pcm_ticket ) {
+		return new WP_Error( 'pcm_crm_ticket_not_found', __( 'That ticket no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+	}
+
+	return pcm_crm_pm_handle_ticket_attachment_upload( $pcm_ticket );
+}
+
+/**
+ * Upload one file and attach it to a Help Ticket — the shared implementation
+ * behind both this staff route and the portal's twin
+ * (pcm_crm_portal_rest_create_attachment() in portal/portal-rest.php). A
+ * client has no wp.media (that needs the upload_files capability, which
+ * pcm_client deliberately has none of), so this is the one place either side
+ * turns a raw upload into an attachment_id — via WordPress's own
+ * media_handle_upload(), which validates the file type against the site's
+ * allowed list the same way any other WordPress upload does.
+ */
+function pcm_crm_pm_handle_ticket_attachment_upload( array $pcm_ticket, $pcm_field = 'file' ) {
+	if ( empty( $_FILES[ $pcm_field ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- REST route, gated by its own permission_callback
+		return new WP_Error( 'pcm_crm_attachment_missing_file', __( 'Choose a file first.', 'pcm-crm' ), array( 'status' => 400 ) );
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+
+	$pcm_attachment_id = media_handle_upload( $pcm_field, 0 );
+
+	if ( is_wp_error( $pcm_attachment_id ) ) {
+		$pcm_attachment_id->add_data( array( 'status' => 400 ) );
+		return $pcm_attachment_id;
+	}
+
+	$pcm_new_id = pcm_crm_project_documents()->insert( array(
+		'project_id'    => (int) $pcm_ticket['project_id'],
+		'ticket_id'     => (int) $pcm_ticket['id'],
+		'attachment_id' => $pcm_attachment_id,
+		'label'         => get_the_title( $pcm_attachment_id ),
+	) );
+
+	if ( is_wp_error( $pcm_new_id ) ) {
+		// The attachment itself uploaded fine; only the CRM row failed to
+		// save (project_id somehow missing). Leaving an unattached Media
+		// Library row behind is a smaller problem than losing the upload.
+		$pcm_new_id->add_data( array( 'status' => 400 ) );
+		return $pcm_new_id;
+	}
+
+	return rest_ensure_response( pcm_crm_pm_decorate_document( pcm_crm_project_documents()->get( $pcm_new_id ) ) );
+}
+
 function pcm_crm_pm_rest_delete_document( WP_REST_Request $pcm_request ) {
 	$pcm_id = absint( $pcm_request->get_url_params()['pcm_id'] );
 
@@ -129,7 +203,7 @@ function pcm_crm_pm_rest_download_document( WP_REST_Request $pcm_request ) {
 		return new WP_Error( 'pcm_crm_document_not_found', __( 'That document no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
 	}
 
-	pcm_crm_stream_document( (int) $pcm_doc['attachment_id'] );
+	pcm_crm_stream_document( (int) $pcm_doc['attachment_id'], 'inline' === $pcm_request->get_param( 'disposition' ) );
 }
 
 /**
@@ -138,8 +212,13 @@ function pcm_crm_pm_rest_download_document( WP_REST_Request $pcm_request ) {
  * routes. A Media Library attachment URL on this host is otherwise publicly
  * reachable by anyone who has or guesses it (see CLAUDE.md's SiteGround
  * notes), which a client or project document must not be.
+ *
+ * $pcm_inline asks the browser to render the file (an image, a PDF) in place
+ * for the record page's preview pane, rather than saving it — same bytes,
+ * same permission check already run by the caller, only the disposition
+ * header differs.
  */
-function pcm_crm_stream_document( $pcm_attachment_id ) {
+function pcm_crm_stream_document( $pcm_attachment_id, $pcm_inline = false ) {
 	$pcm_path = get_attached_file( $pcm_attachment_id );
 
 	if ( ! $pcm_path || ! is_readable( $pcm_path ) ) {
@@ -150,7 +229,7 @@ function pcm_crm_stream_document( $pcm_attachment_id ) {
 
 	nocache_headers();
 	header( 'Content-Type: ' . ( $pcm_type ? $pcm_type : 'application/octet-stream' ) );
-	header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( wp_basename( $pcm_path ) ) . '"' );
+	header( 'Content-Disposition: ' . ( $pcm_inline ? 'inline' : 'attachment' ) . '; filename="' . sanitize_file_name( wp_basename( $pcm_path ) ) . '"' );
 	header( 'Content-Length: ' . filesize( $pcm_path ) );
 	header( 'X-Content-Type-Options: nosniff' );
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_readfile -- streaming a file, not reading it into memory
