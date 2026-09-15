@@ -1320,7 +1320,7 @@ check( 'and so does the arithmetic', function_exists( 'pcm_crm_pm_week_start' ),
 
 echo "\n--- pm schema ---\n";
 
-check( 'the version was bumped for the portal_user_id column', PCM_CRM_Schema::VERSION, '1.12.0' );
+check( 'the version was bumped for the ticket_id column on project_documents', PCM_CRM_Schema::VERSION, '1.12.0' );
 check( 'ten core tables and nine of the module\'s',
 	array( count( $pcm_all_defs ), count( $pcm_pm_only ) ), array( 19, 9 ) );
 
