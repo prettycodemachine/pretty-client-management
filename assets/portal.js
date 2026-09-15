@@ -121,17 +121,31 @@
 	   Shell: header, project switcher, nav.
 	   --------------------------------------------------------------------- */
 
+	/**
+	 * The account behind whichever project is currently selected — the portal
+	 * kicker names the client's own organization rather than the generic
+	 * "Client Portal" label, so it has to track the switcher.
+	 */
+	function currentProject() {
+		var match = null;
+		state.me.projects.forEach(function (project) {
+			if (project.id === state.project) { match = project; }
+		});
+		return match;
+	}
+
 	function render() {
 		clear(root);
 
 		var shell = el('div.pcm-portal-shell');
 		var header = el('div.pcm-portal-header');
 		var body = el('div.pcm-portal-body');
+		var current = currentProject();
 
 		header.appendChild(el('div.pcm-portal-heading', {}, [
 			el('h1', { text: state.me.contact_name || 'Your Portal' })
 		]));
-		header.appendChild(el('p.pcm-portal-kicker', { text: 'Client Portal' }));
+		header.appendChild(el('p.pcm-portal-kicker', { text: (current && current.account_name) || 'Client Portal' }));
 
 		var projectRow = el('div.pcm-portal-projectrow');
 
@@ -141,7 +155,7 @@
 				onchange: function (event) {
 					state.project = Number(event.target.value);
 					state.view = 'summary';
-					renderBody(body);
+					render();
 				}
 			});
 
@@ -268,20 +282,128 @@
 	   RAID — read only.
 	   --------------------------------------------------------------------- */
 
+	/**
+	 * Every level word offered for Impact/Probability, or every status word —
+	 * from cfg when the server sent them, falling back to the live data so an
+	 * older cached bundle still gets a usable filter instead of an empty one.
+	 */
+	function raidFilterOptions(rows, field, fallback) {
+		var fromConfig = field === 'status' ? cfg.raidStatuses : cfg.raidLevels;
+		if (fromConfig && fromConfig.length) { return fromConfig; }
+
+		var seen = [];
+		rows.forEach(function (row) {
+			if (row[field] && seen.indexOf(row[field]) === -1) { seen.push(row[field]); }
+		});
+		return seen.length ? seen : fallback;
+	}
+
+	function raidMatchesFilter(row, filters) {
+		if (filters.status && row.status !== filters.status) { return false; }
+		if (filters.impact && row.impact !== filters.impact) { return false; }
+		if (filters.probability && row.probability !== filters.probability) { return false; }
+		return true;
+	}
+
+	/**
+	 * Sort options are a single field, not a separate field+direction pair —
+	 * "Reported Date, newest first" is one choice a client makes, not two.
+	 */
+	var RAID_SORTS = {
+		reported_desc: { field: 'raised_date', dir: -1 },
+		reported_asc:  { field: 'raised_date', dir: 1 },
+		resolved_desc: { field: 'resolved_date', dir: -1 },
+		resolved_asc:  { field: 'resolved_date', dir: 1 }
+	};
+
+	var RAID_SORT_LABELS = [
+		['reported_desc', 'Reported Date (newest first)'],
+		['reported_asc', 'Reported Date (oldest first)'],
+		['resolved_desc', 'Resolution Date (newest first)'],
+		['resolved_asc', 'Resolution Date (oldest first)']
+	];
+
+	function sortRaid(rows, sortKey) {
+		var sort = RAID_SORTS[sortKey];
+		if (!sort) { return rows; }
+
+		return rows.slice().sort(function (a, b) {
+			var av = a[sort.field], bv = b[sort.field];
+			if (!av && !bv) { return 0; }
+			if (!av) { return 1; }
+			if (!bv) { return -1; }
+			return av < bv ? -sort.dir : (av > bv ? sort.dir : 0);
+		});
+	}
+
+	function raidFilterRow(rows, filters, onChange) {
+		var bar = el('div.pcm-portal-filters');
+
+		function field(label, control) {
+			return el('div.pcm-portal-filter', {}, [el('label', { text: label }), control]);
+		}
+
+		function select(label, current, options) {
+			return el('select', {
+				'aria-label': label,
+				onchange: function (event) { current.set(event.target.value); onChange(); }
+			}, options.map(function (opt) {
+				return el('option', { value: opt.value, text: opt.text, selected: current.get() === opt.value });
+			}));
+		}
+
+		function picklistSelect(label, key, options) {
+			return field(label, select(label, {
+				get: function () { return filters[key]; },
+				set: function (value) { filters[key] = value; }
+			}, [{ value: '', text: 'All ' + label }].concat(options.map(function (opt) { return { value: opt, text: opt }; }))));
+		}
+
+		bar.appendChild(picklistSelect('Status', 'status', raidFilterOptions(rows, 'status', [])));
+		bar.appendChild(picklistSelect('Impact', 'impact', raidFilterOptions(rows, 'impact', [])));
+		bar.appendChild(picklistSelect('Probability', 'probability', raidFilterOptions(rows, 'probability', [])));
+
+		bar.appendChild(field('Sort By', select('Sort By', {
+			get: function () { return filters.sort; },
+			set: function (value) { filters.sort = value; }
+		}, RAID_SORT_LABELS.map(function (pair) { return { value: pair[0], text: pair[1] }; })
+		)));
+
+		if (filters.status || filters.impact || filters.probability || filters.sort !== RAID_SORT_LABELS[0][0]) {
+			bar.appendChild(el('button.pcm-portal-btn.pcm-portal-filters-clear', {
+				type: 'button', text: 'Clear filters',
+				onclick: function () {
+					filters.status = ''; filters.impact = ''; filters.probability = '';
+					filters.sort = RAID_SORT_LABELS[0][0];
+					onChange();
+				}
+			}));
+		}
+
+		return bar;
+	}
+
 	function loadRaid(body) {
 		api('/portal/raid', { query: { project_id: state.project } }).then(function (rows) {
-			clear(body);
+			var filters = { status: '', impact: '', probability: '', sort: RAID_SORT_LABELS[0][0] };
 
-			if (!rows.length) {
-				body.appendChild(el('p.pcm-portal-empty', { text: 'Nothing on the RAID log right now.' }));
-				return;
+			function paint() {
+				clear(body);
+				body.appendChild(raidFilterRow(rows, filters, paint));
+
+				var visible = sortRaid(rows.filter(function (row) { return raidMatchesFilter(row, filters); }), filters.sort);
+
+				if (!visible.length) {
+					body.appendChild(el('p.pcm-portal-empty', { text: rows.length ? 'No RAID items match those filters.' : 'Nothing on the RAID log right now.' }));
+					return;
+				}
+
+				var list = el('div.pcm-portal-list');
+				visible.forEach(function (row) { list.appendChild(raidItem(row)); });
+				body.appendChild(list);
 			}
 
-			var list = el('div.pcm-portal-list');
-
-			rows.forEach(function (row) { list.appendChild(raidItem(row)); });
-
-			body.appendChild(list);
+			paint();
 		}).catch(function (error) { showError(body, error); });
 	}
 
@@ -301,7 +423,9 @@
 			raidField('Status', row.status),
 			raidField('Impact', row.impact),
 			raidField('Probability', row.probability),
+			raidField('Reported', row.raised_date ? formatDate(row.raised_date) : ''),
 			raidField('Review by', row.due_date ? formatDate(row.due_date) : ''),
+			raidField('Resolved', row.resolved_date ? formatDate(row.resolved_date) : ''),
 			raidField('Owner', row._owner_contact_id_name),
 			raidField('Details', row.description),
 			raidField('Mitigation', row.mitigation),

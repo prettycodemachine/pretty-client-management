@@ -15,9 +15,11 @@ function pcm_crm_portal_assets() {
 	wp_enqueue_script( 'pcm-crm-portal', pcm_crm_asset( 'portal.js' ), array(), null, true );
 
 	wp_localize_script( 'pcm-crm-portal', 'PCM_CRM_PORTAL', array(
-		'root'     => esc_url_raw( rest_url( PCM_CRM_REST::NS ) ),
-		'nonce'    => wp_create_nonce( 'wp_rest' ),
-		'statuses' => pcm_crm_pm_ticket_statuses(),
+		'root'         => esc_url_raw( rest_url( PCM_CRM_REST::NS ) ),
+		'nonce'        => wp_create_nonce( 'wp_rest' ),
+		'statuses'     => pcm_crm_pm_ticket_statuses(),
+		'raidStatuses' => pcm_crm_pm_raid_statuses(),
+		'raidLevels'   => pcm_crm_pm_raid_levels(),
 	) );
 }
 

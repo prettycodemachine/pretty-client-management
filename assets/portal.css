@@ -36,9 +36,13 @@
 .pcm-portal-heading { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .pcm-portal-heading h1 { margin: 0; }
 .pcm-portal-kicker { margin: 0 0 12px; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pcm-body); }
-.pcm-portal-projectrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pcm-portal-projectrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .pcm-portal-project-name { font-weight: 700; color: var(--pcm-ink); }
-.pcm-portal-switcher { height: 40px; padding: 0 10px; border: 2px solid var(--pcm-ink); border-radius: 8px; background: #fff; }
+.pcm-portal-switcher {
+  height: 40px; max-width: 100%; min-width: 0; box-sizing: border-box; padding: 0 10px;
+  border: 2px solid var(--pcm-ink); border-radius: 8px; background: #fff;
+  text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+}
 
 @media (min-width: 700px) {
   .pcm-portal { padding-left: 40px; padding-right: 40px; }
@@ -71,6 +75,25 @@
 .pcm-portal-stats dd { margin: 0; color: var(--pcm-ink); }
 
 .pcm-portal-list { display: flex; flex-direction: column; gap: 2px; }
+
+.pcm-portal-filters {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px; align-items: end; margin-bottom: 20px;
+}
+.pcm-portal-filter { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pcm-portal-filter label {
+  font-size: 0.76rem; font-weight: 700; color: var(--pcm-body); text-transform: uppercase;
+  letter-spacing: 0.02em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pcm-portal-filter select, .pcm-portal-filter input[type="date"] {
+  box-sizing: border-box; width: 100%; height: 38px; padding: 0 10px;
+  border: 2px solid var(--pcm-ink); border-radius: 8px; font: inherit; font-size: 0.88rem; background: #fff;
+}
+.pcm-portal-filters-clear { margin-bottom: 0; height: 38px; }
+
+@media (max-width: 560px) {
+  .pcm-portal-filters { grid-template-columns: repeat(2, 1fr); }
+}
 
 .pcm-portal-raid-item {
   padding: 14px 16px; border: 1px solid var(--pcm-line); border-radius: 10px; margin-bottom: 10px;
