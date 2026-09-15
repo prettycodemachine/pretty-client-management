@@ -595,6 +595,35 @@ update_option( 'pcm_crm_stall_days', 0 );
 check( 'zero would flag everything, so it falls back', pcm_crm_stall_days(), 30 );
 delete_option( 'pcm_crm_stall_days' );
 
+echo "\n--- sales process (stage to probability) ---\n";
+
+function pcm_test_stage_by_name( $pcm_stages, $pcm_name ) {
+	foreach ( $pcm_stages as $pcm_stage ) {
+		if ( $pcm_stage['name'] === $pcm_name ) {
+			return $pcm_stage;
+		}
+	}
+
+	return null;
+}
+
+check( 'the shipped defaults are what the Sales Process screen loads',
+	pcm_crm_stages(), pcm_crm_default_stages() );
+
+$pcm_sanitized = pcm_crm_sanitize_stage_probabilities( array( 'Proposal' => '40', 'Negotiation' => '150', 'Made Up Stage' => '99' ) );
+
+check( 'a customised probability is kept', pcm_test_stage_by_name( $pcm_sanitized, 'Proposal' )['probability'], 40 );
+check( 'out of range is clamped rather than stored raw', pcm_test_stage_by_name( $pcm_sanitized, 'Negotiation' )['probability'], 100 );
+check( 'a stage left untouched keeps its shipped default', pcm_test_stage_by_name( $pcm_sanitized, 'Qualification' )['probability'], 10 );
+check( 'a name that is not one of the stages cannot inject a new one', count( $pcm_sanitized ), count( pcm_crm_default_stages() ) );
+check( 'is_closed and is_won are not exposed here, so they cannot drift from the stage set',
+	wp_list_pluck( $pcm_sanitized, 'is_won' ), wp_list_pluck( pcm_crm_default_stages(), 'is_won' ) );
+
+update_option( 'pcm_crm_stages', $pcm_sanitized );
+check( 'a deal in the customised stage picks up the saved probability',
+	pcm_crm_apply_stage( array( 'stage_name' => 'Proposal' ), 'opportunity' )['probability'], 40 );
+delete_option( 'pcm_crm_stages' );
+
 check( 'stalled means open and sitting still',
 	pcm_crm_stalled_args( array() )['filters']['is_closed'], 0 );
 check( 'measured from when the stage was entered',
@@ -1817,22 +1846,33 @@ delete_option( PCM_CRM_LAYOUTS_OPTION );
 
 pcm_test_reset_filters( 'pcm_crm_layout' );
 
-echo "\n--- opportunity to project ---\n";
+echo "\n--- opportunity type follows account project history ---\n";
 
-$pcm_type_map = pcm_crm_pm_opportunity_type_map();
+check( 'renewal is retired — only two business types remain',
+	pcm_crm_opportunity_types(), array( 'New Business', 'Existing Business' ) );
 
-check( 'a renewal becomes a support retainer', $pcm_type_map['Renewal'], 'salesforce-support-retainer' );
-check( 'new business becomes a build', $pcm_type_map['New Business'], 'custom-development' );
-// Absent rather than defaulted: the type decides which stages are legal, so a
-// wrong guess offers the wrong lifecycle and nothing says so until a stage
-// refuses to save.
-check( 'an unmapped type is absent rather than guessed',
-	isset( $pcm_type_map['Something Else'] ), false );
+class PCM_Opp_Type_WPDB extends FakeWPDB {
+	function get_var( $q = '' ) {
+		if ( false !== strpos( $q, 'pcm_crm_projects' ) && false !== strpos( $q, 'COUNT' ) ) {
+			return false !== strpos( $q, 'account_id = 5' ) ? 1 : 0;
+		}
 
-foreach ( $pcm_type_map as $pcm_from => $pcm_to ) {
-	check( "'{$pcm_from}' maps to a type that exists",
-		in_array( $pcm_to, pcm_crm_pm_project_types(), true ), true );
+		return 0;
+	}
 }
+$pcm_real_wpdb   = $GLOBALS['wpdb'];
+$GLOBALS['wpdb'] = new PCM_Opp_Type_WPDB();
+
+check( 'an account with no project on record is new business',
+	pcm_crm_pm_apply_opportunity_type( array( 'account_id' => 9 ), 'opportunity' )['type'], 'New Business' );
+check( 'an account a project already exists for is existing business',
+	pcm_crm_pm_apply_opportunity_type( array( 'account_id' => 5 ), 'opportunity' )['type'], 'Existing Business' );
+check( 'an object that is not an opportunity is left alone',
+	isset( pcm_crm_pm_apply_opportunity_type( array( 'account_id' => 5 ), 'project' )['type'] ), false );
+check( 'an update that does not touch the account is left alone',
+	isset( pcm_crm_pm_apply_opportunity_type( array( 'amount' => 100 ), 'opportunity', 42 )['type'] ), false );
+
+$GLOBALS['wpdb'] = $pcm_real_wpdb;
 
 echo "\n--- sample data reaches the module ---\n";
 
@@ -2121,7 +2161,9 @@ $pcm_nav = pcm_crm_setup_nav();
 check( 'every core group has pages', array_values( array_diff( array_keys( $pcm_nav ), array( 'projects' ) ) ), array( 'crm', 'automation', 'data', 'platform' ) );
 // The suite has loaded the module's files by now, as the bootstrap does when it
 // is switched on — and a module registers its own group.
-check( 'the Projects module brings its own Setup pages', array_keys( $pcm_nav['projects'] ), array( 'project-types', 'time-entry', 'opportunity-mapping', 'project-picklists' ) );
+check( 'the Projects module brings its own Setup pages', array_keys( $pcm_nav['projects'] ), array( 'project-types', 'time-entry', 'project-picklists' ) );
+check( 'Sales Process lives under CRM, not Projects, since it holds whatever the module is switched to',
+	in_array( 'sales-process', array_keys( $pcm_nav['crm'] ), true ), true );
 
 echo "\n--- project type settings ---\n";
 
@@ -2154,8 +2196,6 @@ check( 'and a process that exists',
 	pcm_crm_pm_clean_type( array( 'label' => 'X', 'archetype' => 'barter' ), '' )->get_error_code(), 'pcm_crm_pm_type_archetype' );
 check( 'stages that never close are refused',
 	pcm_crm_pm_clean_type( array( 'label' => 'X', 'archetype' => 'tm', 'stages' => array( array( 'name' => 'Forever' ) ) ), '' )->get_error_code(), 'pcm_crm_pm_type_closing' );
-check( 'the mapping keeps types and drops Ask',
-	pcm_crm_pm_sanitize_mapping( array( 'Renewal' => 'Custom Development', 'New Business' => '' ) ), array( 'Renewal' => 'custom-development' ) );
 check( 'the time settings clamp the ceiling to a day',
 	pcm_crm_pm_sanitize_time_settings( array( 'max_hours' => 40, 'increment' => '0.25' ) )['max_hours'], 24.0 );
 check( 'an emptied picklist falls back rather than saving nothing',

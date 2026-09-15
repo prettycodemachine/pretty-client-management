@@ -81,9 +81,15 @@ function pcm_crm_industries() {
 	) );
 }
 
+/**
+ * New Business vs. Existing Business, Salesforce's Type picklist on
+ * Opportunity — pared to two, since a renewal is only ever a shade of
+ * existing business. Set automatically from the account's project history
+ * (see pcm_crm_pm_apply_opportunity_type()) rather than picked by hand.
+ */
 function pcm_crm_opportunity_types() {
 	return apply_filters( 'pcm_crm_opportunity_types', array(
-		'New Business', 'Existing Business', 'Renewal',
+		'New Business', 'Existing Business',
 	) );
 }
 

@@ -382,6 +382,14 @@ pcm_crm_register_setup_page( 'pipeline', array(
 	'order'       => 10,
 ) );
 
+pcm_crm_register_setup_page( 'sales-process', array(
+	'group'       => 'crm',
+	'label'       => __( 'Sales Process', 'pcm-crm' ),
+	'description' => __( 'The probability each stage of the pipeline carries.', 'pcm-crm' ),
+	'render'      => 'pcm_crm_render_sales_process_tab',
+	'order'       => 15,
+) );
+
 pcm_crm_register_setup_page( 'fields', array(
 	'group'       => 'crm',
 	'label'       => __( 'Fields & Layouts', 'pcm-crm' ),

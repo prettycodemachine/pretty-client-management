@@ -108,7 +108,7 @@ function respond(route) {
 			retainerTypes: ['Salesforce Support Retainer', 'AI Enablement Retainer'],
 			projectStages: ['Active'], projectHealth: ['Green', 'Amber', 'Red'], raidTypes: ['Risk'], raidStatuses: ['Open'],
 			raidLevels: ['Low', 'Medium', 'High'], taskStatuses: ['Done'], partyTypes: { internal: 'Internal', partner: 'Partner', client: 'Client' },
-			projectRoles: ['Business Owner'], retainerPeriods: { monthly: 'Monthly' }, projectStageSets: {}, opportunityTypeMap: {},
+			projectRoles: ['Business Owner'], retainerPeriods: { monthly: 'Monthly' }, projectStageSets: {},
 			projectTypeDefs: { 'side-quest': { label: 'Side Quest', archetype: 'internal', active: 1, stages: [{ name: 'Planned', is_closed: 0 }], fields: { hidden: [], required: [], labels: {} }, time: { task_required: 0, description_required: 1, billable_locked: 1, billable_default: 0 }, defaults: {}, tabs: [] } },
 			archetypes: { internal: { label: 'Internal' } }, timeSettings: { increment: 0.25 }, weekStartsOn: 1,
 		};

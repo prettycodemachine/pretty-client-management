@@ -81,7 +81,6 @@ const app = {
 			retainerTypes: ['salesforce-support-retainer'],
 			projectStages: ['Active', 'Closed'],
 			projectHealth: ['Green', 'Amber', 'Red'],
-			opportunityTypeMap: { 'Renewal': 'salesforce-support-retainer', 'New Business': 'custom-development' },
 			projectTypeDefs: {
 				'salesforce-support-retainer': {
 					label: 'Salesforce Support Retainer', archetype: 'retainer', active: 1, icon: 'backup',
@@ -277,16 +276,16 @@ const fromAccount = registered.children.accounts[0]({ id: 5 }, helpers)[0];
 check('a project created from an account is linked to it', fromAccount.prefill.account_id, 5);
 
 const fromDeal = registered.children.opportunities[0](
-	{ id: 9, account_id: 5, name: 'Acme — AI pilot', type: 'Renewal', amount: 24000 }, helpers
+	{ id: 9, account_id: 5, name: 'Acme — AI pilot', type: 'Existing Business', amount: 24000 }, helpers
 )[0];
 check('a project created from a deal carries the account', fromDeal.prefill.account_id, 5);
 check('and the deal itself', fromDeal.prefill.opportunity_id, 9);
 check('and the amount as the budget', fromDeal.prefill.budget_amount, 24000);
-check('and the mapped project type', fromDeal.prefill.project_type, 'salesforce-support-retainer');
+// Guessing the type from the deal would offer the wrong lifecycle, and nothing
+// says so until a stage refuses to save — so it is always left for the New
+// Project chooser to ask, whatever the deal's own type.
+check('the project type is left blank rather than guessed from the deal', fromDeal.prefill.project_type, '');
 
-// Guessing the type would offer the wrong lifecycle, and nothing says so until a
-// stage refuses to save.
-const unmapped = registered.children.opportunities[0]({ id: 9, account_id: 5, type: 'Barter' }, helpers)[0];
 /* The type chooser, and a form that follows the type. ---------------------- */
 
 const projectDef = registered.objects.projects;
@@ -314,9 +313,6 @@ check('a field every type uses carries no condition', projectDef.hints('name').s
 check('the stage picklist narrows to the type', projectDef.hints('stage_name').ui, 'project-stage');
 check('a build opens its related lists on tasks', projectDef.tabOrder({ project_type: 'custom-development' }).slice(0, 3), ['burn', 'tasks', 'raid']);
 check('and reads its type by name in a list', projectDef.columns.find(c => c.key === 'project_type').render({ project_type: 'custom-development' }), 'Custom Development');
-
-check('an unmapped deal type leaves the project type blank rather than guessing',
-	unmapped.prefill.project_type, '');
 
 registered.children.projects[0]({ id: 12 }, helpers).forEach(child => {
 	check(`a project's '${child.id}' child is linked back to it`,

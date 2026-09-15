@@ -1,6 +1,6 @@
 <?php
 /**
- * Setup › Projects: project types, time entry, opportunity mapping, picklists.
+ * Setup › Projects: project types, time entry, picklists.
  *
  * Gated with the rest of the module's surface, so switching Projects off takes
  * this group out of Setup. The types themselves, and the rules they carry, live
@@ -30,14 +30,6 @@ pcm_crm_register_setup_page( 'time-entry', array(
 	'order'       => 20,
 ) );
 
-pcm_crm_register_setup_page( 'opportunity-mapping', array(
-	'group'       => 'projects',
-	'label'       => __( 'Opportunity Mapping', 'pcm-crm' ),
-	'description' => __( 'Which project type a won deal becomes when a project is started from it.', 'pcm-crm' ),
-	'render'      => 'pcm_crm_pm_render_mapping_page',
-	'order'       => 30,
-) );
-
 pcm_crm_register_setup_page( 'project-picklists', array(
 	'group'       => 'projects',
 	'label'       => __( 'Picklists', 'pcm-crm' ),
@@ -50,11 +42,6 @@ function pcm_crm_pm_register_settings() {
 	register_setting( 'pcm_crm_pm_time_settings', PCM_CRM_PM_TIME_OPTION, array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_pm_sanitize_time_settings',
-	) );
-
-	register_setting( 'pcm_crm_pm_mapping_settings', PCM_CRM_PM_OPP_MAP_OPTION, array(
-		'type'              => 'array',
-		'sanitize_callback' => 'pcm_crm_pm_sanitize_mapping',
 	) );
 
 	register_setting( 'pcm_crm_pm_picklist_settings', PCM_CRM_PM_PICKLISTS_OPTION, array(
@@ -77,24 +64,6 @@ function pcm_crm_pm_sanitize_time_settings( $pcm_value ) {
 		'allow_future'    => empty( $pcm_value['allow_future'] ) ? 0 : 1,
 		'lock_after_days' => isset( $pcm_value['lock_after_days'] ) ? absint( $pcm_value['lock_after_days'] ) : 0,
 	);
-}
-
-/**
- * The map posts every opportunity type, with '' for "ask". Ask is stored as an
- * absence, which is what the chooser reads as "no mapped type".
- */
-function pcm_crm_pm_sanitize_mapping( $pcm_value ) {
-	$pcm_out = array();
-
-	foreach ( (array) $pcm_value as $pcm_from => $pcm_to ) {
-		$pcm_key = pcm_crm_pm_type_key( sanitize_text_field( $pcm_to ) );
-
-		if ( '' !== $pcm_key ) {
-			$pcm_out[ sanitize_text_field( $pcm_from ) ] = $pcm_key;
-		}
-	}
-
-	return $pcm_out;
 }
 
 function pcm_crm_pm_lines( $pcm_text ) {
@@ -703,34 +672,6 @@ function pcm_crm_pm_render_time_page() {
 					</p>
 				</td>
 			</tr>
-		</table>
-		<?php submit_button(); ?>
-	</form>
-	<?php
-}
-
-function pcm_crm_pm_render_mapping_page() {
-	$pcm_map   = pcm_crm_pm_opportunity_type_map();
-	$pcm_types = pcm_crm_pm_types( false );
-	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
-		<?php settings_fields( 'pcm_crm_pm_mapping_settings' ); ?>
-		<p class="description"><?php esc_html_e( 'When a project is started from a won deal, it opens as the type mapped here. "Ask" opens the type chooser instead — the safer answer when one kind of deal can become several kinds of project.', 'pcm-crm' ); ?></p>
-		<table class="form-table" role="presentation">
-			<?php foreach ( pcm_crm_opportunity_types() as $pcm_opportunity_type ) : ?>
-				<?php $pcm_field = 'pcm-map-' . sanitize_title( $pcm_opportunity_type ); ?>
-				<tr>
-					<th scope="row"><label for="<?php echo esc_attr( $pcm_field ); ?>"><?php echo esc_html( $pcm_opportunity_type ); ?></label></th>
-					<td>
-						<select id="<?php echo esc_attr( $pcm_field ); ?>" name="<?php echo esc_attr( PCM_CRM_PM_OPP_MAP_OPTION ); ?>[<?php echo esc_attr( $pcm_opportunity_type ); ?>]">
-							<option value=""><?php esc_html_e( 'Ask when creating', 'pcm-crm' ); ?></option>
-							<?php foreach ( $pcm_types as $pcm_key => $pcm_type ) : ?>
-								<option value="<?php echo esc_attr( $pcm_key ); ?>" <?php selected( isset( $pcm_map[ $pcm_opportunity_type ] ) ? $pcm_map[ $pcm_opportunity_type ] : '', $pcm_key ); ?>><?php echo esc_html( $pcm_type['label'] ); ?></option>
-							<?php endforeach; ?>
-						</select>
-					</td>
-				</tr>
-			<?php endforeach; ?>
 		</table>
 		<?php submit_button(); ?>
 	</form>

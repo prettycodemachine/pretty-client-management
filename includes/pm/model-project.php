@@ -144,6 +144,43 @@ add_filter( 'pcm_crm_before_insert', 'pcm_crm_pm_apply_stage', 10, 2 );
 add_filter( 'pcm_crm_before_update', 'pcm_crm_pm_apply_stage', 10, 3 );
 
 /**
+ * Derive an opportunity's Type from whether its account already has a
+ * project, rather than asking someone to pick — an account with no project
+ * on record is new business, and one with a project already underway or
+ * delivered is existing business. Replaces the old Opportunity Mapping
+ * screen and its "Renewal" value, which was only ever a shade of existing
+ * business.
+ *
+ * Set on every insert, and re-derived on update only when the account is
+ * changing — mirroring pcm_crm_apply_stage()'s probability, so a deal moved
+ * to the right account is reclassified but an unrelated edit does not keep
+ * recomputing it.
+ */
+function pcm_crm_pm_apply_opportunity_type( $pcm_row, $pcm_object, $pcm_id = 0 ) {
+	if ( 'opportunity' !== $pcm_object ) {
+		return $pcm_row;
+	}
+
+	$pcm_account_id = isset( $pcm_row['account_id'] ) ? (int) $pcm_row['account_id'] : 0;
+
+	if ( $pcm_id && ! isset( $pcm_row['account_id'] ) ) {
+		return $pcm_row;
+	}
+
+	if ( ! $pcm_account_id ) {
+		return $pcm_row;
+	}
+
+	$pcm_has_project = pcm_crm_projects()->count( array( 'filters' => array( 'account_id' => $pcm_account_id ) ) ) > 0;
+
+	$pcm_row['type'] = $pcm_has_project ? 'Existing Business' : 'New Business';
+
+	return $pcm_row;
+}
+add_filter( 'pcm_crm_before_insert', 'pcm_crm_pm_apply_opportunity_type', 10, 2 );
+add_filter( 'pcm_crm_before_update', 'pcm_crm_pm_apply_opportunity_type', 10, 3 );
+
+/**
  * Refuse a project that is not coherent.
  *
  * Validated against the merged record rather than the posted one, the way the

@@ -714,19 +714,17 @@
 	/**
 	 * A project's opening values, taken from the opportunity it came from.
 	 *
-	 * An unmapped deal type leaves the project type blank rather than guessing:
+	 * The project type is always left blank rather than guessed from the deal:
 	 * the type decides which stages are legal, so guessing it wrong means the
 	 * stage picklist offers the wrong lifecycle. A blank type is what makes the
 	 * New Project chooser ask.
 	 */
 	function projectFromOpportunity(row) {
-		var map = (state.boot && state.boot.opportunityTypeMap) || {};
-
 		return {
 			account_id: row.account_id || 0,
 			opportunity_id: row.id,
 			name: row.name || '',
-			project_type: map[row.type] || '',
+			project_type: '',
 			budget_amount: row.amount || null,
 			health: 'Green',
 			start_date: app.helpers.today()

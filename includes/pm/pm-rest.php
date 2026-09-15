@@ -22,6 +22,7 @@ function pcm_crm_pm_bootstrap( $pcm_boot ) {
 	$pcm_boot['raidStatuses']    = pcm_crm_pm_raid_statuses();
 	$pcm_boot['raidLevels']      = pcm_crm_pm_raid_levels();
 	$pcm_boot['taskStatuses']    = pcm_crm_pm_task_statuses();
+	$pcm_boot['milestoneStatuses'] = pcm_crm_pm_milestone_statuses();
 	$pcm_boot['partyTypes']      = pcm_crm_pm_party_types();
 	$pcm_boot['projectRoles']    = pcm_crm_pm_roles();
 	$pcm_boot['retainerPeriods'] = pcm_crm_pm_periods();
@@ -32,7 +33,6 @@ function pcm_crm_pm_bootstrap( $pcm_boot ) {
 	$pcm_boot['projectStageSets'] = pcm_crm_pm_stages();
 
 	$pcm_boot['retainerTypes']      = pcm_crm_pm_retainer_types();
-	$pcm_boot['opportunityTypeMap'] = pcm_crm_pm_opportunity_type_map();
 
 	// Everything a type decides — fields, stages, time rules, tab order — so a
 	// project form and a time entry form can reshape themselves as the type is
@@ -97,6 +97,12 @@ function pcm_crm_pm_related_project( $pcm_id ) {
 			'orderby'  => 'severity',
 			'order'    => 'DESC',
 			'per_page' => 200,
+		) ) ),
+		'milestones' => PCM_CRM_REST::expand( 'project_milestone', pcm_crm_project_milestones()->find( array(
+			'filters'  => array( 'project_id' => $pcm_id ),
+			'orderby'  => 'due_date',
+			'order'    => 'ASC',
+			'per_page' => 100,
 		) ) ),
 		'roles'      => PCM_CRM_REST::expand( 'project_role', pcm_crm_project_roles()->find( array(
 			'filters'  => array( 'project_id' => $pcm_id ),
@@ -199,8 +205,12 @@ function pcm_crm_pm_layout( $pcm_layout, $pcm_object ) {
 			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
 		),
 		'project_tasks' => array(
-			array( 'title' => '', 'fields' => array( 'name', 'project_id', 'assignee_user_id', 'status', 'is_milestone' ) ),
+			array( 'title' => '', 'fields' => array( 'name', 'project_id', 'assignee_user_id', 'status' ) ),
 			array( 'title' => 'Dates', 'fields' => array( 'start_date', 'due_date', 'estimated_hours' ) ),
+			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
+		),
+		'project_milestones' => array(
+			array( 'title' => '', 'fields' => array( 'name', 'project_id', 'status', 'due_date' ) ),
 			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
 		),
 		'project_raid' => array(
@@ -251,7 +261,7 @@ add_filter( 'pcm_crm_merge_prefixes', 'pcm_crm_pm_merge_prefix' );
  * The module's objects, as expand() names them.
  */
 function pcm_crm_pm_expandable() {
-	return array( 'project', 'project_task', 'project_raid', 'project_role', 'time_entry', 'allocation', 'retainer_period', 'status_report' );
+	return array( 'project', 'project_task', 'project_raid', 'project_milestone', 'project_role', 'time_entry', 'allocation', 'retainer_period', 'status_report' );
 }
 
 /**
@@ -490,19 +500,7 @@ function pcm_crm_pm_project_summary( $pcm_id ) {
 		}
 	}
 
-	$pcm_milestones = pcm_crm_project_tasks()->find( array(
-		'filters'  => array( 'project_id' => (int) $pcm_id, 'is_milestone' => 1 ),
-		'orderby'  => 'due_date',
-		'order'    => 'ASC',
-		'per_page' => 50,
-	) );
-
-	foreach ( isset( $pcm_milestones['items'] ) ? $pcm_milestones['items'] : $pcm_milestones as $pcm_milestone ) {
-		if ( 'Done' !== $pcm_milestone['status'] ) {
-			$pcm_out['next_milestone'] = array( 'id' => (int) $pcm_milestone['id'], 'name' => $pcm_milestone['name'], 'due_date' => $pcm_milestone['due_date'] );
-			break;
-		}
-	}
+	$pcm_out['next_milestone'] = pcm_crm_pm_next_milestone( $pcm_id );
 
 	return $pcm_out;
 }

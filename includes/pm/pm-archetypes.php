@@ -25,7 +25,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 const PCM_CRM_PM_TYPES_OPTION = 'pcm_crm_pm_types';
 const PCM_CRM_PM_TIME_OPTION  = 'pcm_crm_pm_time_settings';
-const PCM_CRM_PM_OPP_MAP_OPTION = 'pcm_crm_pm_opportunity_map';
 
 /**
  * The project fields that belong to one kind of process or another. Anything
@@ -80,7 +79,7 @@ function pcm_crm_pm_archetypes() {
 				'labels'   => array(),
 			),
 			'time'        => array_merge( $pcm_time, array( 'resolves_period' => 1 ) ),
-			'tabs'        => array( 'time', 'tasks', 'raid', 'roles', 'activities' ),
+			'tabs'        => array( 'time', 'tasks', 'raid', 'milestones', 'roles', 'activities' ),
 		),
 		'fixed' => array(
 			'label'       => __( 'Fixed scope', 'pcm-crm' ),
@@ -103,7 +102,7 @@ function pcm_crm_pm_archetypes() {
 				'labels'   => array(),
 			),
 			'time'        => array_merge( $pcm_time, array( 'task_required' => 1 ) ),
-			'tabs'        => array( 'tasks', 'raid', 'time', 'roles', 'activities' ),
+			'tabs'        => array( 'tasks', 'raid', 'milestones', 'time', 'roles', 'activities' ),
 		),
 		'tm' => array(
 			'label'       => __( 'Time & materials', 'pcm-crm' ),
@@ -122,7 +121,7 @@ function pcm_crm_pm_archetypes() {
 				'labels'   => array( 'budget_amount' => __( 'Not-to-exceed Cap', 'pcm-crm' ) ),
 			),
 			'time'        => array_merge( $pcm_time, array( 'rate_required' => 1 ) ),
-			'tabs'        => array( 'time', 'tasks', 'roles', 'raid', 'activities' ),
+			'tabs'        => array( 'time', 'tasks', 'roles', 'raid', 'milestones', 'activities' ),
 		),
 		'internal' => array(
 			'label'       => __( 'Internal', 'pcm-crm' ),
@@ -140,7 +139,7 @@ function pcm_crm_pm_archetypes() {
 				'labels'   => array(),
 			),
 			'time'        => array_merge( $pcm_time, array( 'billable_default' => 0, 'billable_locked' => 1, 'description_required' => 1 ) ),
-			'tabs'        => array( 'tasks', 'time', 'roles', 'raid', 'activities' ),
+			'tabs'        => array( 'tasks', 'time', 'roles', 'raid', 'milestones', 'activities' ),
 		),
 	) );
 }
@@ -325,37 +324,6 @@ function pcm_crm_pm_archetype_defs() {
 			'description' => $pcm_archetype['description'],
 			'icon'        => $pcm_archetype['icon'],
 		);
-	}
-
-	return $pcm_out;
-}
-
-/**
- * How a won deal's type becomes a project's: opportunity type => project type key.
- *
- * An unmapped type is deliberately absent rather than defaulting to anything:
- * the project type decides which stages are legal, so a wrong guess offers the
- * wrong lifecycle and the mistake is invisible until someone picks a stage that
- * will not save. Absent is what makes the New Project chooser ask instead.
- */
-function pcm_crm_pm_opportunity_type_map() {
-	$pcm_saved = get_option( PCM_CRM_PM_OPP_MAP_OPTION, null );
-
-	$pcm_map = is_array( $pcm_saved ) ? $pcm_saved : array(
-		'New Business'      => 'custom-development',
-		'Existing Business' => 'custom-development',
-		'Renewal'           => 'salesforce-support-retainer',
-	);
-
-	$pcm_out = array();
-
-	// A filter or an old save may still name a type by its label.
-	foreach ( (array) apply_filters( 'pcm_crm_pm_opportunity_type_map', $pcm_map ) as $pcm_from => $pcm_to ) {
-		$pcm_key = pcm_crm_pm_type_key( $pcm_to );
-
-		if ( '' !== $pcm_key ) {
-			$pcm_out[ $pcm_from ] = $pcm_key;
-		}
 	}
 
 	return $pcm_out;

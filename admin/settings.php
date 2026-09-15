@@ -92,6 +92,11 @@ function pcm_crm_register_settings() {
 		'sanitize_callback' => 'absint',
 		'default'           => 30,
 	) );
+
+	register_setting( 'pcm_crm_sales_process_settings', 'pcm_crm_stages', array(
+		'type'              => 'array',
+		'sanitize_callback' => 'pcm_crm_sanitize_stage_probabilities',
+	) );
 }
 add_action( 'admin_init', 'pcm_crm_register_settings' );
 
@@ -741,6 +746,65 @@ function pcm_crm_render_modules_tab() {
 		</table>
 
 		<?php submit_button( __( 'Save Modules', 'pcm-crm' ) ); ?>
+	</form>
+	<?php
+}
+
+/**
+ * Only probability is editable here — is_closed, is_won and the forecast
+ * category are load-bearing everywhere from the pipeline board to the loss
+ * rules, so this screen (unlike Salesforce's own Sales Process) leaves them
+ * fixed rather than opening them to a value that could break both.
+ */
+function pcm_crm_sanitize_stage_probabilities( $pcm_value ) {
+	$pcm_value = is_array( $pcm_value ) ? $pcm_value : array();
+	$pcm_out   = array();
+
+	foreach ( pcm_crm_default_stages() as $pcm_stage ) {
+		if ( isset( $pcm_value[ $pcm_stage['name'] ] ) ) {
+			$pcm_stage['probability'] = max( 0, min( 100, (int) $pcm_value[ $pcm_stage['name'] ] ) );
+		}
+
+		$pcm_out[] = $pcm_stage;
+	}
+
+	return $pcm_out;
+}
+
+function pcm_crm_render_sales_process_tab() {
+	$pcm_stages = pcm_crm_stages();
+	?>
+	<form method="post" action="options.php" class="pcm-crm-card">
+		<?php settings_fields( 'pcm_crm_sales_process_settings' ); ?>
+		<p class="description"><?php esc_html_e( 'Every deal’s probability follows its stage automatically — a hand-tuned figure on one deal still survives until that deal’s stage changes. These are the shipped defaults; change any of them to match how you actually sell.', 'pcm-crm' ); ?></p>
+		<table class="widefat striped pcm-setup-table">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Stage', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Probability', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Forecast Category', 'pcm-crm' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $pcm_stages as $pcm_stage ) : ?>
+					<tr>
+						<td>
+							<strong><?php echo esc_html( $pcm_stage['name'] ); ?></strong>
+							<?php if ( ! empty( $pcm_stage['is_closed'] ) ) : ?>
+								<span class="description">— <?php echo $pcm_stage['is_won'] ? esc_html__( 'won', 'pcm-crm' ) : esc_html__( 'lost', 'pcm-crm' ); ?></span>
+							<?php endif; ?>
+						</td>
+						<td>
+							<input type="number" min="0" max="100" step="1" class="small-text"
+								name="pcm_crm_stages[<?php echo esc_attr( $pcm_stage['name'] ); ?>]"
+								value="<?php echo esc_attr( $pcm_stage['probability'] ); ?>"> %
+						</td>
+						<td><?php echo esc_html( $pcm_stage['forecast_category'] ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php submit_button(); ?>
 	</form>
 	<?php
 }
