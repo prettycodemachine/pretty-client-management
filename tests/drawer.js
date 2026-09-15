@@ -242,6 +242,17 @@ async function main() {
 	const tabIds = panels().map(p => p.dataset.tab).filter(t => t !== 'details');
 	check('every related list gets a tab, and the project its summary and documents', tabIds, ['tasks', 'raid', 'milestones', 'roles', 'time', 'activities', 'burn', 'documents']);
 
+	// The tab *bar* is a separate list from the panels above — panels are
+	// appended to the DOM as each related list is built, but the bar is
+	// rendered from a re-sorted array, and pinTrailingTabs() runs last on
+	// that array: whatever order a type's own tabOrder() produces, Activities
+	// still has to end up after Documents and every other tab, with Task
+	// immediately before it.
+	const barIds = Array.from(drawer.querySelectorAll('.pcm-crm-tab')).map(b => b.dataset.tab);
+	check('Task sits immediately before Activity in the tab bar',
+		barIds.indexOf('activities') - barIds.indexOf('tasks'), 1);
+	check('and Activity is the last tab of all', barIds[barIds.length - 1], 'activities');
+
 	/* Click an existing row in each list, then New in each. */
 	for (const object of Object.keys(children)) {
 		const key = listKey[object];

@@ -3775,7 +3775,30 @@
 				.map(function (entry) { return entry.tab; });
 		}
 
-		renderTabs(tabs);
+		renderTabs(pinTrailingTabs(tabs));
+	}
+
+	/**
+	 * Activities trails every other related list, on whichever object it
+	 * appears — and Tasks, on the one object that has both, sits immediately
+	 * before it. Enforced here rather than in each object's own tab order, so
+	 * a new object carrying either tab follows the rule without code of its
+	 * own, and a hand-written archetype tab list cannot drift from it either.
+	 */
+	function pinTrailingTabs(tabs) {
+		var activities = null;
+		var tasks = null;
+
+		var rest = tabs.filter(function (tab) {
+			if (tab.id === 'activities') { activities = tab; return false; }
+			if (tab.id === 'tasks') { tasks = tab; return false; }
+			return true;
+		});
+
+		if (tasks) { rest.push(tasks); }
+		if (activities) { rest.push(activities); }
+
+		return rest;
 	}
 
 	function relatedColumns(kind) {
