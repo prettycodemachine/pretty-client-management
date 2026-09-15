@@ -4874,24 +4874,8 @@
 					};
 				});
 
-				dom.body.appendChild(el('div.pcm-crm-card', {}, [
+				dom.body.appendChild(el('div.pcm-crm-card.pcm-crm-chart', { style: 'max-width:620px' }, [
 					el('h3', { text: 'Grouped by ' + report.groupBy.replace(/_/g, ' ') }),
-					el('div.pcm-crm-table-wrap', { style: 'border:0' }, [
-						el('table.pcm-crm-table', {}, [
-							el('thead', {}, [el('tr', {}, [
-								el('th', { text: 'Group' }),
-								el('th', { text: 'Records' }),
-								el('th', { text: 'Value' })
-							])]),
-							el('tbody', {}, rows.map(function (row) {
-								return el('tr', { style: 'cursor:default' }, [
-									el('td.pcm-crm-strong', { text: row.value || '—' }),
-									el('td.pcm-crm-num', { text: String(row.count) }),
-									el('td.pcm-crm-num', { text: row.total ? money(row.total) : '—' })
-								]);
-							}))
-						])
-					]),
 					charts.bar(rows)
 				]));
 			}
