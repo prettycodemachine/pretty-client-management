@@ -44,26 +44,28 @@ function pcm_crm_menu() {
 		add_submenu_page( 'pcm-crm', $pcm_page[0], $pcm_page[0], $pcm_cap, $pcm_slug, $pcm_page[1] );
 	}
 
-	/* The setup --------------------------------------------------------- */
-	add_menu_page(
-		__( 'Setup', 'pcm-crm' ),
-		__( 'Setup', 'pcm-crm' ),
+	/* The setup ------------------------------------------------------------
+	   Lives under WordPress's own Settings menu as "CRM Settings" rather than
+	   a top-level menu of its own — it is a screen touched twice a year, and
+	   Settings is where WordPress already trains people to look for one of
+	   those. Its app-backed pages (Templates, Sequences, Schedules, the bin)
+	   keep their own slugs on purpose: a notification email links to
+	   page=pcm-crm-recycle-bin and a drill-down to one of the others, and
+	   moving a screen must not break a link already sent. They no longer get
+	   a submenu entry of their own, though — registered here and immediately
+	   hidden, so the URL still works but the WordPress sidebar shows only
+	   CRM Settings. Each is still one click away from CRM Settings' own nav
+	   (pcm_crm_setup_open()'s left-hand groups), which is what "lives within
+	   CRM Settings" means for them now.
+	   ------------------------------------------------------------------- */
+	add_options_page(
+		__( 'CRM Settings', 'pcm-crm' ),
+		__( 'CRM Settings', 'pcm-crm' ),
 		$pcm_cap,
 		PCM_CRM_SETUP_SLUG,
-		'pcm_crm_render_settings',
-		'dashicons-admin-generic',
-		// 28 rather than 27: the Projects module claims 27 when it is switched
-		// on, and setup belongs after the work whether it is or not.
-		28
+		'pcm_crm_render_settings'
 	);
 
-	add_submenu_page( PCM_CRM_SETUP_SLUG, __( 'Setup Home', 'pcm-crm' ), __( 'Setup Home', 'pcm-crm' ), $pcm_cap, PCM_CRM_SETUP_SLUG, 'pcm_crm_render_settings' );
-
-	// Page slugs are unchanged on purpose: a notification email links to
-	// page=pcm-crm-contacts and a drill-down to page=pcm-crm-reports, and
-	// moving a screen between menus must not break a link already sent. The
-	// app-backed Setup pages keep theirs for the same reason, and stay in the
-	// sidebar because they are the ones visited most.
 	$pcm_renderers = array(
 		'pcm-crm-templates'   => 'pcm_crm_render_templates',
 		'pcm-crm-sequences'   => 'pcm_crm_render_sequences',
@@ -73,7 +75,8 @@ function pcm_crm_menu() {
 
 	foreach ( pcm_crm_setup_pages() as $pcm_page ) {
 		if ( isset( $pcm_renderers[ $pcm_page['page'] ] ) ) {
-			add_submenu_page( PCM_CRM_SETUP_SLUG, $pcm_page['label'], $pcm_page['label'], $pcm_cap, $pcm_page['page'], $pcm_renderers[ $pcm_page['page'] ] );
+			add_submenu_page( 'options-general.php', $pcm_page['label'], $pcm_page['label'], $pcm_cap, $pcm_page['page'], $pcm_renderers[ $pcm_page['page'] ] );
+			remove_submenu_page( 'options-general.php', $pcm_page['page'] );
 		}
 	}
 }
@@ -145,9 +148,9 @@ function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '', array $pcm_a
 		wp_die( esc_html__( 'You do not have access to the CRM.', 'pcm-crm' ) );
 	}
 
-	// A Setup page that is an app screen underneath — templates, the bin — draws
-	// inside the Setup frame, which carries its title and description, so the
-	// shell below keeps only the actions row.
+	// A CRM Settings page that is an app screen underneath — templates, the bin
+	// — draws inside the CRM Settings frame, which carries its title and
+	// description, so the shell below keeps only the actions row.
 	$pcm_setup = isset( $pcm_args['setup'] ) ? $pcm_args['setup'] : '';
 
 	if ( $pcm_setup ) {
@@ -210,11 +213,11 @@ function pcm_crm_apps() {
 
 /**
  * The bar across the top of a work screen: which app you are in, its screens,
- * and the door to Setup.
+ * and the door to CRM Settings.
  *
  * It is what makes a record screen read as part of an app rather than a lone
- * WordPress page — and, with Setup drawn in its own frame, what makes the two
- * unmistakable for each other.
+ * WordPress page — and, with CRM Settings drawn in its own frame, what makes
+ * the two unmistakable for each other.
  */
 function pcm_crm_app_bar( $pcm_view, $pcm_app ) {
 	$pcm_apps = pcm_crm_apps();
@@ -252,7 +255,7 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app ) {
 		</ul>
 		<a class="pcm-crm-appbar-setup" href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>">
 			<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
-			<?php esc_html_e( 'Setup', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'CRM Settings', 'pcm-crm' ); ?>
 		</a>
 	</nav>
 	<?php

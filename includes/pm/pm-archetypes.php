@@ -18,8 +18,8 @@
  * A **project type** is what a person picks when creating a project: a name,
  * an archetype, and whatever the type overrides — its own stages, its own
  * defaults, a stricter rule for time. Types are data, edited under
- * Setup › Projects, and stored by a stable key so renaming one never orphans a
- * project.
+ * CRM Settings › Projects, and stored by a stable key so renaming one never
+ * orphans a project.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 

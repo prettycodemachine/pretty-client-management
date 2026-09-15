@@ -207,14 +207,14 @@ function pcm_crm_setup_open( $pcm_key ) {
 	$pcm_page   = 'home' === $pcm_key ? null : pcm_crm_setup_page( $pcm_key );
 	$pcm_groups = pcm_crm_setup_groups();
 	$pcm_group  = $pcm_page && isset( $pcm_groups[ $pcm_page['group'] ] ) ? $pcm_groups[ $pcm_page['group'] ] : null;
-	$pcm_title  = $pcm_page ? $pcm_page['label'] : __( 'Setup Home', 'pcm-crm' );
+	$pcm_title  = $pcm_page ? $pcm_page['label'] : __( 'CRM Settings', 'pcm-crm' );
 	?>
 	<div class="wrap pcm-crm pcm-setup" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
 		<header class="pcm-setup-band">
 			<span class="pcm-setup-mark dashicons dashicons-admin-generic" aria-hidden="true"></span>
 			<div class="pcm-setup-heading">
 				<p class="pcm-setup-crumbs">
-					<a href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"><?php esc_html_e( 'Setup', 'pcm-crm' ); ?></a>
+					<a href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"><?php esc_html_e( 'CRM Settings', 'pcm-crm' ); ?></a>
 					<?php if ( $pcm_group ) : ?>
 						<span aria-hidden="true">›</span> <?php echo esc_html( $pcm_group['label'] ); ?>
 					<?php endif; ?>
@@ -230,12 +230,12 @@ function pcm_crm_setup_open( $pcm_key ) {
 		</header>
 
 		<div class="pcm-setup-layout">
-			<nav class="pcm-setup-nav" aria-label="<?php esc_attr_e( 'Setup pages', 'pcm-crm' ); ?>">
+			<nav class="pcm-setup-nav" aria-label="<?php esc_attr_e( 'CRM Settings pages', 'pcm-crm' ); ?>">
 				<input type="search" class="pcm-setup-find" placeholder="<?php esc_attr_e( 'Quick find', 'pcm-crm' ); ?>"
-					aria-label="<?php esc_attr_e( 'Filter setup pages', 'pcm-crm' ); ?>">
+					aria-label="<?php esc_attr_e( 'Filter CRM Settings pages', 'pcm-crm' ); ?>">
 				<a class="pcm-setup-nav-home<?php echo 'home' === $pcm_key ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"
-					<?php echo 'home' === $pcm_key ? 'aria-current="page"' : ''; ?>><?php esc_html_e( 'Setup Home', 'pcm-crm' ); ?></a>
+					<?php echo 'home' === $pcm_key ? 'aria-current="page"' : ''; ?>><?php esc_html_e( 'Home', 'pcm-crm' ); ?></a>
 				<?php foreach ( pcm_crm_setup_nav() as $pcm_group_key => $pcm_items ) : ?>
 					<div class="pcm-setup-nav-group">
 						<h2><?php echo esc_html( $pcm_groups[ $pcm_group_key ]['label'] ); ?></h2>
@@ -290,7 +290,7 @@ function pcm_crm_setup_close() {
 }
 
 /**
- * The main Setup screen: Home, or one registered page.
+ * The main CRM Settings screen: Home, or one registered page.
  */
 function pcm_crm_render_settings() {
 	if ( ! pcm_crm_user_can() ) {
@@ -314,7 +314,7 @@ function pcm_crm_render_settings() {
 }
 
 /**
- * Setup Home: every group as a card, with its pages listed.
+ * CRM Settings Home: every group as a card, with its pages listed.
  */
 function pcm_crm_render_setup_home() {
 	$pcm_nav = pcm_crm_setup_nav();
@@ -356,10 +356,11 @@ function pcm_crm_render_setup_home() {
 }
 
 /**
- * Keep the Setup menu highlighted on its app-backed pages.
+ * Keep CRM Settings highlighted under WordPress's Settings menu on its
+ * app-backed pages.
  *
- * Those pages keep their own slugs, and WordPress highlights a menu by slug, so
- * without this a Setup page would light up nothing in the sidebar.
+ * Those pages keep their own slugs and no submenu entry of their own, so
+ * without this, visiting one would light up nothing in the sidebar at all.
  */
 function pcm_crm_setup_parent_file( $pcm_parent ) {
 	global $plugin_page;

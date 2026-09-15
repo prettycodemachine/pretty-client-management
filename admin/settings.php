@@ -101,7 +101,7 @@ function pcm_crm_register_settings() {
 add_action( 'admin_init', 'pcm_crm_register_settings' );
 
 /**
- * The pages on the main Setup screen, as ?tab= key => label.
+ * The pages on the main CRM Settings screen, as ?tab= key => label.
  *
  * Derived from the Setup registry (includes/setup.php) rather than listed here,
  * so a module's pages count without this file naming them.

@@ -115,7 +115,7 @@ function pcm_crm_portal_invite_contact( $pcm_contact_id ) {
 	}
 
 	if ( ! pcm_crm_portal_url() ) {
-		return new WP_Error( 'pcm_crm_portal_no_page', __( 'Choose the portal page under Setup › Client Portal first.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_portal_no_page', __( 'Choose the portal page under CRM Settings › Client Portal first.', 'pcm-crm' ) );
 	}
 
 	pcm_crm_portal_ensure_role();
@@ -222,7 +222,7 @@ function pcm_crm_portal_admin_assets( $pcm_hook ) {
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_portal_admin_assets' );
 
-/* Setup: which page carries the portal ------------------------------------- */
+/* CRM Settings: which page carries the portal -------------------------------- */
 
 function pcm_crm_portal_setup_group( $pcm_groups ) {
 	$pcm_groups['portal'] = array(

@@ -122,7 +122,7 @@
 		});
 
 		if (!active.length) {
-			list.appendChild(el('p.pcm-crm-muted', { text: 'There are no project types to choose from. Add one under Setup › Projects › Project Types.' }));
+			list.appendChild(el('p.pcm-crm-muted', { text: 'There are no project types to choose from. Add one under CRM Settings › Projects › Project Types.' }));
 		}
 
 		modal.show('What kind of project?', el('div', {}, [
@@ -668,7 +668,7 @@
 	function round2(n) { return Math.round(n * 100) / 100; }
 
 	/**
-	 * Round up to the increment set under Setup › Projects › Time Entry, so a
+	 * Round up to the increment set under CRM Settings › Projects › Time Entry, so a
 	 * 20-minute call on a quarter-hour team is 0.5 rather than 0.33.
 	 */
 	function roundHours(hours, increment) {
