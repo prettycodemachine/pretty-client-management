@@ -452,13 +452,30 @@ foreach ( $GLOBALS['pcm_test_menus'] as $pcm_menu ) {
 check( 'CRM Settings registers as its own top-level menu, not under Settings',
 	$pcm_settings_menu && '' === $pcm_settings_menu['parent'], true );
 
-$pcm_hidden = array();
+// remove_submenu_page() is deliberately never called for these four:
+// unsetting a page from $GLOBALS['submenu'] does not just hide its sidebar
+// row, it is also where WordPress's own dispatch (get_admin_page_parent(),
+// called from user_can_access_admin_page()) looks up which top-level menu a
+// requested page belongs to — removing the entry left every one of these
+// pages unable to resolve its own parent and refused with WordPress's own
+// "Sorry, you are not allowed to access this page," discovered only by an
+// authenticated HTTP request against staging, since neither this stub's
+// admin-menu recording nor WP-CLI's eval populate $submenu/$menu the way a
+// real admin page load does. Confirmed registered as ordinary submenu pages
+// instead, hidden from the sidebar with CSS (pcm_crm_hide_setup_submenu_items())
+// rather than by removing the registration.
+$pcm_registered = array();
+$pcm_removed    = array();
 foreach ( $GLOBALS['pcm_test_menus'] as $pcm_menu ) {
-	if ( 'removed' === $pcm_menu['type'] ) { $pcm_hidden[] = $pcm_menu['slug']; }
+	if ( 'submenu' === $pcm_menu['type'] && PCM_CRM_SETUP_SLUG === $pcm_menu['parent'] ) { $pcm_registered[] = $pcm_menu['slug']; }
+	if ( 'removed' === $pcm_menu['type'] ) { $pcm_removed[] = $pcm_menu['slug']; }
 }
-sort( $pcm_hidden );
-check( 'the app-backed pages are still registered then hidden — the URL works, the sidebar does not grow',
-	$pcm_hidden, array( 'pcm-crm-recycle-bin', 'pcm-crm-schedules', 'pcm-crm-sequences', 'pcm-crm-templates' ) );
+$pcm_app_backed = array( 'pcm-crm-recycle-bin', 'pcm-crm-schedules', 'pcm-crm-sequences', 'pcm-crm-templates' );
+
+check( 'each app-backed page is registered as an ordinary submenu of CRM Settings',
+	array_values( array_diff( $pcm_app_backed, $pcm_registered ) ), array() );
+check( 'and none of them is ever unregistered — that is what broke them',
+	$pcm_removed, array() );
 
 echo "\n--- no URL in the codebase had to change ---\n";
 

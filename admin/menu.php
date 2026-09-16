@@ -86,12 +86,46 @@ function pcm_crm_menu() {
 
 	foreach ( pcm_crm_setup_pages() as $pcm_page ) {
 		if ( isset( $pcm_renderers[ $pcm_page['page'] ] ) ) {
+			// Registered, deliberately NOT followed by remove_submenu_page().
+			// That call does not just hide a sidebar row — it unsets the
+			// entry from $GLOBALS['submenu'], which is also where WordPress's
+			// own dispatch (user_can_access_admin_page(), via
+			// get_admin_page_parent()) looks up which top-level menu a
+			// requested page belongs to. Removing it here left every one of
+			// these four pages unable to resolve their own parent at
+			// request time — "Sorry, you are not allowed to access this
+			// page," WordPress's own message, not this plugin's — the
+			// moment CRM Settings became a top-level menu instead of a
+			// submenu of Settings (whose parent registration WordPress
+			// already keeps stable on its own, independent of this
+			// plugin's $submenu entries). Hidden from the sidebar with CSS
+			// instead (pcm_crm_hide_setup_submenu_items() below), which
+			// touches only what is drawn, not what WordPress can route to.
 			add_submenu_page( PCM_CRM_SETUP_SLUG, $pcm_page['label'], $pcm_page['label'], $pcm_cap, $pcm_page['page'], $pcm_renderers[ $pcm_page['page'] ] );
-			remove_submenu_page( PCM_CRM_SETUP_SLUG, $pcm_page['page'] );
 		}
 	}
 }
 add_action( 'admin_menu', 'pcm_crm_menu' );
+
+/**
+ * Hide the app-backed Setup pages' sidebar rows without touching WordPress's
+ * own $submenu registration — see the comment in pcm_crm_menu() above for
+ * why removing the registration entirely broke the pages themselves. Each
+ * is still one click away through CRM Settings' own left-hand nav
+ * (pcm_crm_setup_open()'s groups), which is what "hidden from the sidebar"
+ * means for them now.
+ */
+function pcm_crm_hide_setup_submenu_items() {
+	$pcm_slugs = array( 'pcm-crm-templates', 'pcm-crm-sequences', 'pcm-crm-schedules', 'pcm-crm-recycle-bin' );
+	?>
+	<style>
+		<?php foreach ( $pcm_slugs as $pcm_slug ) : ?>
+		#adminmenu li:has(> a[href*="page=<?php echo esc_attr( $pcm_slug ); ?>"]) { display: none; }
+		<?php endforeach; ?>
+	</style>
+	<?php
+}
+add_action( 'admin_head', 'pcm_crm_hide_setup_submenu_items' );
 
 /**
  * Is the current screen one of ours?
