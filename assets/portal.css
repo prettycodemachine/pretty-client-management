@@ -50,10 +50,16 @@
 
 .pcm-portal-nav { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 2px solid var(--pcm-ink); margin-bottom: 20px; }
 .pcm-portal-tab {
+  display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 14px; border: 0; background: none; font-weight: 700; color: var(--pcm-body);
   cursor: pointer; border-radius: 8px 8px 0 0;
 }
 .pcm-portal-tab.is-active { background: var(--pcm-paper-tint); color: var(--pcm-ink); box-shadow: inset 0 -3px 0 var(--pcm-accent-deep); }
+
+/* stroke="currentColor" on the glyph itself does the rest — active or not,
+   the icon always matches the label beside it with no separate rule here. */
+.pcm-portal-tab-icon { display: inline-flex; flex: 0 0 auto; }
+.pcm-portal-tab-icon svg { display: block; }
 
 .pcm-portal-card { padding: 18px 20px; border: 2px solid var(--pcm-ink); border-radius: 12px; background: #fff; box-shadow: 5px 5px 0 var(--pcm-blue); }
 .pcm-portal-note { font-size: 0.86rem; color: var(--pcm-body); }
@@ -64,15 +70,124 @@
   background: #fbeeee; color: var(--pcm-accent-deeper);
 }
 
-.pcm-portal-meter { margin-bottom: 18px; }
-.pcm-portal-meter-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; font-size: 0.92rem; }
+/* The Summary card: the project's name carries the card, the rest is a
+   label/value list beneath it. */
+.pcm-portal-summary { margin-bottom: 20px; }
+.pcm-portal-summary-name {
+  font-size: 1.5rem; line-height: 1.2; letter-spacing: -0.01em;
+  margin: 0 0 14px; padding-bottom: 12px; border-bottom: 2px solid var(--pcm-line);
+}
+
+.pcm-portal-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 20px; margin: 0; }
+.pcm-portal-facts dt { font-weight: 700; color: var(--pcm-body); font-size: 0.86rem; }
+.pcm-portal-facts dd { margin: 0; color: var(--pcm-ink); font-weight: 600; }
+
+/* The bars, and whatever facts list follows them, both get a rule above
+   them — but only the one that actually follows something, so the first
+   facts list (right under the name) stays flush against it. */
+.pcm-portal-facts + .pcm-portal-meters,
+.pcm-portal-meters + .pcm-portal-facts { margin-top: 20px; padding-top: 16px; border-top: 2px solid var(--pcm-line); }
+
+/* The meters sit in a capped grid rather than running the card's full width
+   — a 1000px-wide progress bar is harder to read than a 300px one, not
+   easier, and two side by side compare at a glance. */
+.pcm-portal-meters {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 340px));
+  gap: 22px 32px;
+}
+
+.pcm-portal-meter { min-width: 0; }
+.pcm-portal-meter-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 10px; margin-bottom: 6px; font-size: 0.9rem; }
+.pcm-portal-meter-head strong { color: var(--pcm-ink); }
+.pcm-portal-meter-figures { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--pcm-body); }
 .pcm-portal-meter-track { height: 12px; border: 2px solid var(--pcm-ink); border-radius: 999px; background: var(--pcm-paper-tint); overflow: hidden; }
 .pcm-portal-meter-fill { display: block; height: 100%; background: var(--pcm-green); }
 .pcm-portal-meter.is-over .pcm-portal-meter-fill { background: var(--pcm-accent-deep); }
+.pcm-portal-meter.is-over .pcm-portal-meter-figures { color: var(--pcm-accent-deeper); font-weight: 700; }
 
 .pcm-portal-stats { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 10px 0 0; }
 .pcm-portal-stats dt { font-weight: 700; color: var(--pcm-body); }
 .pcm-portal-stats dd { margin: 0; color: var(--pcm-ink); }
+
+/* ==========================================================================
+   Milestones, as a Gantt.
+
+   Two columns — a fixed label rail and a proportional track — so every row
+   shares one scale and the bars line up down the chart. Bars are positioned
+   in percentages of the charted window, computed in portal.js, which is why
+   nothing here knows a date.
+   ========================================================================== */
+.pcm-portal-gantt-scroll { overflow-x: auto; padding-bottom: 4px; }
+.pcm-portal-gantt {
+  min-width: 520px;
+  border: 2px solid var(--pcm-ink); border-radius: 12px; background: #fff;
+  box-shadow: 5px 5px 0 var(--pcm-blue); padding: 8px 16px 14px;
+}
+
+.pcm-portal-gantt-row { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 14px; align-items: center; }
+.pcm-portal-gantt-row + .pcm-portal-gantt-row { border-top: 1px solid var(--pcm-line); }
+.pcm-portal-gantt-label { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 10px 0; }
+.pcm-portal-gantt-label strong { color: var(--pcm-ink); font-size: 0.9rem; line-height: 1.25; }
+.pcm-portal-gantt-label .pcm-portal-muted { font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+
+.pcm-portal-gantt-head { border-bottom: 2px solid var(--pcm-ink); }
+.pcm-portal-gantt-scale { position: relative; height: 26px; }
+.pcm-portal-gantt-tick {
+  position: absolute; bottom: 2px; transform: translateX(-50%); white-space: nowrap;
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--pcm-body);
+}
+.pcm-portal-gantt-tick::after {
+  content: ''; position: absolute; left: 50%; bottom: -6px; width: 1px; height: 5px; background: var(--pcm-line);
+}
+
+.pcm-portal-gantt-track { position: relative; height: 34px; }
+.pcm-portal-gantt-bar {
+  position: absolute; top: 12px; height: 10px; min-width: 4px;
+  border-radius: 999px; background: var(--pcm-blue);
+}
+.pcm-portal-gantt-bar.is-done { background: var(--pcm-green); }
+.pcm-portal-gantt-bar.is-past-due { background: var(--pcm-accent-deep); }
+
+/* The due date itself — a milestone is a moment, and the bar is only the
+   run-up to it, so the moment gets its own mark. */
+.pcm-portal-gantt-point {
+  position: absolute; top: 11px; width: 12px; height: 12px; margin-left: -6px;
+  background: var(--pcm-blue-deep); border: 2px solid #fff; border-radius: 3px; transform: rotate(45deg);
+}
+.pcm-portal-gantt-point.is-done { background: var(--pcm-green); }
+.pcm-portal-gantt-point.is-past-due { background: var(--pcm-accent-deeper); }
+
+/* Drawn per row rather than as one overlay, so it needs no positioned
+   ancestor spanning the chart — adjacent rows read it as a single line. */
+.pcm-portal-gantt-today {
+  position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+  background: var(--pcm-accent-deep); opacity: 0.45;
+}
+
+.pcm-portal-gantt-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 22px; font-size: 0.78rem; color: var(--pcm-body); }
+.pcm-portal-gantt-key { display: inline-flex; align-items: center; gap: 6px; }
+.pcm-portal-gantt-key::before { content: ''; width: 14px; height: 8px; border-radius: 999px; background: var(--pcm-blue); }
+.pcm-portal-gantt-key.is-done::before { background: var(--pcm-green); }
+.pcm-portal-gantt-key.is-past-due::before { background: var(--pcm-accent-deep); }
+.pcm-portal-gantt-key.is-today::before { width: 2px; height: 14px; border-radius: 0; background: var(--pcm-accent-deep); opacity: 0.45; }
+
+.pcm-portal-badge.is-done { background: #e8f5ee; color: var(--pcm-green); border-color: var(--pcm-green); }
+.pcm-portal-badge.is-past-due { background: #fbeeee; color: var(--pcm-accent-deeper); border-color: var(--pcm-accent-deep); }
+.pcm-portal-badge.is-primary { background: #e8f1fb; color: var(--pcm-blue-deep); border-color: var(--pcm-blue-deep); min-width: 0; }
+
+/* Project Team — a read-only list, so no hover or pointer the way a
+   .pcm-portal-row that opens something has. Chained with .pcm-portal-row
+   for specificity, not just written after it: a single-class override loses
+   to .pcm-portal-row:hover (defined later, same specificity) by source
+   order alone. */
+.pcm-portal-role { cursor: default; justify-content: space-between; }
+.pcm-portal-row.pcm-portal-role:hover { background: none; }
+.pcm-portal-role-detail { flex: 0 0 auto; margin-left: auto; text-align: right; }
+
+@media (max-width: 560px) {
+  .pcm-portal-role { flex-wrap: wrap; }
+  .pcm-portal-role-detail { margin-left: 0; text-align: left; }
+}
 
 .pcm-portal-list { display: flex; flex-direction: column; gap: 2px; }
 
@@ -135,7 +250,8 @@
 .pcm-portal-doc-layout { display: flex; gap: 20px; align-items: flex-start; }
 .pcm-portal-doc-layout > .pcm-portal-list { flex: 1 1 280px; min-width: 0; }
 .pcm-portal-doc-preview { flex: 1 1 360px; min-width: 0; }
-.pcm-portal-doc-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.pcm-portal-doc-preview-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.pcm-portal-doc-preview-head .pcm-portal-muted { margin: 2px 0 0; }
 .pcm-portal-doc-preview-img { max-width: 100%; max-height: 420px; display: block; margin: 0 auto; }
 .pcm-portal-doc-preview-frame { width: 100%; height: 480px; border: 0; }
 

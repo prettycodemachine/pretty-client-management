@@ -2150,9 +2150,95 @@ check( 'the safe summary drops every rate, cost and dollar figure',
 		'budget_amount' => 5000, 'budget_hours' => 20, 'estimate_hours' => 0,
 		'current_period' => null, 'next_milestone' => null,
 	) ) ),
-	array( 'type_label', 'logged_hours', 'billable_hours', 'budget_hours', 'estimate_hours', 'current_period', 'next_milestone' ) );
+	array( 'project', 'type_label', 'logged_hours', 'billable_hours', 'budget_hours', 'estimate_hours', 'current_period', 'next_milestone' ) );
 
-unset( $GLOBALS['pcm_test_current_user'], $GLOBALS['pcm_test_user_meta'], $GLOBALS['pcm_test_attachments'] );
+// The project header the Summary card names. The row it is handed is a whole
+// projects row, budget and rates included — the assertion is that none of
+// them come out the other side, since that is the promise the allow-list
+// makes and the one a later field added to model-project.php could break.
+$pcm_safe_project = pcm_crm_portal_safe_project( array(
+	'name' => 'Copilot Rollout', 'project_type' => 'retainer', 'stage_name' => 'Active',
+	'start_date' => '2026-01-05', 'end_date' => '2026-12-31',
+	'budget_amount' => 50000, 'budget_hours' => 94, 'default_bill_rate' => 225,
+	'default_cost_rate' => 110, 'health' => 'Amber', 'health_note' => 'client knows',
+) );
+
+check( 'the project header carries only the five naming fields and no money',
+	array_keys( $pcm_safe_project ),
+	array( 'name', 'type_label', 'stage_name', 'start_date', 'end_date' ) );
+check( 'and resolves the type key to its label, since a client never sees a key',
+	$pcm_safe_project['type_label'], pcm_crm_pm_type_label( 'retainer' ) );
+
+// A role row carries a bill rate and a cost rate. The portal shows names and
+// hours, never money — and the Notes field goes too, being where staff write
+// about a person with no expectation the client reads it.
+$GLOBALS['pcm_test_users'][ 4 ] = (object) array( 'ID' => 4, 'first_name' => 'Jason', 'last_name' => 'Jensen', 'display_name' => 'jason@prettycodemachine.com' );
+
+$pcm_safe_role = pcm_crm_portal_safe_role( array(
+	'id' => 3, 'party_type' => 'internal', 'user_id' => 4, 'contact_id' => 0,
+	'partner_account_id' => 0, 'role' => 'Engagement Lead', 'is_primary' => 1,
+	'bill_rate' => 225, 'cost_rate' => 110, 'start_date' => '2026-01-05', 'end_date' => null,
+	'description' => 'internal note nobody outside should read',
+) );
+
+check( 'a project role drops both rates and the internal note',
+	array_keys( $pcm_safe_role ),
+	array( 'id', 'party_type', 'party_label', 'party_name', 'organization', 'role', 'is_primary', 'start_date', 'end_date' ) );
+// pcm_crm_user_label() already has its own fallback chain covered above —
+// this just confirms an internal role's name is routed through it rather
+// than through display_name directly, which on this site is the login email.
+check( 'an internal party is named through pcm_crm_user_label(), not display_name',
+	$pcm_safe_role['party_name'], 'Jason Jensen' );
+check( 'a party type resolves to its label', $pcm_safe_role['party_label'], 'Internal' );
+
+// A partner firm engaged before anyone there is named — validate_role() allows
+// it, so the projection has to survive it rather than assuming a contact.
+check( 'an unnamed party is an empty string, not a fatal',
+	pcm_crm_portal_safe_role( array(
+		'id' => 4, 'party_type' => 'partner', 'user_id' => 0, 'contact_id' => 0,
+		'partner_account_id' => 0, 'role' => 'Developer', 'is_primary' => 0,
+		'bill_rate' => null, 'cost_rate' => null, 'start_date' => null, 'end_date' => null,
+		'description' => '',
+	) )['party_name'],
+	'' );
+
+// A milestone is client-facing by design, but still written out field by
+// field — a field added to the model later must not arrive here unexamined.
+check( 'a milestone carries its commitment and nothing else',
+	array_keys( pcm_crm_portal_safe_milestone( array(
+		'id' => 5, 'project_id' => 12, 'name' => 'UAT sign-off', 'status' => 'Planned',
+		'due_date' => '2026-06-30', 'completed_date' => null, 'description' => 'Client confirms',
+		'created_by_id' => 1, 'owner_id' => 1,
+	) ) ),
+	array( 'id', 'name', 'status', 'due_date', 'completed_date', 'description' ) );
+
+// A document, decorated as a client may see it. The row it is handed carries
+// a ticket_id and a raw attachment_id — neither survives the projection, and
+// created_by_id turns into a resolved name whichever side uploaded it.
+$GLOBALS['pcm_test_users'][ 4 ] = $user( 'Jason', 'Jensen', 'jason@prettycodemachine.com', 'jason' );
+
+$pcm_safe_document = pcm_crm_portal_safe_document( array(
+	'id' => 9, 'project_id' => 12, 'ticket_id' => 0, 'attachment_id' => 55,
+	'label' => 'Discovery Findings', 'created_by_id' => 4, 'created_date' => '2026-01-25 14:03:00',
+) );
+
+check( 'a document carries what it is, who put it there and when — no ticket_id or attachment_id',
+	array_keys( $pcm_safe_document ),
+	array( 'id', 'label', '_filename', '_filesize', '_mime_type', '_missing', 'uploaded_by', 'created_date' ) );
+check( 'the uploader is resolved through pcm_crm_user_label(), staff or client alike',
+	$pcm_safe_document['uploaded_by'], 'Jason Jensen' );
+
+// The current-period label follows the retainer's own cadence rather than
+// always saying "Month" — a quarterly retainer showing "This Month" would be
+// wrong on every project that isn't monthly, not just imprecise.
+check( 'a monthly retainer says Month',
+	pcm_crm_portal_period_label( array( 'retainer_period' => 'monthly' ) ), 'Hours Used This Month' );
+check( 'a quarterly retainer says Quarter',
+	pcm_crm_portal_period_label( array( 'retainer_period' => 'quarterly' ) ), 'Hours Used This Quarter' );
+check( 'an unrecognised or missing cadence falls back to a generic Period',
+	pcm_crm_portal_period_label( array() ), 'Hours Used This Period' );
+
+unset( $GLOBALS['pcm_test_current_user'], $GLOBALS['pcm_test_user_meta'], $GLOBALS['pcm_test_attachments'], $GLOBALS['pcm_test_users'][4] );
 $GLOBALS['wpdb'] = $pcm_real_wpdb;
 
 delete_option( PCM_CRM_MODULES_OPTION );

@@ -15,7 +15,7 @@
 	var root = document.getElementById('pcm-portal-root');
 	if (!root) { return; }
 
-	var state = { me: null, project: 0, view: 'summary', ticket: 0 };
+	var state = { me: null, project: 0, view: 'summary', ticket: 0, summary: null };
 
 	/* ---------------------------------------------------------------------
 	   DOM + API helpers — the same small shape crm.js uses, kept separate on
@@ -76,9 +76,11 @@
 	 * for FormData, so this is a separate small helper rather than an option
 	 * on api().
 	 */
-	function apiUpload(path, file) {
+	function apiUpload(path, file, fields) {
 		var body = new window.FormData();
 		body.append('file', file);
+
+		Object.keys(fields || {}).forEach(function (key) { body.append(key, fields[key]); });
 
 		return window.fetch(cfg.root + path, {
 			method: 'POST',
@@ -104,13 +106,62 @@
 		}, Promise.resolve());
 	}
 
-	function formatDate(value) {
-		if (!value) { return '—'; }
-		var d = new Date(String(value).replace(' ', 'T'));
-		return isNaN(d) ? String(value) : d.toLocaleDateString();
+	/**
+	 * A stored date as a Date in the reader's own timezone.
+	 *
+	 * Built from the parts rather than handed to the Date constructor: a
+	 * date-only string is parsed as UTC midnight, which renders as the day
+	 * before for anyone west of Greenwich — a milestone due the 1st reading
+	 * as the 31st is exactly the kind of quiet wrongness a client notices and
+	 * cannot explain. MySQL's zero date is a blank, not a date in year 0.
+	 */
+	function parseDate(value) {
+		if (!value) { return null; }
+
+		var parts = String(value).split(/[^0-9]+/).filter(function (p) { return p !== ''; }).map(Number);
+		if (parts.length < 3 || !parts[0] || !parts[1]) { return null; }
+
+		var d = new Date(parts[0], parts[1] - 1, parts[2], parts[3] || 0, parts[4] || 0, parts[5] || 0);
+		return isNaN(d.getTime()) ? null : d;
 	}
 
+	function formatDate(value) {
+		var d = parseDate(value);
+		if (!value) { return '—'; }
+		return d ? d.toLocaleDateString() : String(value);
+	}
+
+	/**
+	 * A Date we already hold, written out. Not formatDate(d.toISOString()) —
+	 * toISOString() is UTC, which moves a local midnight back a day for
+	 * anyone east of Greenwich and would mislabel the chart's own scale.
+	 */
+	function formatDay(date) { return date ? date.toLocaleDateString() : '—'; }
+
+	/** Today at local midnight — the granularity every date on this screen has. */
+	function today() {
+		var now = new Date();
+		return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	}
+
+	var DAY_MS = 86400000;
+
+	function daysBetween(from, to) { return Math.round((to.getTime() - from.getTime()) / DAY_MS); }
+
 	function hours(n) { return (Math.round(Number(n || 0) * 100) / 100) + 'h'; }
+
+	function days(n) { return Math.round(Number(n || 0)) + (1 === Math.round(Number(n || 0)) ? ' day' : ' days'); }
+
+	/**
+	 * The share one number is of another, as a whole percent — uncapped on
+	 * purpose. The bar is clamped to its track, but the number beside it says
+	 * 105%, because "98.5h of 94h · 100%" would read as finishing exactly on
+	 * budget when the truth is the opposite.
+	 */
+	function percent(used, available) {
+		if (!(Number(available) > 0)) { return null; }
+		return Math.round((Number(used) / Number(available)) * 100);
+	}
 
 	function showError(container, error) {
 		clear(container);
@@ -120,6 +171,24 @@
 	/* ---------------------------------------------------------------------
 	   Shell: header, project switcher, nav.
 	   --------------------------------------------------------------------- */
+
+	/**
+	 * "Account Name — Project Name", without saying the account twice.
+	 *
+	 * Some projects are named "Account — Project" already (a house naming
+	 * habit, not something this code enforces), and appending the account
+	 * again on top of that read as "Account — Project — Account". Prepending
+	 * it only when the name does not already start with it keeps both
+	 * conventions readable.
+	 */
+	function projectLabel(project) {
+		var name = project.name || '';
+		var account = project.account_name || '';
+
+		if (!account || 0 === name.toLowerCase().indexOf(account.toLowerCase())) { return name; }
+
+		return account + ' — ' + name;
+	}
 
 	/**
 	 * The account behind whichever project is currently selected — the portal
@@ -155,6 +224,11 @@
 				onchange: function (event) {
 					state.project = Number(event.target.value);
 					state.view = 'summary';
+					// The cached summary belongs to the project being left —
+					// the Milestones chart reads its dates out of it, and a
+					// stale one would draw the new project's milestones
+					// against the old one's window.
+					state.summary = null;
 					render();
 				}
 			});
@@ -162,7 +236,7 @@
 			state.me.projects.forEach(function (project) {
 				switcher.appendChild(el('option', {
 					value: project.id,
-					text: project.name + (project.account_name ? ' — ' + project.account_name : ''),
+					text: projectLabel(project),
 					selected: project.id === state.project
 				}));
 			});
@@ -185,6 +259,37 @@
 	}
 
 	/**
+	 * A tab's icon as inline SVG — outline glyphs (stroke, no fill) borrowed
+	 * from the same common icon set crm.js draws its dashicons from
+	 * conceptually, but hand-inlined here rather than pulled in as a
+	 * dependency: portal.js is deliberately standalone, and dashicons itself
+	 * is a wp-admin asset this front-end page has no reason to load. Built
+	 * with innerHTML rather than el()/createElement, since createElement
+	 * cannot make a real, renderable <svg> without the SVG namespace —
+	 * innerHTML's parser handles that switch on its own.
+	 *
+	 * stroke="currentColor" is the whole trick: the glyph follows the tab's
+	 * own text color, active or not, with no separate color rule to keep in
+	 * sync with .pcm-portal-tab.is-active.
+	 */
+	function tabIcon(name) {
+		var paths = {
+			summary: '<path d="m3 9.5 9-7 9 7"/><path d="M9 21.5v-9h6v9"/><path d="M5 10.5v9a1 1 0 0 0 1 1h3"/><path d="M19 10.5v9a1 1 0 0 1-1 1h-3"/>',
+			milestones: '<path d="M5 21V4"/><path d="M5 5s1-1 4-1 5 2 8 2 4-1 4-1v9s-1 1-4 1-5-2-8-2-4 1-4 1"/>',
+			roles: '<circle cx="9" cy="8" r="3.5"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15 14a5 5 0 0 1 5.5 5"/>',
+			raid: '<path d="M12 3 2 20h20z"/><path d="M12 10v4"/><path d="M12 17h.01"/>',
+			documents: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M13 3v4a1 1 0 0 0 1 1h5"/><path d="M8.5 13h7"/><path d="M8.5 17h7"/>',
+			tickets: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="m5.6 5.6 3.3 3.3M18.4 5.6l-3.3 3.3M18.4 18.4l-3.3-3.3M5.6 18.4l3.3-3.3"/>'
+		};
+
+		var span = el('span.pcm-portal-tab-icon', { 'aria-hidden': 'true' });
+		span.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
+			+ 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (paths[name] || '') + '</svg>';
+
+		return span;
+	}
+
+	/**
 	 * The tab strip, kept in its own function so a tab click can update both
 	 * the active button and the body from one place — building it once inside
 	 * render() and never touching it again left the Summary tab looking
@@ -195,13 +300,14 @@
 
 		[
 			{ id: 'summary', label: 'Summary' },
+			{ id: 'milestones', label: 'Milestones' },
+			{ id: 'roles', label: 'Project Team' },
 			{ id: 'raid', label: 'RAID Log' },
 			{ id: 'documents', label: 'Documents' },
 			{ id: 'tickets', label: 'Help Tickets' }
 		].forEach(function (tab) {
 			nav.appendChild(el('button.pcm-portal-tab' + (state.view === tab.id ? '.is-active' : ''), {
 				type: 'button',
-				text: tab.label,
 				'data-tab': tab.id,
 				onclick: function () {
 					state.view = tab.id;
@@ -213,7 +319,7 @@
 
 					renderBody(body);
 				}
-			}));
+			}, [tabIcon(tab.id), el('span', { text: tab.label })]));
 		});
 
 		return nav;
@@ -224,58 +330,417 @@
 		body.appendChild(el('p.pcm-portal-loading', { text: 'Loading…' }));
 
 		if (state.view === 'summary') { return loadSummary(body); }
+		if (state.view === 'milestones') { return loadMilestones(body); }
+		if (state.view === 'roles') { return loadRoles(body); }
 		if (state.view === 'raid') { return loadRaid(body); }
 		if (state.view === 'documents') { return loadDocuments(body); }
 		if (state.view === 'tickets') { return state.ticket ? loadTicket(body) : loadTickets(body); }
 	}
 
 	/* ---------------------------------------------------------------------
-	   Summary — hours only, never a rate or a dollar figure.
+	   Summary — one card: what this project is, then how far through. Hours
+	   only, never a rate or a dollar figure.
 	   --------------------------------------------------------------------- */
 
-	function meter(label, used, available) {
-		var pct = available > 0 ? Math.min(100, Math.round((used / available) * 100)) : 0;
-		var over = available > 0 && used > available;
+	/**
+	 * One labelled bar. `format` is how the two numbers are written (hours
+	 * here, days for the timeline).
+	 *
+	 * The percentage rides after the figures because that is the number that
+	 * actually answers "how are we doing" — "12.5h of 16.48h" makes the reader
+	 * do the division. The fill is clamped to the track while the percentage
+	 * is not, so an overrun reads as a full red bar *and* the honest 105%.
+	 * Nothing below the bar states that in words — the bar is the answer.
+	 */
+	function meter(label, used, available, format) {
+		format = format || hours;
+
+		var pct = percent(used, available);
+		var fill = null === pct ? 0 : Math.min(100, Math.max(0, pct));
+		var over = null !== pct && pct > 100;
 
 		return el('div.pcm-portal-meter' + (over ? '.is-over' : ''), {}, [
 			el('div.pcm-portal-meter-head', {}, [
 				el('strong', { text: label }),
-				el('span', { text: hours(used) + ' of ' + hours(available) })
+				el('span.pcm-portal-meter-figures', {
+					text: format(used) + ' of ' + format(available) + (null === pct ? '' : ' · ' + pct + '%')
+				})
 			]),
 			el('div.pcm-portal-meter-track', {}, [
-				el('span.pcm-portal-meter-fill', { style: 'width:' + pct + '%' })
+				el('span.pcm-portal-meter-fill', { style: 'width:' + fill + '%' })
 			])
 		]);
+	}
+
+	/**
+	 * How far through the planned window today is.
+	 *
+	 * Inclusive of both end days, so a one-day project is one day long rather
+	 * than zero — and returns null rather than a bar when either date is
+	 * missing, since "0 of 0 days" says nothing.
+	 */
+	function timelineMeter(project) {
+		var start = parseDate(project.start_date);
+		var end = parseDate(project.end_date);
+
+		if (!start || !end || end < start) { return null; }
+
+		var total = daysBetween(start, end) + 1;
+		var elapsed = Math.min(total, Math.max(0, daysBetween(start, today()) + 1));
+
+		return meter('Timeline', elapsed, total, days);
+	}
+
+	/**
+	 * The one Summary card: identity, then the bars, then what's next — in
+	 * that order because each answers a narrower question than the last. The
+	 * name is the card's own heading rather than another row in the list — it
+	 * is the one thing on the screen the client already knows by heart.
+	 */
+	function summaryCard(summary) {
+		var project = summary.project || {};
+		var card = el('div.pcm-portal-card.pcm-portal-summary');
+
+		card.appendChild(el('h2.pcm-portal-summary-name', { text: project.name || (currentProject() && currentProject().name) || 'Project' }));
+
+		var facts = el('dl.pcm-portal-facts');
+
+		function fact(label, value) {
+			if (!value) { return; }
+			facts.appendChild(el('dt', { text: label }));
+			facts.appendChild(el('dd', { text: value }));
+		}
+
+		fact('Project Type', project.type_label || summary.type_label);
+		fact('Stage', project.stage_name);
+		fact('Start Date', project.start_date ? formatDate(project.start_date) : '');
+		fact('Planned End Date', project.end_date ? formatDate(project.end_date) : '');
+
+		card.appendChild(facts);
+
+		// Timeline first, then the period (a retainer's short-term view), then
+		// the whole-project budget — narrowest window to widest.
+		var meters = el('div.pcm-portal-meters');
+		var timeline = timelineMeter(project);
+
+		if (timeline) { meters.appendChild(timeline); }
+		if (summary.current_period) {
+			// The label follows the retainer's own cadence (portal-rest.php's
+			// pcm_crm_portal_period_label()) — "This Month" would be wrong on
+			// a quarterly retainer, not just vague.
+			meters.appendChild(meter(summary.current_period.label || 'Hours Used This Period', summary.current_period.used, summary.current_period.available));
+		}
+		if (summary.budget_hours) { meters.appendChild(meter('Budget', summary.logged_hours, summary.budget_hours)); }
+
+		if (meters.childNodes.length) { card.appendChild(meters); }
+
+		if (summary.next_milestone) {
+			var next = el('dl.pcm-portal-facts');
+			next.appendChild(el('dt', { text: 'Next milestone' }));
+			next.appendChild(el('dd', { text: summary.next_milestone.name + (summary.next_milestone.due_date ? ' · ' + formatDate(summary.next_milestone.due_date) : '') }));
+			card.appendChild(next);
+		}
+
+		return card;
 	}
 
 	function loadSummary(body) {
 		api('/portal/summary', { query: { project_id: state.project } }).then(function (summary) {
 			clear(body);
+			state.summary = summary;
+			body.appendChild(summaryCard(summary));
+		}).catch(function (error) { showError(body, error); });
+	}
 
-			var wrap = el('div.pcm-portal-card');
+	/* ---------------------------------------------------------------------
+	   Milestones — read only, drawn as a Gantt.
+	   --------------------------------------------------------------------- */
 
-			if (summary.current_period) {
-				wrap.appendChild(meter('This period', summary.current_period.used, summary.current_period.available));
-				wrap.appendChild(el('p.pcm-portal-note', {
-					text: 'Period runs ' + formatDate(summary.current_period.start) + ' to ' + formatDate(summary.current_period.end) + '.'
+	/**
+	 * The window the chart spans.
+	 *
+	 * Wide enough to hold the project's planned dates *and* every dated
+	 * milestone, because the two disagree in practice: a milestone slips past
+	 * the planned end, or an early one predates a start date entered later.
+	 * Clipping either would draw a chart that silently omits the thing the
+	 * client came to look at. A degenerate window (one milestone, no project
+	 * dates) is padded, since a zero-width scale puts every bar at 0%.
+	 */
+	function ganttRange(milestones, project) {
+		var dates = [];
+
+		[project.start_date, project.end_date].forEach(function (value) {
+			var d = parseDate(value);
+			if (d) { dates.push(d); }
+		});
+
+		milestones.forEach(function (row) {
+			var d = parseDate(row.due_date);
+			if (d) { dates.push(d); }
+		});
+
+		if (!dates.length) { return null; }
+
+		var min = new Date(Math.min.apply(null, dates));
+		var max = new Date(Math.max.apply(null, dates));
+
+		if (daysBetween(min, max) < 14) {
+			min = new Date(min.getTime() - 7 * DAY_MS);
+			max = new Date(max.getTime() + 7 * DAY_MS);
+		}
+
+		return { start: min, end: max, span: Math.max(1, daysBetween(min, max)) };
+	}
+
+	function ganttOffset(range, date) {
+		return Math.min(100, Math.max(0, (daysBetween(range.start, date) / range.span) * 100));
+	}
+
+	/**
+	 * The month gridlines across the top, thinned to quarters once there are
+	 * more than eighteen of them — a year-and-a-half engagement labelled every
+	 * month is unreadable at phone width, and the ticks stop being a scale and
+	 * become texture.
+	 */
+	function ganttScale(range) {
+		var scale = el('div.pcm-portal-gantt-scale');
+		var months = [];
+		var cursor = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
+
+		while (cursor <= range.end) {
+			months.push(new Date(cursor.getTime()));
+			cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+		}
+
+		var step = months.length > 18 ? 3 : 1;
+
+		months.forEach(function (month, index) {
+			if (index % step !== 0 || month < range.start) { return; }
+
+			scale.appendChild(el('span.pcm-portal-gantt-tick', {
+				style: 'left:' + ganttOffset(range, month) + '%',
+				text: month.toLocaleDateString(undefined, { month: 'short' })
+					+ (0 === month.getMonth() || 0 === index ? ' ’' + String(month.getFullYear()).slice(2) : '')
+			}));
+		});
+
+		return scale;
+	}
+
+	/**
+	 * A milestone's own class: hit, still to come, or past its date and not
+	 * hit. Overdue is worth its own colour — it is the one state on this chart
+	 * a client would want to ask about.
+	 */
+	function milestoneClass(row) { return 'is-' + milestoneState(row).toLowerCase().replace(/[^a-z]+/g, '-'); }
+
+	function milestoneState(row) {
+		if ('Done' === row.status) { return 'Done'; }
+
+		var due = parseDate(row.due_date);
+
+		return due && due < today() ? 'Past due' : 'Planned';
+	}
+
+	/**
+	 * One row of the chart: a bar running from where the last milestone landed
+	 * to where this one is due, plus a marker on the date itself.
+	 *
+	 * A milestone is a point in time, not a span — it has a due date and no
+	 * start (see model-project-milestone.php). Drawing the run-up to it as the
+	 * bar is what turns a row of dots into something that reads as a schedule:
+	 * the bar is the stretch of work this milestone closes.
+	 */
+	function ganttRow(row, range, from) {
+		var due = parseDate(row.due_date);
+		var left = ganttOffset(range, from);
+		var right = ganttOffset(range, due);
+		var cls = milestoneClass(row);
+
+		var track = el('div.pcm-portal-gantt-track', {}, [
+			el('span.pcm-portal-gantt-bar.' + cls, {
+				style: 'left:' + left + '%;width:' + Math.max(0, right - left) + '%',
+				title: row.name + ' · due ' + formatDate(row.due_date)
+			}),
+			el('span.pcm-portal-gantt-point.' + cls, { style: 'left:' + right + '%' })
+		]);
+
+		var todayAt = ganttTodayOffset(range);
+		if (null !== todayAt) { track.appendChild(el('span.pcm-portal-gantt-today', { style: 'left:' + todayAt + '%' })); }
+
+		// The date reads in the label rail rather than beside the marker. In
+		// the track it had nowhere good to go: to the right of a late
+		// milestone it ran off the chart, and flipped to the left it printed
+		// on top of that milestone's own bar.
+		return el('div.pcm-portal-gantt-row', {}, [
+			el('div.pcm-portal-gantt-label', {}, [
+				el('strong', { text: row.name }),
+				el('span.pcm-portal-muted', { text: milestoneState(row) + ' · ' + formatDate(row.due_date) })
+			]),
+			track
+		]);
+	}
+
+	/** Today's position, or null when today falls outside the charted window. */
+	function ganttTodayOffset(range) {
+		var now = today();
+
+		if (now < range.start || now > range.end) { return null; }
+
+		return ganttOffset(range, now);
+	}
+
+	function gantt(milestones, project) {
+		var dated = milestones.filter(function (row) { return parseDate(row.due_date); });
+
+		if (!dated.length) { return null; }
+
+		var range = ganttRange(dated, project);
+		if (!range) { return null; }
+
+		var chart = el('div.pcm-portal-gantt');
+		var todayAt = ganttTodayOffset(range);
+
+		chart.appendChild(el('div.pcm-portal-gantt-row.pcm-portal-gantt-head', {}, [
+			el('div.pcm-portal-gantt-label', {}, [
+				el('span.pcm-portal-muted', { text: formatDay(range.start) + ' – ' + formatDay(range.end) })
+			]),
+			ganttScale(range)
+		]));
+
+		// Each bar starts where the previous one ended, so the chart reads as
+		// one chain of work rather than a set of unrelated dots.
+		var from = parseDate(project.start_date) || parseDate(dated[0].due_date);
+
+		dated.forEach(function (row) {
+			chart.appendChild(ganttRow(row, range, from));
+			from = parseDate(row.due_date);
+		});
+
+		var legend = el('div.pcm-portal-gantt-legend', {}, [
+			el('span.pcm-portal-gantt-key.is-done', { text: 'Done' }),
+			el('span.pcm-portal-gantt-key.is-planned', { text: 'Planned' }),
+			el('span.pcm-portal-gantt-key.is-past-due', { text: 'Past due' }),
+			null === todayAt ? null : el('span.pcm-portal-gantt-key.is-today', { text: 'Today' })
+		]);
+
+		return el('div', {}, [el('div.pcm-portal-gantt-scroll', {}, [chart]), legend]);
+	}
+
+	function milestoneItem(row) {
+		var fields = el('div.pcm-portal-raid-fields');
+
+		// No Status row: the badge already carries it, and stating the stored
+		// word beside a badge reading the derived one ("Planned" next to
+		// "Past due") reads as a contradiction rather than as two facts.
+		[
+			raidField('Due', row.due_date ? formatDate(row.due_date) : ''),
+			raidField('Completed', row.completed_date ? formatDate(row.completed_date) : ''),
+			raidField('Notes', row.description)
+		].forEach(function (field) { if (field) { fields.appendChild(field); } });
+
+		return el('div.pcm-portal-raid-item', {}, [
+			el('div.pcm-portal-raid-head', {}, [
+				el('span.pcm-portal-badge.' + milestoneClass(row), { text: milestoneState(row) }),
+				el('strong', { text: row.name })
+			]),
+			fields
+		]);
+	}
+
+	/**
+	 * The chart needs the project's planned window, which lives on the summary
+	 * — fetched alongside rather than read from the cache alone, so landing on
+	 * this tab first (a bookmark, a switcher change) draws the same chart as
+	 * arriving from Summary.
+	 */
+	function loadMilestones(body) {
+		Promise.all([
+			api('/portal/milestones', { query: { project_id: state.project } }),
+			state.summary ? Promise.resolve(state.summary) : api('/portal/summary', { query: { project_id: state.project } })
+		]).then(function (results) {
+			var rows = results[0];
+			state.summary = results[1];
+
+			clear(body);
+
+			if (!rows.length) {
+				body.appendChild(el('p.pcm-portal-empty', { text: 'No milestones have been set on this project yet.' }));
+				return;
+			}
+
+			var chart = gantt(rows, (state.summary && state.summary.project) || {});
+			if (chart) { body.appendChild(chart); }
+
+			var undated = rows.filter(function (row) { return !parseDate(row.due_date); });
+
+			body.appendChild(el('h3', { text: 'Every milestone' }));
+			rows.forEach(function (row) { body.appendChild(milestoneItem(row)); });
+
+			if (undated.length && chart) {
+				body.appendChild(el('p.pcm-portal-note', {
+					text: undated.length + (1 === undated.length ? ' milestone has' : ' milestones have') + ' no date set yet, so ' + (1 === undated.length ? 'it is' : 'they are') + ' not on the chart above.'
 				}));
 			}
+		}).catch(function (error) { showError(body, error); });
+	}
 
-			if (summary.budget_hours) { wrap.appendChild(meter('Hours', summary.logged_hours, summary.budget_hours)); }
-			if (summary.estimate_hours) { wrap.appendChild(meter('Against the estimate', summary.logged_hours, summary.estimate_hours)); }
+	/* ---------------------------------------------------------------------
+	   Project Team — read only, the roles on this project.
+	   --------------------------------------------------------------------- */
 
-			var stats = el('dl.pcm-portal-stats');
-			stats.appendChild(el('dt', { text: 'Hours logged' }));
-			stats.appendChild(el('dd', { text: hours(summary.logged_hours) }));
+	/**
+	 * Grouped by party, in the order a client reads them: the delivery team
+	 * first, then partners, then their own people. Names and roles only —
+	 * portal-rest.php has already dropped both rates.
+	 */
+	function loadRoles(body) {
+		api('/portal/roles', { query: { project_id: state.project } }).then(function (rows) {
+			clear(body);
 
-			if (summary.next_milestone) {
-				stats.appendChild(el('dt', { text: 'Next milestone' }));
-				stats.appendChild(el('dd', { text: summary.next_milestone.name + (summary.next_milestone.due_date ? ' · ' + formatDate(summary.next_milestone.due_date) : '') }));
+			if (!rows.length) {
+				body.appendChild(el('p.pcm-portal-empty', { text: 'Nobody has been assigned to this project yet.' }));
+				return;
 			}
 
-			wrap.appendChild(stats);
-			body.appendChild(wrap);
+			[
+				['internal', 'Delivery Team'],
+				['partner', 'Partners'],
+				['client', 'Your Team']
+			].forEach(function (group) {
+				var members = rows.filter(function (row) { return row.party_type === group[0]; });
+				if (!members.length) { return; }
+
+				body.appendChild(el('h3', { text: group[1] }));
+
+				var list = el('div.pcm-portal-list');
+				members.forEach(function (row) { list.appendChild(roleRow(row)); });
+				body.appendChild(list);
+			});
 		}).catch(function (error) { showError(body, error); });
+	}
+
+	/**
+	 * A partner firm may be engaged before anyone there is named, so the row
+	 * falls back to the firm's own name rather than rendering a blank line
+	 * with a role beside it.
+	 */
+	function roleRow(row) {
+		var name = row.party_name || row.organization || 'Not yet named';
+		var detail = [];
+
+		if (row.party_name && row.organization) { detail.push(row.organization); }
+		if (row.start_date) { detail.push('From ' + formatDate(row.start_date)); }
+		if (row.end_date) { detail.push('Until ' + formatDate(row.end_date)); }
+
+		return el('div.pcm-portal-row.pcm-portal-role', {}, [
+			el('div.pcm-portal-row-body', {}, [
+				el('strong', { text: name }),
+				el('span.pcm-portal-muted', { text: row.role || row.party_label })
+			]),
+			detail.length ? el('span.pcm-portal-muted.pcm-portal-role-detail', { text: detail.join(' · ') }) : null,
+			row.is_primary ? el('span.pcm-portal-badge.is-primary', { text: 'Primary' }) : null
+		]);
 	}
 
 	/* ---------------------------------------------------------------------
@@ -463,10 +928,24 @@
 		return el('p.pcm-portal-muted', { text: 'No preview available for this file type.' });
 	}
 
+	/** Who put a document there and when — the byline under its label. */
+	function documentByline(row) {
+		var parts = [];
+		if (row.uploaded_by) { parts.push('Uploaded by ' + row.uploaded_by); }
+		if (row.created_date) { parts.push(formatDate(row.created_date)); }
+		return parts.join(' · ');
+	}
+
 	function loadDocuments(body) {
 		api('/portal/documents', { query: { project_id: state.project } }).then(function (rows) {
 			clear(body);
 			rows = rows.filter(function (row) { return !row._missing; });
+
+			body.appendChild(el('button.pcm-portal-btn.pcm-portal-btn-primary', {
+				type: 'button',
+				text: 'Upload Document',
+				onclick: function () { newDocumentForm(body); }
+			}));
 
 			if (!rows.length) {
 				body.appendChild(el('p.pcm-portal-empty', { text: 'No documents have been shared yet.' }));
@@ -479,7 +958,10 @@
 			function showPreview(row) {
 				clear(preview);
 				preview.appendChild(el('div.pcm-portal-doc-preview-head', {}, [
-					el('strong', { text: row.label || row._filename }),
+					el('div', {}, [
+						el('strong', { text: row.label || row._filename }),
+						el('p.pcm-portal-muted', { text: documentByline(row) })
+					]),
 					el('a.pcm-portal-btn', {
 						href: documentUrl(row, 'attachment'),
 						text: 'Download'
@@ -495,7 +977,7 @@
 				}, [
 					el('div.pcm-portal-row-body', {}, [
 						el('strong', { text: row.label || row._filename }),
-						el('span.pcm-portal-muted', { text: row._filename })
+						el('span.pcm-portal-muted', { text: documentByline(row) || row._filename })
 					])
 				]);
 
@@ -505,6 +987,50 @@
 
 			body.appendChild(el('div.pcm-portal-doc-layout', {}, [list, preview]));
 		}).catch(function (error) { showError(body, error); });
+	}
+
+	/**
+	 * A single file plus what it's for — the portal's twin of
+	 * newTicketForm(), but one file rather than several, since each upload
+	 * carries its own description rather than one description covering a
+	 * batch. The description becomes the row's `label`
+	 * (pcm_crm_portal_rest_create_document()), the same field a staff-side
+	 * document already carries.
+	 */
+	function newDocumentForm(body) {
+		clear(body);
+
+		var file = el('input', { type: 'file', required: true, accept: 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt' });
+		var description = el('input', { type: 'text', placeholder: 'What is this document?' });
+		var status = el('p.pcm-portal-note');
+
+		body.appendChild(el('form.pcm-portal-form', { onsubmit: function (e) { e.preventDefault(); } }, [
+			el('label', { text: 'File' }), file,
+			el('label', { text: 'Description' }), description,
+			status,
+			el('div.pcm-portal-form-actions', {}, [
+				el('button.pcm-portal-btn.pcm-portal-btn-primary', {
+					type: 'button',
+					text: 'Upload',
+					onclick: function (event) {
+						var selected = (file.files || [])[0];
+
+						if (!selected) { status.textContent = 'Choose a file first.'; return; }
+
+						event.target.disabled = true;
+						status.textContent = 'Uploading…';
+
+						apiUpload('/portal/documents?project_id=' + encodeURIComponent(state.project), selected, { label: description.value })
+							.then(function () { loadDocuments(body); })
+							.catch(function (error) {
+								status.textContent = error.message;
+								event.target.disabled = false;
+							});
+					}
+				}),
+				el('button.pcm-portal-btn', { type: 'button', text: 'Cancel', onclick: function () { loadDocuments(body); } })
+			])
+		]));
 	}
 
 	/* ---------------------------------------------------------------------
