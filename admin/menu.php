@@ -133,9 +133,29 @@ function pcm_crm_admin_assets( $pcm_hook ) {
 		'exportUrl' => esc_url_raw( admin_url( 'admin-post.php' ) ),
 		'exportNonce' => wp_create_nonce( 'pcm_crm_export' ),
 		'currentUser' => get_current_user_id(),
+		// Carried here as well as in /bootstrap because the nav and the app
+		// bar are drawn before that request resolves.
+		'permissions' => pcm_crm_effective_permissions(),
 	) );
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_admin_assets' );
+
+/**
+ * Which permission area a screen belongs to.
+ *
+ * A screen inside the CRM Settings frame is Settings whatever app it borrows
+ * its body from — the recycle bin and the template list are configuration, and
+ * granting somebody the CRM should not hand them the bin. Otherwise the answer
+ * is the app's own declared area, so a module brings one with it.
+ */
+function pcm_crm_screen_area( array $pcm_args ) {
+	if ( ! empty( $pcm_args['setup'] ) ) { return 'settings'; }
+
+	$pcm_app  = isset( $pcm_args['app'] ) ? $pcm_args['app'] : 'crm';
+	$pcm_apps = pcm_crm_apps();
+
+	return isset( $pcm_apps[ $pcm_app ]['area'] ) ? $pcm_apps[ $pcm_app ]['area'] : 'crm';
+}
 
 /**
  * The shell every app screen shares.
@@ -144,14 +164,14 @@ add_action( 'admin_enqueue_scripts', 'pcm_crm_admin_assets' );
  * is the same, so there is one shell rather than eight near-copies.
  */
 function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '', array $pcm_args = array() ) {
-	if ( ! pcm_crm_user_can() ) {
-		wp_die( esc_html__( 'You do not have access to the CRM.', 'pcm-crm' ) );
-	}
-
 	// A CRM Settings page that is an app screen underneath — templates, the bin
 	// — draws inside the CRM Settings frame, which carries its title and
 	// description, so the shell below keeps only the actions row.
 	$pcm_setup = isset( $pcm_args['setup'] ) ? $pcm_args['setup'] : '';
+
+	if ( ! pcm_crm_can( pcm_crm_screen_area( $pcm_args ), 'view' ) ) {
+		wp_die( esc_html__( 'You do not have access to this part of the CRM.', 'pcm-crm' ) );
+	}
 
 	if ( $pcm_setup ) {
 		pcm_crm_setup_open( $pcm_setup );
@@ -198,6 +218,11 @@ function pcm_crm_apps() {
 	return apply_filters( 'pcm_crm_apps', array(
 		'crm' => array(
 			'label' => __( 'CRM', 'pcm-crm' ),
+			// The permission area this app's screens answer to. Declared here
+			// rather than on each item, because an app is the unit somebody is
+			// granted — and the item tuples are read positionally by the app
+			// bar, so a third element would have to be threaded through there.
+			'area'  => 'crm',
 			'items' => array(
 				'pcm-crm'               => array( __( 'Dashboard', 'pcm-crm' ), 'dashboard' ),
 				'pcm-crm-accounts'      => array( __( 'Accounts', 'pcm-crm' ), 'accounts' ),

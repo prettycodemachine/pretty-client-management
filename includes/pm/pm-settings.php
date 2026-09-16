@@ -220,7 +220,7 @@ function pcm_crm_pm_type_usage( $pcm_key ) {
 
 function pcm_crm_pm_handle_save_type() {
 	if (
-		! pcm_crm_user_can() ||
+		! pcm_crm_can( 'settings', 'edit' ) ||
 		! isset( $_POST['pcm_crm_pm_type_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_pm_type_nonce'] ), 'pcm_crm_pm_type' )
 	) {

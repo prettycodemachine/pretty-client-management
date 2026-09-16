@@ -293,8 +293,8 @@ function pcm_crm_setup_close() {
  * The main CRM Settings screen: Home, or one registered page.
  */
 function pcm_crm_render_settings() {
-	if ( ! pcm_crm_user_can() ) {
-		wp_die( esc_html__( 'You do not have access to the CRM.', 'pcm-crm' ) );
+	if ( ! pcm_crm_can( 'settings', 'view' ) ) {
+		wp_die( esc_html__( 'You do not have access to CRM Settings.', 'pcm-crm' ) );
 	}
 
 	$pcm_key  = pcm_crm_current_setup_key();

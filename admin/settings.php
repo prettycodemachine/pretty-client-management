@@ -837,7 +837,7 @@ function pcm_crm_render_pipeline_tab() {
  */
 function pcm_crm_handle_test_email() {
 	if (
-		! pcm_crm_user_can() ||
+		! pcm_crm_can( 'settings', 'edit' ) ||
 		! isset( $_POST['pcm_crm_test_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_test_nonce'] ), 'pcm_crm_test_email' )
 	) {
@@ -1262,7 +1262,7 @@ function pcm_crm_render_samples_tab() {
  */
 function pcm_crm_handle_samples() {
 	if (
-		! pcm_crm_user_can() ||
+		! pcm_crm_can( 'settings', 'edit' ) ||
 		! isset( $_POST['pcm_crm_samples_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_samples_nonce'] ), 'pcm_crm_samples' )
 	) {

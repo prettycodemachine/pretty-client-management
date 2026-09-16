@@ -62,8 +62,101 @@ class PCM_CRM_REST {
 		return isset( $pcm_models[ $pcm_slug ] ) ? $pcm_models[ $pcm_slug ] : null;
 	}
 
-	public static function permission() {
-		return pcm_crm_user_can();
+	/**
+	 * The gate every generic route shares.
+	 *
+	 * WordPress hands the request to every permission_callback, and PHP
+	 * ignores arguments a function does not declare — which is why this could
+	 * grow a parameter without touching one of the thirty registrations that
+	 * name it. What each route guards is resolved from the request instead of
+	 * being declared thirty times, so a route added later is covered by
+	 * construction rather than by somebody remembering.
+	 *
+	 * Called directly, with no request, it answers the old question: may this
+	 * person reach the app at all.
+	 */
+	public static function permission( $pcm_request = null ) {
+		if ( ! $pcm_request instanceof WP_REST_Request ) {
+			return pcm_crm_user_can();
+		}
+
+		return self::route_permission( $pcm_request );
+	}
+
+	/**
+	 * Which area and action a route stands for, and whether this person has it.
+	 */
+	protected static function route_permission( WP_REST_Request $pcm_request ) {
+		$pcm_route  = (string) $pcm_request->get_route();
+		$pcm_method = strtoupper( (string) $pcm_request->get_method() );
+
+		// The two every screen fetches before it can draw anything. Resolving
+		// these to an area would leave someone granted Projects alone looking
+		// at an empty Projects screen, because /bootstrap answered "CRM" and
+		// was refused.
+		if ( preg_match( '#/(bootstrap|schema)$#', $pcm_route ) ) {
+			return pcm_crm_user_can();
+		}
+
+		$pcm_action = self::route_action( $pcm_route, $pcm_method );
+
+		// Emptying the whole bin reaches every object there is, so it is not
+		// one area's decision. Anything less than delete everywhere something
+		// recyclable lives would let a CRM user purge Projects records.
+		if ( preg_match( '#/recycle-bin$#', $pcm_route ) ) {
+			if ( 'view' === $pcm_action ) { return pcm_crm_user_can(); }
+
+			foreach ( pcm_crm_recyclable_areas() as $pcm_area ) {
+				if ( ! pcm_crm_can( $pcm_area, 'delete' ) ) { return false; }
+			}
+
+			return true;
+		}
+
+		return pcm_crm_can( self::route_area( $pcm_request, $pcm_route ), $pcm_action );
+	}
+
+	/**
+	 * The verb behind the method.
+	 *
+	 * POST means edit almost everywhere, and the exceptions are the two that
+	 * destroy something. Purging is the only irreversible operation in the
+	 * app, so reading it as an edit is the one mistake here worth guarding
+	 * against by name.
+	 */
+	protected static function route_action( $pcm_route, $pcm_method ) {
+		if ( preg_match( '#/(purge|empty-bin)$#', $pcm_route ) ) { return 'delete'; }
+
+		if ( 'DELETE' === $pcm_method ) { return 'delete'; }
+
+		if ( in_array( $pcm_method, array( 'GET', 'HEAD' ), true ) ) { return 'view'; }
+
+		return 'edit';
+	}
+
+	/**
+	 * The area behind the path.
+	 */
+	protected static function route_area( WP_REST_Request $pcm_request, $pcm_route ) {
+		// A report names the object it runs over in its query rather than in
+		// its path, so the path cannot answer this one. It is a GET, so there
+		// is no body for the parameter to be shadowed by.
+		if ( preg_match( '#/report$#', $pcm_route ) ) {
+			$pcm_object = (string) $pcm_request->get_param( 'object' );
+
+			return $pcm_object ? pcm_crm_object_area( $pcm_object ) : 'crm';
+		}
+
+		$pcm_object = self::route_object( $pcm_request );
+
+		if ( $pcm_object ) { return pcm_crm_object_area( $pcm_object ); }
+
+		// A module's hand-registered sub-routes carry no object capture —
+		// /pm/time-context and the ticket and document routes are Projects by
+		// their prefix, which is the only thing that names them.
+		if ( false !== strpos( $pcm_route, '/pm/' ) ) { return 'pm'; }
+
+		return 'crm';
 	}
 
 	/**
@@ -708,6 +801,10 @@ class PCM_CRM_REST {
 			'sequences'         => pcm_crm_sequence_choices(),
 			'weekdays'          => pcm_crm_weekdays(),
 			'objects'           => pcm_crm_object_directory(),
+			// So the app can leave out an action the server would refuse. It
+			// is a copy for drawing with, never the decision — every route
+			// resolves its own answer regardless of what the browser believes.
+			'permissions'       => pcm_crm_effective_permissions(),
 		) ) );
 	}
 

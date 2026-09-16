@@ -179,7 +179,7 @@ function pcm_crm_npsp_export_url( $pcm_include_donations = false ) {
 
 function pcm_crm_handle_npsp_export() {
 	if (
-		! pcm_crm_user_can() ||
+		! pcm_crm_can( 'crm', 'export' ) ||
 		! isset( $_GET['pcm_crm_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_GET['pcm_crm_nonce'] ), 'pcm_crm_export' )
 	) {

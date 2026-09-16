@@ -85,6 +85,7 @@ function pcm_crm_pm_render_help_tickets() {
 function pcm_crm_pm_app( $pcm_apps ) {
 	$pcm_apps['projects'] = array(
 		'label' => __( 'Projects', 'pcm-crm' ),
+		'area'  => 'pm',
 		'items' => array(
 			'pcm-crm-projects'      => array( __( 'Projects', 'pcm-crm' ), 'projects' ),
 			'pcm-crm-project-tasks' => array( __( 'Tasks', 'pcm-crm' ), 'project_tasks' ),

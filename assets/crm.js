@@ -17,6 +17,45 @@
 	var charts = window.PCM_CRM_Charts;
 
 	/* ---------------------------------------------------------------------
+	   Permissions
+
+	   A copy of what the server already decided, carried so the app can leave
+	   out a button the server would refuse rather than offering one that
+	   errors. It is never the decision — every route resolves its own answer,
+	   and hiding a control is a courtesy, not a gate.
+	   --------------------------------------------------------------------- */
+
+	/**
+	 * Read from the config first and the bootstrap second.
+	 *
+	 * The nav and the app bar are drawn before /bootstrap resolves, so the
+	 * localized copy has to answer during that window; once the fetch lands
+	 * the two say the same thing.
+	 */
+	function grants() {
+		return (state.boot && state.boot.permissions) || cfg.permissions || {};
+	}
+
+	function can(area, action) {
+		var allowed = grants()[area];
+
+		return !!allowed && allowed.indexOf(action || 'view') !== -1;
+	}
+
+	/**
+	 * The same question about an object, which knows its own area.
+	 *
+	 * The area travels with the object in /bootstrap rather than being mapped
+	 * here, so a module's objects answer correctly without this file learning
+	 * what belongs to which app.
+	 */
+	function canObject(object, action) {
+		var def = state.boot && state.boot.objects && state.boot.objects[object];
+
+		return can((def && def.area) || 'crm', action);
+	}
+
+	/* ---------------------------------------------------------------------
 	   DOM helpers
 	   --------------------------------------------------------------------- */
 
@@ -1286,12 +1325,12 @@
 			// it has no children.
 			clear(dom.filters);
 		} else {
-			renderFilters(def.filters(), function () { loadList(object); }, [
+			renderFilters(def.filters(), function () { loadList(object); }, canObject(object, 'export') ? [
 				el('a.pcm-btn.pcm-btn-quiet', {
 					href: exportUrl(object),
 					text: 'Export CSV'
 				})
-			], object);
+			] : [], object);
 		}
 
 		clear(dom.actions);
@@ -1303,7 +1342,7 @@
 				style: 'align-self:center;font-size:0.82rem;max-width:340px;text-align:right',
 				text: 'Create one with the Schedule button on the Dashboard or a Report.'
 			}));
-		} else {
+		} else if (canObject(object, 'edit')) {
 			dom.actions.appendChild(el('button.pcm-btn.pcm-btn-primary', {
 				type: 'button',
 				text: 'New ' + def.label,
@@ -1874,13 +1913,15 @@
 
 		var actions = el('div.pcm-crm-record-actions');
 
-		if (!isNew && !current.editing) {
+		if (!isNew && !current.editing && canObject(object, 'edit')) {
 			actions.appendChild(el('button.pcm-btn.pcm-btn-sm', {
 				type: 'button',
 				text: 'Edit',
 				onclick: function () { enterEdit(); }
 			}));
+		}
 
+		if (!isNew && !current.editing && canObject(object, 'delete')) {
 			actions.appendChild(el('button.pcm-btn.pcm-btn-sm.pcm-btn-danger', {
 				type: 'button',
 				text: 'Delete',
@@ -4809,9 +4850,9 @@
 				}));
 			});
 
-			renderFilters(objects[report.object].filters(), loadReport, [
+			renderFilters(objects[report.object].filters(), loadReport, canObject(report.object, 'export') ? [
 				el('a.pcm-btn.pcm-btn-quiet', { href: exportUrl(report.object), text: 'Export CSV' })
-			], report.object);
+			] : [], report.object);
 
 			// The object and grouping choices belong with the filters they act
 			// on, so they are prepended into the same bar rather than sitting

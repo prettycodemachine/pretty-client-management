@@ -119,7 +119,9 @@ function pcm_crm_object_is( $pcm_slug, $pcm_flag ) {
 
 /**
  * What the browser needs to draw an object it does not otherwise know about:
- * slug => label, plural, icon, colour token and the page its records open on.
+ * slug => label, plural, icon, colour token, the page its records open on, and
+ * the permission area it answers to — which is what lets the app hide a New or
+ * Delete the server would refuse, without a second list of what belongs where.
  */
 function pcm_crm_object_directory() {
 	$pcm_out = array();
@@ -131,6 +133,7 @@ function pcm_crm_object_directory() {
 			'icon'   => $pcm_object['icon'],
 			'color'  => (int) $pcm_object['color'],
 			'page'   => $pcm_object['page'],
+			'area'   => pcm_crm_object_area( $pcm_slug ),
 		);
 	}
 

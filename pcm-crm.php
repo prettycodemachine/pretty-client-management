@@ -28,6 +28,16 @@ define( 'PCM_CRM_URL', plugin_dir_url( __FILE__ ) );
 define( 'PCM_CRM_CAP', 'pcm_crm_manage' );
 
 /**
+ * The staff role, and the stamp that reconciles its capabilities.
+ *
+ * Bump PCM_CRM_ROLE_VERSION on any change to pcm_crm_staff_capabilities() —
+ * add_role() is a no-op once the role exists, so without the bump a new
+ * capability never reaches an install that already has the role.
+ */
+define( 'PCM_CRM_STAFF_ROLE', 'pcm_crm_staff' );
+define( 'PCM_CRM_ROLE_VERSION', 1 );
+
+/**
  * The lead source stamped on contacts created by the site's contact form.
  *
  * A constant rather than a literal because the intake writes it and the
@@ -47,6 +57,9 @@ require_once PCM_CRM_DIR . 'includes/custom-fields.php';
 require_once PCM_CRM_DIR . 'includes/duration.php';
 require_once PCM_CRM_DIR . 'includes/objects.php';
 require_once PCM_CRM_DIR . 'includes/modules.php';
+// After objects and modules, both of which it resolves areas from, and before
+// anything that gates on the answer.
+require_once PCM_CRM_DIR . 'includes/permissions.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-model.php';
 require_once PCM_CRM_DIR . 'includes/model-account.php';
 require_once PCM_CRM_DIR . 'includes/model-contact.php';

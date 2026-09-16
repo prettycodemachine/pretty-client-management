@@ -23,8 +23,9 @@ function pcm_crm_export_url( $pcm_object, array $pcm_query = array() ) {
 }
 
 function pcm_crm_handle_export() {
+	// The nonce first, because it is the cheap check and the one that does not
+	// depend on anything in the request being meaningful.
 	if (
-		! pcm_crm_user_can() ||
 		! isset( $_GET['pcm_crm_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_GET['pcm_crm_nonce'] ), 'pcm_crm_export' )
 	) {
@@ -36,6 +37,14 @@ function pcm_crm_handle_export() {
 
 	if ( ! $pcm_model ) {
 		wp_die( esc_html__( 'Unknown object.', 'pcm-crm' ), 404 );
+	}
+
+	// Authorised only once the object is known: exporting is granted per area,
+	// and which area this is cannot be answered before the object is parsed.
+	// Being able to export deals says nothing about being able to export
+	// timesheets.
+	if ( ! pcm_crm_can( pcm_crm_object_area( $pcm_object ), 'export' ) ) {
+		wp_die( esc_html__( 'You are not allowed to export CRM data.', 'pcm-crm' ), 403 );
 	}
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- verified above

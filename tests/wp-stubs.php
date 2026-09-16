@@ -153,6 +153,14 @@ function get_users( $pcm_args = array() ) {
 			if ( ! in_array( $pcm_args['role'], $pcm_roles, true ) ) { continue; }
 		}
 
+		// A real get_users() hands back WP_User objects, which always carry an
+		// ID and an address even when the address is empty. Filling those in
+		// means a fixture written for get_userdata() — which only ever needed
+		// a name — does not have to grow fields to be listable. The seed array
+		// is keyed by user id everywhere it is used, so the key is the ID.
+		if ( ! isset( $pcm_user->ID ) ) { $pcm_user->ID = (int) $pcm_id; }
+		if ( ! isset( $pcm_user->user_email ) ) { $pcm_user->user_email = ''; }
+
 		$pcm_out[] = $pcm_user;
 	}
 
@@ -326,9 +334,17 @@ function rest_ensure_response( $v ) { return $v; }
 class WP_REST_Request implements ArrayAccess {
 	private $url = array();
 	private $params = array();
-	function __construct( $url = array(), $params = array() ) { $this->url = $url; $this->params = $params; }
+	private $route = '';
+	private $method = 'GET';
+	function __construct( $url = array(), $params = array(), $route = '', $method = 'GET' ) {
+		$this->url = $url; $this->params = $params; $this->route = $route; $this->method = $method;
+	}
 	function get_url_params() { return $this->url; }
 	function get_json_params() { return $this->params; }
+	function get_route() { return $this->route; }
+	function get_method() { return $this->method; }
+	function set_route( $r ) { $this->route = $r; }
+	function set_method( $m ) { $this->method = $m; }
 	function get_param( $k ) {
 		if ( isset( $this->params[ $k ] ) ) { return $this->params[ $k ]; }
 		return isset( $this->url[ $k ] ) ? $this->url[ $k ] : null;

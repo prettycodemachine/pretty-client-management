@@ -344,7 +344,8 @@ $GLOBALS['wpdb'] = $real_wpdb;
 
 check( 'bootstrap describes every object for the browser',
 	PCM_CRM_REST::bootstrap( new WP_REST_Request() )['objects']['contacts'],
-	array( 'label' => 'Contact', 'plural' => 'Contacts', 'icon' => 'id', 'color' => 5, 'page' => 'pcm-crm-contacts' ) );
+	array( 'label' => 'Contact', 'plural' => 'Contacts', 'icon' => 'id', 'color' => 5,
+		'page' => 'pcm-crm-contacts', 'area' => 'crm' ) );
 
 echo "\n--- route parameters are not shadowed by the body ---\n";
 // WordPress merges the JSON body ahead of URL parameters. The schedules table
@@ -2246,6 +2247,10 @@ pcm_crm_screen( 'contacts', 'Contacts' );
 $pcm_html = ob_get_clean();
 check( 'a work screen carries the app bar', false !== strpos( $pcm_html, 'class="pcm-crm-appbar"' ), true );
 check( 'with its own screen marked current', (bool) preg_match( '/page=pcm-crm-contacts"\s+class="is-active"/', $pcm_html ), true );
+
+// Last, because it reassigns the current user's profile and turns modules on
+// and off — everything above it should run against the untouched defaults.
+require __DIR__ . '/permissions.php';
 
 echo "\n" . ( $fail ? "$fail FAILED\n" : "All checks passed\n" );
 exit( $fail ? 1 : 0 );
