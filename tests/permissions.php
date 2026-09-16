@@ -349,7 +349,93 @@ foreach ( $GLOBALS['pcm_test_routes'] as $pcm_registered ) {
 
 check( 'every registered route is named in the table above', array_keys( $pcm_unmapped ), array() );
 
+echo "\n--- the Setup pages the editor registers ---\n";
+
+check( 'Profiles, Permission Sets and Staff Access are all registered',
+	array(
+		null !== pcm_crm_setup_page( 'access-profiles' ),
+		null !== pcm_crm_setup_page( 'access-permission-sets' ),
+		null !== pcm_crm_setup_page( 'access-users' ),
+	),
+	array( true, true, true )
+);
+check( 'all three sit under Platform, beside Theme and Modules',
+	array(
+		pcm_crm_setup_page( 'access-profiles' )['group'],
+		pcm_crm_setup_page( 'access-permission-sets' )['group'],
+		pcm_crm_setup_page( 'access-users' )['group'],
+	),
+	array( 'platform', 'platform', 'platform' )
+);
+
+echo "\n--- cleaning a posted profile or permission set ---\n";
+
+check( 'a blank name is refused',
+	pcm_crm_clean_access_definition( array( 'label' => '' ) )->get_error_code(), 'pcm_crm_access_label_required' );
+check( 'whitespace alone is refused too',
+	pcm_crm_clean_access_definition( array( 'label' => '   ' ) )->get_error_code(), 'pcm_crm_access_label_required' );
+
+$pcm_cleaned = pcm_crm_clean_access_definition( array(
+	'label'       => 'Read Only',
+	'description' => 'Sees everything, changes nothing.',
+	'grants'      => array( 'crm' => array( 'view' ), 'bogus' => array( 'view' ), 'media' => array( 'view', 'delete' ) ),
+) );
+
+check( 'the label and description come through', array( $pcm_cleaned['label'], $pcm_cleaned['description'] ),
+	array( 'Read Only', 'Sees everything, changes nothing.' ) );
+check( 'grants run through the same sanitiser the model uses — an unknown area is dropped',
+	isset( $pcm_cleaned['grants']['bogus'] ), false );
+check( 'and an action its area does not offer is dropped',
+	$pcm_cleaned['grants']['media'], array( 'view' ) );
+
+echo "\n--- deleting a profile that is still somebody's baseline ---\n";
+
+update_option( PCM_CRM_PROFILES_OPTION, array( 'sales' => array( 'label' => 'Sales', 'description' => '', 'grants' => array() ) ) );
+$GLOBALS['pcm_test_users']     = array( 9 => (object) array( 'ID' => 9, 'roles' => array( PCM_CRM_STAFF_ROLE ) ) );
+$GLOBALS['pcm_test_user_meta'] = array();
+
+check( 'an unassigned profile is not in use', pcm_crm_profile_in_use( 'sales' ), false );
+
+update_user_meta( 9, PCM_CRM_PROFILE_META, 'sales' );
+check( 'an assigned profile is in use', pcm_crm_profile_in_use( 'sales' ), true );
+
+update_user_meta( 9, PCM_CRM_PROFILE_META, 'delivery' );
+check( 'and only the profile actually held, not any profile at all',
+	pcm_crm_profile_in_use( 'sales' ), false );
+
+check( 'a blank key is never "in use" — nothing to refuse deleting',
+	pcm_crm_profile_in_use( '' ), false );
+
+echo "\n--- narrowing a posted access assignment ---\n";
+
+update_option( PCM_CRM_PROFILES_OPTION, array( 'sales' => array( 'label' => 'Sales', 'description' => '', 'grants' => array() ) ) );
+update_option( PCM_CRM_SETS_OPTION, array( 'exporter' => array( 'label' => 'Exporting', 'description' => '', 'grants' => array() ) ) );
+
+check( 'a real profile and set survive',
+	pcm_crm_clean_user_access( array( 'profile' => 'sales', 'sets' => array( 'exporter' ) ) ),
+	array( 'profile' => 'sales', 'sets' => array( 'exporter' ) )
+);
+check( 'a profile key nobody defines is dropped to none',
+	pcm_crm_clean_user_access( array( 'profile' => 'ghost' ) )['profile'], '' );
+check( 'a set key nobody defines is dropped from the list',
+	pcm_crm_clean_user_access( array( 'sets' => array( 'exporter', 'ghost' ) ) )['sets'], array( 'exporter' ) );
+check( 'nothing posted is nothing assigned',
+	pcm_crm_clean_user_access( array() ), array( 'profile' => '', 'sets' => array() ) );
+
+echo "\n--- who the Staff Access screen lists ---\n";
+
+$GLOBALS['pcm_test_users'] = array(
+	// An administrator holding the cap directly is not staff — the union is
+	// what pcm_crm_user_can() asks, but this screen is for people whose
+	// access a profile actually decides.
+	3 => (object) array( 'ID' => 3, 'roles' => array( 'administrator' ), 'display_name' => 'Admin' ),
+	9 => (object) array( 'ID' => 9, 'roles' => array( PCM_CRM_STAFF_ROLE ), 'display_name' => 'Staffer' ),
+);
+check( 'only the Staff role appears, not every capable user',
+	wp_list_pluck( pcm_crm_staff_users(), 'ID' ), array( 9 ) );
+
 pcm_test_reset_caps();
 pcm_crm_flush_permissions();
 $GLOBALS['pcm_test_users']     = array();
 $GLOBALS['pcm_test_user_caps'] = array();
+$GLOBALS['pcm_test_user_meta'] = array();

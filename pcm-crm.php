@@ -60,6 +60,9 @@ require_once PCM_CRM_DIR . 'includes/modules.php';
 // After objects and modules, both of which it resolves areas from, and before
 // anything that gates on the answer.
 require_once PCM_CRM_DIR . 'includes/permissions.php';
+// The CRM Settings pages over that model. After setup.php (register function),
+// permissions.php (the model) and capabilities.php (the staff role constant).
+require_once PCM_CRM_DIR . 'includes/access-settings.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-model.php';
 require_once PCM_CRM_DIR . 'includes/model-account.php';
 require_once PCM_CRM_DIR . 'includes/model-contact.php';

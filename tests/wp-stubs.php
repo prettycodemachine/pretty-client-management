@@ -76,7 +76,14 @@ function sanitize_title( $s ) { return trim( preg_replace( '/[^a-z0-9]+/', '-', 
 function is_email( $s ) { return (bool) filter_var( $s, FILTER_VALIDATE_EMAIL ); }
 function absint( $v ) { return abs( (int) $v ); }
 function wp_parse_args( $a, $d ) { return array_merge( $d, (array) $a ); }
-function wp_list_pluck( $rows, $key ) { return array_map( function( $r ) use ( $key ) { return isset($r[$key]) ? $r[$key] : null; }, $rows ); }
+function wp_list_pluck( $rows, $key ) {
+	// Real wp_list_pluck() reads either shape — get_users() and WP_User rows
+	// are objects, most of this plugin's own rows are arrays.
+	return array_map( function( $r ) use ( $key ) {
+		if ( is_object( $r ) ) { return isset( $r->$key ) ? $r->$key : null; }
+		return isset( $r[ $key ] ) ? $r[ $key ] : null;
+	}, $rows );
+}
 function current_time( $t ) { return 'timestamp' === $t ? time() : date( 'Y-m-d H:i:s' ); }
 function get_current_user_id() { return 1; }
 function home_url( $p = '/' ) { return 'https://' . ( isset( $GLOBALS['pcm_test_host'] ) ? $GLOBALS['pcm_test_host'] : 'example.com' ) . $p; }
@@ -104,7 +111,39 @@ function get_attached_file() { return ''; } function wp_kses_post( $s ) { return
 function wp_strip_all_tags( $s ) { return trim( strip_tags( (string) $s ) ); }
 function plugin_dir_path( $f ) { return dirname( $f ) . '/'; }
 function plugin_dir_url() { return 'https://example.com/plugin/'; }
-function add_query_arg( $k, $v = null, $u = null ) { return is_array($k) ? $u : $u . '?' . $k . '=' . $v; }
+/**
+ * Real add_query_arg() takes the URL from a different argument position
+ * depending on whether the first argument is an array or a key — this
+ * codebase uses both call shapes (a handler redirect merges several query
+ * args at once with the array form; a single link uses the key/value form),
+ * so the stub has to tell them apart the same way core does rather than
+ * assuming one fixed arity.
+ */
+function add_query_arg( ...$pcm_args ) {
+	if ( is_array( $pcm_args[0] ) ) {
+		$pcm_new = $pcm_args[0];
+		$pcm_url = isset( $pcm_args[1] ) ? $pcm_args[1] : '';
+	} else {
+		$pcm_new = array( $pcm_args[0] => isset( $pcm_args[1] ) ? $pcm_args[1] : '' );
+		$pcm_url = isset( $pcm_args[2] ) ? $pcm_args[2] : '';
+	}
+
+	$pcm_parts = explode( '#', (string) $pcm_url, 2 );
+	$pcm_frag  = isset( $pcm_parts[1] ) ? '#' . $pcm_parts[1] : '';
+	$pcm_base  = strtok( $pcm_parts[0], '?' );
+	$pcm_query = array();
+
+	if ( false !== strpos( $pcm_parts[0], '?' ) ) {
+		parse_str( substr( $pcm_parts[0], strpos( $pcm_parts[0], '?' ) + 1 ), $pcm_query );
+	}
+
+	foreach ( $pcm_new as $pcm_key => $pcm_value ) {
+		if ( false === $pcm_value ) { unset( $pcm_query[ $pcm_key ] ); continue; }
+		$pcm_query[ $pcm_key ] = $pcm_value;
+	}
+
+	return $pcm_base . ( $pcm_query ? '?' . http_build_query( $pcm_query ) : '' ) . $pcm_frag;
+}
 /**
  * Roles, backed by an array so add_cap() can be asserted.
  *
@@ -153,6 +192,16 @@ function get_users( $pcm_args = array() ) {
 			if ( ! in_array( $pcm_args['role'], $pcm_roles, true ) ) { continue; }
 		}
 
+		// meta_key/meta_value against the same fixture user_meta() reads,
+		// which is what makes "is this profile still assigned to anybody"
+		// answerable against seeded data rather than only in production.
+		if ( ! empty( $pcm_args['meta_key'] ) ) {
+			$pcm_value = get_user_meta( $pcm_id, $pcm_args['meta_key'], true );
+
+			if ( isset( $pcm_args['meta_value'] ) && (string) $pcm_value !== (string) $pcm_args['meta_value'] ) { continue; }
+			if ( ! isset( $pcm_args['meta_value'] ) && '' === (string) $pcm_value ) { continue; }
+		}
+
 		// A real get_users() hands back WP_User objects, which always carry an
 		// ID and an address even when the address is empty. Filling those in
 		// means a fixture written for get_userdata() — which only ever needed
@@ -161,7 +210,7 @@ function get_users( $pcm_args = array() ) {
 		if ( ! isset( $pcm_user->ID ) ) { $pcm_user->ID = (int) $pcm_id; }
 		if ( ! isset( $pcm_user->user_email ) ) { $pcm_user->user_email = ''; }
 
-		$pcm_out[] = $pcm_user;
+		$pcm_out[] = 'ID' === ( isset( $pcm_args['fields'] ) ? $pcm_args['fields'] : '' ) ? (int) $pcm_id : $pcm_user;
 	}
 
 	return $pcm_out;
@@ -277,6 +326,7 @@ function get_user_meta( $id, $key = '', $single = false ) {
 function update_user_meta( $id, $key, $value ) { $GLOBALS['pcm_test_user_meta'][ $id ][ $key ] = $value; return true; }
 function get_post( $id ) { return in_array( (int) $id, isset( $GLOBALS['pcm_test_attachments'] ) ? $GLOBALS['pcm_test_attachments'] : array(), true ) ? (object) array( 'ID' => (int) $id ) : null; }
 function esc_attr_e( $s ) { echo $s; }
+function esc_js( $s ) { return addslashes( (string) $s ); }
 function esc_textarea( $s ) { return htmlspecialchars( (string) $s, ENT_QUOTES ); }
 function wp_get_attachment_image() { return ''; } function antispambot( $s ) { return $s; }
 function wp_die() {} function nocache_headers() {}
