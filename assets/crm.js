@@ -5052,7 +5052,24 @@
 
 	function init() {
 		var root = document.querySelector('.pcm-crm[data-view]');
-		if (!root || !cfg.root) { return; }
+
+		// No mount is not a failure — crm.js can be enqueued on a page that
+		// simply is not a CRM screen.
+		if (!root) { return; }
+
+		// A missing config is. It means the localized PCM_CRM block never ran —
+		// most plausibly an asset optimiser moved or dropped it, which is only
+		// possible on the front end where minifying and combining are active.
+		// Returning quietly here is what leaves the screen on "Loading…" with a
+		// clean console, and that is the hardest version of this failure to
+		// diagnose, so say so on the screen instead.
+		if (!cfg.root) {
+			clear(root.querySelector('[data-role="body"]') || root, el('div.pcm-crm-error', {
+				text: 'The CRM could not start — its configuration did not load. If an asset optimiser is active, exclude this plugin’s scripts from combining.'
+			}));
+			window.console.error('PCM CRM: window.PCM_CRM is missing or carries no REST root.');
+			return;
+		}
 
 		dom.root = root;
 		dom.filters = root.querySelector('[data-role="filters"]');
