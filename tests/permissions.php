@@ -725,7 +725,90 @@ pcm_crm_front_assets();
 check( 'the settings route enqueues no app at all — there is nothing there to mount it against',
 	isset( $GLOBALS['pcm_test_localized']['pcm-crm'] ), false );
 
-$GLOBALS['pcm_test_is_admin']  = true;
+$GLOBALS['pcm_test_is_admin'] = true;
+pcm_test_set_query_vars( array() );
+
+echo "\n--- the app bar hides doors a viewer cannot walk through ---\n";
+
+// A staff member with only Sales must not see a live-looking "Go to
+// Projects" that refuses them the moment they follow it, or a "CRM
+// Settings" door with the same problem. Real bug, reported from a real
+// staging screenshot: both were shown unconditionally to every viewer.
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1 ) );
+pcm_crm_load_modules();
+
+// pcm_crm_apps() reads pcm_crm_pm_app() through apply_filters(), which this
+// stub honours only for a hook a test opts in by name — real plugin code's
+// own add_filter() call is not enough on its own, deliberately, or every
+// filter registered anywhere would quietly change what every other
+// assertion in this suite measures. This is the one section that needs the
+// Projects app to actually appear in the list, so it opts in and puts the
+// hook back afterward.
+pcm_test_add_filter( 'pcm_crm_apps', 'pcm_crm_pm_app' );
+
+update_option( PCM_CRM_PROFILES_OPTION, array(
+	'sales-only' => array( 'label' => 'Sales', 'description' => '', 'grants' => array( 'crm' => array( 'view' ) ) ),
+	'both-apps'  => array( 'label' => 'Both', 'description' => '', 'grants' => array( 'crm' => array( 'view' ), 'pm' => array( 'view' ) ) ),
+) );
+
+$GLOBALS['pcm_test_users'] = array( 9 => (object) array( 'ID' => 9, 'roles' => array( PCM_CRM_STAFF_ROLE ) ) );
+$GLOBALS['pcm_test_current_user'] = $GLOBALS['pcm_test_users'][9];
+pcm_test_set_caps( array( PCM_CRM_CAP => true ) );
+
+update_user_meta( 9, PCM_CRM_PROFILE_META, 'sales-only' );
+pcm_crm_flush_permissions( 9 );
+
+ob_start();
+pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
+$pcm_bar_html = ob_get_clean();
+
+check( 'a Sales-only viewer sees no door to CRM Settings',
+	false !== strpos( $pcm_bar_html, 'CRM Settings' ), false );
+check( 'and no "Go to Projects" they cannot use',
+	false !== strpos( $pcm_bar_html, 'Go to' ), false );
+
+update_user_meta( 9, PCM_CRM_PROFILE_META, 'both-apps' );
+pcm_crm_flush_permissions( 9 );
+
+ob_start();
+pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
+$pcm_bar_html = ob_get_clean();
+
+check( 'granted both areas, the switcher appears',
+	false !== strpos( $pcm_bar_html, 'Go to Projects' ), true );
+check( 'but CRM Settings still does not, with no Settings grant',
+	false !== strpos( $pcm_bar_html, 'CRM Settings' ), false );
+
+update_option( PCM_CRM_SETS_OPTION, array( 'settings-editor' => array( 'label' => 'Settings', 'description' => '', 'grants' => array( 'settings' => array( 'edit' ) ) ) ) );
+pcm_crm_assign_permissions( 9, 'both-apps', array( 'settings-editor' ) );
+
+ob_start();
+pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
+$pcm_bar_html = ob_get_clean();
+
+check( 'granted Settings too, the door appears',
+	false !== strpos( $pcm_bar_html, 'CRM Settings' ), true );
+
+// An administrator, unaffected throughout — this is the same gate
+// pcm_crm_can() already applies everywhere, and an administrator's answer
+// to it has never changed.
+pcm_test_reset_caps();
+$GLOBALS['pcm_test_current_user'] = null;
+pcm_crm_flush_permissions();
+
+ob_start();
+pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
+$pcm_bar_html = ob_get_clean();
+
+check( 'an administrator still sees both the switcher and CRM Settings',
+	array( false !== strpos( $pcm_bar_html, 'Go to Projects' ), false !== strpos( $pcm_bar_html, 'CRM Settings' ) ),
+	array( true, true )
+);
+
+pcm_test_reset_filters( 'pcm_crm_apps' );
+update_option( PCM_CRM_MODULES_OPTION, array() );
+pcm_crm_load_modules();
+pcm_crm_flush_permissions();
 $GLOBALS['pcm_test_users']     = array();
 $GLOBALS['pcm_test_user_caps'] = array();
-pcm_test_set_query_vars( array() );
+$GLOBALS['pcm_test_user_meta'] = array();

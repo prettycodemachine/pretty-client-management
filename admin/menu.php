@@ -398,11 +398,22 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 		return;
 	}
 	?>
+	<?php
+	// An app someone cannot reach at all is not worth a "Go to" link — a
+	// staff member with only Sales access would otherwise see a live-looking
+	// door to Projects that refuses them the moment they walk through it.
+	// pcm_crm_can() is the real gate everywhere else; this is only ever the
+	// courtesy of not showing what it would refuse.
+	$pcm_reachable_apps = array_filter( $pcm_apps, function ( $pcm_other ) {
+		return pcm_crm_can( isset( $pcm_other['area'] ) ? $pcm_other['area'] : 'crm', 'view' );
+	} );
+	$pcm_settings_reachable = pcm_crm_can( 'settings', 'view' );
+	?>
 	<nav class="pcm-crm-appbar" aria-label="<?php echo esc_attr( $pcm_apps[ $pcm_app ]['label'] ); ?>">
 		<span class="pcm-crm-appbar-name"><?php echo esc_html( $pcm_apps[ $pcm_app ]['label'] ); ?></span>
-		<?php if ( count( $pcm_apps ) > 1 ) : ?>
+		<?php if ( count( $pcm_reachable_apps ) > 1 ) : ?>
 			<span class="pcm-crm-appbar-switch">
-				<?php foreach ( $pcm_apps as $pcm_key => $pcm_other ) : ?>
+				<?php foreach ( $pcm_reachable_apps as $pcm_key => $pcm_other ) : ?>
 					<?php if ( $pcm_key !== $pcm_app ) : ?>
 						<a href="<?php echo esc_url( pcm_crm_screen_url( key( $pcm_other['items'] ), array(), $pcm_host ) ); ?>">
 							<?php
@@ -425,10 +436,12 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 				</li>
 			<?php endforeach; ?>
 		</ul>
-		<a class="pcm-crm-appbar-setup" href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>">
-			<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
-			<?php esc_html_e( 'CRM Settings', 'pcm-crm' ); ?>
-		</a>
+		<?php if ( $pcm_settings_reachable ) : ?>
+			<a class="pcm-crm-appbar-setup" href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>">
+				<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
+				<?php esc_html_e( 'CRM Settings', 'pcm-crm' ); ?>
+			</a>
+		<?php endif; ?>
 	</nav>
 	<?php
 }

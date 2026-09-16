@@ -16,6 +16,16 @@
 	var cfg = window.PCM_CRM || {};
 	var charts = window.PCM_CRM_Charts;
 
+	// wp_localize_script() stringifies every value it hands to JS, cfg.recordId
+	// included — so an unset id arrives here as the string "0", not the number
+	// 0, and a bare `if (cfg.recordId)` reads that as truthy: a non-empty
+	// string is always truthy in JS, whatever it contains. Normalised once,
+	// here, rather than at every place cfg.recordId is read or compared —
+	// state.recordId is always a real number (Number(id) wherever it is set),
+	// and cfg.recordId has to match that or every comparison between the two
+	// silently fails instead of erroring.
+	cfg.recordId = Number(cfg.recordId) || 0;
+
 	/* ---------------------------------------------------------------------
 	   Permissions
 
