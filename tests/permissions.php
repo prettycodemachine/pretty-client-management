@@ -439,3 +439,109 @@ pcm_crm_flush_permissions();
 $GLOBALS['pcm_test_users']     = array();
 $GLOBALS['pcm_test_user_caps'] = array();
 $GLOBALS['pcm_test_user_meta'] = array();
+
+echo "\n--- CRM Settings: top-level menu, not a Settings submenu ---\n";
+
+$GLOBALS['pcm_test_menus'] = array();
+pcm_crm_menu();
+
+$pcm_settings_menu = null;
+foreach ( $GLOBALS['pcm_test_menus'] as $pcm_menu ) {
+	if ( 'menu' === $pcm_menu['type'] && 'pcm-crm-settings' === $pcm_menu['slug'] ) { $pcm_settings_menu = $pcm_menu; }
+}
+check( 'CRM Settings registers as its own top-level menu, not under Settings',
+	$pcm_settings_menu && '' === $pcm_settings_menu['parent'], true );
+
+$pcm_hidden = array();
+foreach ( $GLOBALS['pcm_test_menus'] as $pcm_menu ) {
+	if ( 'removed' === $pcm_menu['type'] ) { $pcm_hidden[] = $pcm_menu['slug']; }
+}
+sort( $pcm_hidden );
+check( 'the app-backed pages are still registered then hidden — the URL works, the sidebar does not grow',
+	$pcm_hidden, array( 'pcm-crm-recycle-bin', 'pcm-crm-schedules', 'pcm-crm-sequences', 'pcm-crm-templates' ) );
+
+echo "\n--- no URL in the codebase had to change ---\n";
+
+// The whole point of restoring the top-level menu through PCM_CRM_SETUP_SLUG
+// rather than a new slug: pcm_crm_setup_url() already emitted admin.php?page=,
+// which resolves a registered page regardless of what its parent is.
+check( 'pcm_crm_setup_url() still emits the same shape it always did',
+	pcm_crm_setup_url( 'fields' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-settings&tab=fields' );
+check( 'and the recycle bin’s own slug is untouched',
+	pcm_crm_setup_url( 'recycle' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-recycle-bin' );
+check( 'pcm_crm_settings_url() is gone rather than kept as a second way to say the same thing',
+	function_exists( 'pcm_crm_settings_url' ), false );
+
+echo "\n--- every settings group this plugin owns can actually be saved ---\n";
+
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1, 'portal' => 1 ) );
+pcm_crm_load_modules();
+
+$GLOBALS['pcm_crm_setting_groups'] = array();
+pcm_crm_register_settings();
+pcm_crm_pm_register_settings();
+pcm_crm_portal_register_settings();
+
+$pcm_expected_groups = array(
+	'pcm_crm_form_settings', 'pcm_crm_fields_settings', 'pcm_crm_export_settings',
+	'pcm_crm_theme_settings', 'pcm_crm_modules_settings', 'pcm_crm_pipeline_settings',
+	'pcm_crm_sales_process_settings', 'pcm_crm_pm_time_settings', 'pcm_crm_pm_picklist_settings',
+	'pcm_crm_portal_settings',
+);
+
+check( 'pcm_crm_register_setting() saw every group the settings screens register',
+	array_diff( $pcm_expected_groups, array_keys( $GLOBALS['pcm_crm_setting_groups'] ) ), array() );
+
+$pcm_missing_filter = array();
+foreach ( $pcm_expected_groups as $pcm_group ) {
+	if ( ! has_filter( 'option_page_capability_' . $pcm_group, 'pcm_crm_settings_option_capability' ) ) {
+		$pcm_missing_filter[] = $pcm_group;
+	}
+}
+check( 'and every one of them has options.php’s capability filter — this is the blocker made un-regressable',
+	$pcm_missing_filter, array() );
+
+echo "\n--- what options.php actually asks: is PCM_CRM_SETTINGS_CAP granted ---\n";
+
+// pcm_crm_map_settings_cap() IS the user_has_cap filter, so it cannot call
+// current_user_can()/user_can() to find its own answer without re-entering
+// itself — tested here as the pure function it is, with a crafted $allcaps
+// standing in for what WordPress had already computed from roles before any
+// filter ran.
+$pcm_admin_user = (object) array( 'ID' => 1 );
+$pcm_staff_user = (object) array( 'ID' => 9 );
+
+check( 'an administrator is granted regardless of any profile',
+	pcm_crm_map_settings_cap( array( 'manage_options' => true ), array(), array(), $pcm_admin_user )[ PCM_CRM_SETTINGS_CAP ],
+	true
+);
+
+update_option( PCM_CRM_PROFILES_OPTION, array( 'sales' => array( 'label' => 'Sales', 'description' => '', 'grants' => array( 'settings' => array( 'edit' ) ) ) ) );
+$GLOBALS['pcm_test_users'] = array( 9 => (object) array( 'ID' => 9, 'roles' => array( PCM_CRM_STAFF_ROLE ) ) );
+$GLOBALS['pcm_test_user_caps'] = array( 9 => array( PCM_CRM_CAP => true ) );
+update_user_meta( 9, PCM_CRM_PROFILE_META, 'sales' );
+pcm_crm_flush_permissions( 9 );
+
+check( 'a non-administrator with Settings-edit in their profile is granted',
+	pcm_crm_map_settings_cap( array(), array(), array(), $pcm_staff_user )[ PCM_CRM_SETTINGS_CAP ],
+	true
+);
+
+update_option( PCM_CRM_PROFILES_OPTION, array( 'sales' => array( 'label' => 'Sales', 'description' => '', 'grants' => array( 'crm' => array( 'view' ) ) ) ) );
+pcm_crm_flush_permissions( 9 );
+
+check( 'a non-administrator without it is refused',
+	pcm_crm_map_settings_cap( array(), array(), array(), $pcm_staff_user )[ PCM_CRM_SETTINGS_CAP ],
+	false
+);
+
+check( 'the filter only ever adds its own key — it never touches manage_options itself',
+	pcm_crm_map_settings_cap( array( 'manage_options' => true, 'edit_posts' => false ), array(), array(), $pcm_admin_user ),
+	array( 'manage_options' => true, 'edit_posts' => false, PCM_CRM_SETTINGS_CAP => true )
+);
+
+pcm_crm_flush_permissions();
+$GLOBALS['pcm_test_users']         = array();
+$GLOBALS['pcm_test_user_caps']     = array();
+$GLOBALS['pcm_test_user_meta']     = array();
+$GLOBALS['pcm_crm_setting_groups'] = array();

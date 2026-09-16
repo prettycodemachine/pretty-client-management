@@ -38,6 +38,18 @@ define( 'PCM_CRM_STAFF_ROLE', 'pcm_crm_staff' );
 define( 'PCM_CRM_ROLE_VERSION', 1 );
 
 /**
+ * The capability options.php asks about before it will save a settings form.
+ *
+ * options.php hard-requires manage_options unless an
+ * option_page_capability_{$group} filter answers a different capability for
+ * that group — see pcm_crm_register_setting() in access-settings.php, which
+ * registers that filter for every group this plugin owns, and
+ * pcm_crm_map_settings_cap() in capabilities.php, which answers it from the
+ * permission matrix rather than from a second, parallel capability grant.
+ */
+define( 'PCM_CRM_SETTINGS_CAP', 'pcm_crm_settings' );
+
+/**
  * The lead source stamped on contacts created by the site's contact form.
  *
  * A constant rather than a literal because the intake writes it and the

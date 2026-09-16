@@ -45,26 +45,37 @@ function pcm_crm_menu() {
 	}
 
 	/* The setup ------------------------------------------------------------
-	   Lives under WordPress's own Settings menu as "CRM Settings" rather than
-	   a top-level menu of its own — it is a screen touched twice a year, and
-	   Settings is where WordPress already trains people to look for one of
-	   those. Its app-backed pages (Templates, Sequences, Schedules, the bin)
-	   keep their own slugs on purpose: a notification email links to
+	   A top-level menu of its own, not tucked under WordPress's Settings —
+	   employee-portal staff with a Settings permission set but no wp-admin
+	   Settings access still need to find it, and "under Settings" only ever
+	   made sense while every visitor here was an administrator anyway. 28
+	   rather than 27: Projects claims 27 when its module is on, and Setup
+	   belongs after the work whether it is or not.
+	   Its app-backed pages (Templates, Sequences, Schedules, the bin) keep
+	   their own slugs on purpose: a notification email links to
 	   page=pcm-crm-recycle-bin and a drill-down to one of the others, and
 	   moving a screen must not break a link already sent. They no longer get
 	   a submenu entry of their own, though — registered here and immediately
-	   hidden, so the URL still works but the WordPress sidebar shows only
-	   CRM Settings. Each is still one click away from CRM Settings' own nav
+	   hidden, so the URL still works but the sidebar shows only CRM Settings.
+	   Each is still one click away from CRM Settings' own nav
 	   (pcm_crm_setup_open()'s left-hand groups), which is what "lives within
 	   CRM Settings" means for them now.
 	   ------------------------------------------------------------------- */
-	add_options_page(
+	add_menu_page(
 		__( 'CRM Settings', 'pcm-crm' ),
 		__( 'CRM Settings', 'pcm-crm' ),
 		$pcm_cap,
 		PCM_CRM_SETUP_SLUG,
-		'pcm_crm_render_settings'
+		'pcm_crm_render_settings',
+		'dashicons-admin-generic',
+		28
 	);
+
+	// Without this, WordPress's own default submenu item for a single-page
+	// top-level menu repeats the top-level label — "CRM Settings" under "CRM
+	// Settings" — where the in-frame nav (pcm_crm_setup_open()) already calls
+	// this destination "Home".
+	add_submenu_page( PCM_CRM_SETUP_SLUG, __( 'Home', 'pcm-crm' ), __( 'Home', 'pcm-crm' ), $pcm_cap, PCM_CRM_SETUP_SLUG, 'pcm_crm_render_settings' );
 
 	$pcm_renderers = array(
 		'pcm-crm-templates'   => 'pcm_crm_render_templates',
@@ -75,8 +86,8 @@ function pcm_crm_menu() {
 
 	foreach ( pcm_crm_setup_pages() as $pcm_page ) {
 		if ( isset( $pcm_renderers[ $pcm_page['page'] ] ) ) {
-			add_submenu_page( 'options-general.php', $pcm_page['label'], $pcm_page['label'], $pcm_cap, $pcm_page['page'], $pcm_renderers[ $pcm_page['page'] ] );
-			remove_submenu_page( 'options-general.php', $pcm_page['page'] );
+			add_submenu_page( PCM_CRM_SETUP_SLUG, $pcm_page['label'], $pcm_page['label'], $pcm_cap, $pcm_page['page'], $pcm_renderers[ $pcm_page['page'] ] );
+			remove_submenu_page( PCM_CRM_SETUP_SLUG, $pcm_page['page'] );
 		}
 	}
 }

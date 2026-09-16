@@ -244,7 +244,7 @@ pcm_crm_register_setup_page( 'portal-page', array(
 ) );
 
 function pcm_crm_portal_register_settings() {
-	register_setting( 'pcm_crm_portal_settings', 'pcm_crm_portal_page_id', array(
+	pcm_crm_register_setting( 'pcm_crm_portal_settings', 'pcm_crm_portal_page_id', array(
 		'type'              => 'integer',
 		'sanitize_callback' => 'absint',
 		'default'           => 0,

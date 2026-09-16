@@ -51,6 +51,49 @@ function pcm_crm_register_setup_page( $pcm_key, array $pcm_args ) {
 }
 
 /**
+ * Register a Setup option group, and the capability its form needs to save.
+ *
+ * options.php hard-requires manage_options to accept a submitted group unless
+ * an option_page_capability_{$group} filter names a different capability —
+ * and no such filter existed anywhere in this plugin before permissions were
+ * granular, so a staff member with Settings access could see every tab and
+ * save none of them.
+ *
+ * The filter is registered *here*, inside the wrapper, rather than from a
+ * list of group names kept in sync by hand: a group registered through
+ * register_setting() directly would silently fall back to manage_options,
+ * with a wp_die() at save time that says nothing about why. Routing every
+ * settings tab through this one function is what makes that failure mode
+ * structurally impossible rather than a rule to remember.
+ *
+ * Recorded groups are also what tests/permissions.php checks completeness
+ * against, the same shape the REST route table does for permission areas.
+ */
+function pcm_crm_register_setting( $pcm_group, $pcm_option, array $pcm_args = array() ) {
+	if ( ! isset( $GLOBALS['pcm_crm_setting_groups'] ) ) {
+		$GLOBALS['pcm_crm_setting_groups'] = array();
+	}
+
+	if ( ! isset( $GLOBALS['pcm_crm_setting_groups'][ $pcm_group ] ) ) {
+		add_filter( 'option_page_capability_' . $pcm_group, 'pcm_crm_settings_option_capability' );
+	}
+
+	$GLOBALS['pcm_crm_setting_groups'][ $pcm_group ] = true;
+
+	register_setting( $pcm_group, $pcm_option, $pcm_args );
+}
+
+/**
+ * The capability every option_page_capability_* filter this plugin owns
+ * answers with. A single named function (rather than an inline closure per
+ * add_filter() call above) so has_filter() can tell our filters apart from
+ * anyone else's for the same reason.
+ */
+function pcm_crm_settings_option_capability() {
+	return PCM_CRM_SETTINGS_CAP;
+}
+
+/**
  * The groups, in nav order.
  *
  * 'module' names the module a group belongs to, so Setup Home can say a group

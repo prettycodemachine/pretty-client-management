@@ -17,13 +17,6 @@ function pcm_crm_add_capabilities() {
 }
 
 /**
- * Grant the cap to any administrator who predates the plugin.
- *
- * Roles are stored in the database, so an admin created before activation —
- * or on a site where activation ran before this cap existed — would otherwise
- * never receive it. Cheap enough to check on every admin load.
- */
-/**
  * The staff role.
  *
  * One role, not one per profile. The role answers only "is this person staff" —
@@ -81,6 +74,16 @@ function pcm_crm_ensure_staff_role() {
 }
 add_action( 'init', 'pcm_crm_ensure_staff_role' );
 
+/**
+ * Grant the cap to any administrator who predates the plugin.
+ *
+ * Roles are stored in the database, so an admin created before activation —
+ * or on a site where activation ran before this cap existed — would otherwise
+ * never receive it. Cheap enough to check on every admin load. Stays admin-only
+ * (is_admin()) even now that there is a front-end host, because it only ever
+ * grants to administrators, who are the one audience still expected to reach
+ * wp-admin.
+ */
 function pcm_crm_ensure_capabilities() {
 	if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
 		return;
@@ -113,3 +116,43 @@ function pcm_crm_user_can() {
 
 	return false;
 }
+
+/**
+ * Answers PCM_CRM_SETTINGS_CAP from the permission matrix, for options.php.
+ *
+ * options.php hard-requires manage_options to save a settings form unless an
+ * option_page_capability_{$group} filter names a different capability — but
+ * that filter can only name a capability *string*, not call pcm_crm_can()
+ * directly. This is the one place that translates between the two: every
+ * option_page_capability_* filter this plugin registers (see
+ * pcm_crm_register_setting() in access-settings.php) answers with
+ * PCM_CRM_SETTINGS_CAP, and this is what decides whether the current user
+ * actually holds it.
+ *
+ * This filter *is* user_has_cap, which current_user_can() and user_can() both
+ * run through for every capability check, not only this one — so calling
+ * either of those back out from inside it re-enters the same filter. The
+ * administrator case is answered straight from $pcm_allcaps, which is the
+ * array WordPress already computed from roles before any filter ran, so that
+ * branch never recurses at all. The non-administrator case does still call
+ * pcm_crm_can(), which asks pcm_crm_is_administrator() the same "are they an
+ * administrator" question a second time — but keyed and reentrancy-guarded
+ * per user id there (includes/permissions.php), so that nested ask answers
+ * false immediately instead of asking current_user_can() again. The recursion
+ * is bounded by that guard, not by anything here; do not remove it from
+ * permissions.php without keeping this safe another way.
+ *
+ * Getting this wrong is a stack overflow on every admin page — a white-
+ * screened site — and there is no local PHP stack to catch it before staging.
+ */
+function pcm_crm_map_settings_cap( $pcm_allcaps, $pcm_caps, $pcm_args, $pcm_user ) {
+	if ( ! empty( $pcm_allcaps['manage_options'] ) ) {
+		$pcm_allcaps[ PCM_CRM_SETTINGS_CAP ] = true;
+		return $pcm_allcaps;
+	}
+
+	$pcm_allcaps[ PCM_CRM_SETTINGS_CAP ] = pcm_crm_can( 'settings', 'edit', $pcm_user->ID );
+
+	return $pcm_allcaps;
+}
+add_filter( 'user_has_cap', 'pcm_crm_map_settings_cap', 10, 4 );

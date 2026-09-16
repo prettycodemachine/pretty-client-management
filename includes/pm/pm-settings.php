@@ -39,12 +39,12 @@ pcm_crm_register_setup_page( 'project-picklists', array(
 ) );
 
 function pcm_crm_pm_register_settings() {
-	register_setting( 'pcm_crm_pm_time_settings', PCM_CRM_PM_TIME_OPTION, array(
+	pcm_crm_register_setting( 'pcm_crm_pm_time_settings', PCM_CRM_PM_TIME_OPTION, array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_pm_sanitize_time_settings',
 	) );
 
-	register_setting( 'pcm_crm_pm_picklist_settings', PCM_CRM_PM_PICKLISTS_OPTION, array(
+	pcm_crm_register_setting( 'pcm_crm_pm_picklist_settings', PCM_CRM_PM_PICKLISTS_OPTION, array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_pm_sanitize_picklists',
 	) );

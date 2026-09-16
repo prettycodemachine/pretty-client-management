@@ -17,83 +17,83 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * form did not include it.
  */
 function pcm_crm_register_settings() {
-	register_setting( 'pcm_crm_form_settings', 'pcm_contact_recipient', array(
+	pcm_crm_register_setting( 'pcm_crm_form_settings', 'pcm_contact_recipient', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'sanitize_email',
 		'default'           => get_option( 'admin_email' ),
 	) );
-	register_setting( 'pcm_crm_form_settings', 'pcm_autoresponder_enabled', array(
+	pcm_crm_register_setting( 'pcm_crm_form_settings', 'pcm_autoresponder_enabled', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'pcm_crm_sanitize_checkbox',
 		'default'           => '1',
 	) );
-	register_setting( 'pcm_crm_form_settings', 'pcm_autoresponder_subject', array(
+	pcm_crm_register_setting( 'pcm_crm_form_settings', 'pcm_autoresponder_subject', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'sanitize_text_field',
 		'default'           => pcm_crm_autoresponder_default_subject(),
 	) );
-	register_setting( 'pcm_crm_form_settings', 'pcm_autoresponder_body', array(
+	pcm_crm_register_setting( 'pcm_crm_form_settings', 'pcm_autoresponder_body', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'wp_kses_post',
 		'default'           => '',
 	) );
-	register_setting( 'pcm_crm_form_settings', 'pcm_crm_attachment_ids', array(
+	pcm_crm_register_setting( 'pcm_crm_form_settings', 'pcm_crm_attachment_ids', array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_sanitize_ids',
 		'default'           => array(),
 	) );
-	register_setting( 'pcm_crm_form_settings', 'pcm_crm_email_logo', array(
+	pcm_crm_register_setting( 'pcm_crm_form_settings', 'pcm_crm_email_logo', array(
 		'type'              => 'integer',
 		'sanitize_callback' => 'absint',
 		'default'           => 0,
 	) );
-	register_setting( 'pcm_crm_form_settings', 'pcm_crm_form_button', array(
+	pcm_crm_register_setting( 'pcm_crm_form_settings', 'pcm_crm_form_button', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'sanitize_text_field',
 		'default'           => '',
 	) );
-	register_setting( 'pcm_crm_form_settings', PCM_CRM_FIELDS_OPTION, array(
+	pcm_crm_register_setting( 'pcm_crm_form_settings', PCM_CRM_FIELDS_OPTION, array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_sanitize_form_fields',
 		'default'           => array(),
 	) );
 
-	register_setting( 'pcm_crm_fields_settings', PCM_CRM_CUSTOM_FIELDS_OPTION, array(
+	pcm_crm_register_setting( 'pcm_crm_fields_settings', PCM_CRM_CUSTOM_FIELDS_OPTION, array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_sanitize_custom_fields',
 		'default'           => array(),
 	) );
-	register_setting( 'pcm_crm_fields_settings', PCM_CRM_LAYOUTS_OPTION, array(
+	pcm_crm_register_setting( 'pcm_crm_fields_settings', PCM_CRM_LAYOUTS_OPTION, array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_sanitize_layouts',
 		'default'           => array(),
 	) );
 
-	register_setting( 'pcm_crm_export_settings', 'pcm_crm_npsp_namespace', array(
+	pcm_crm_register_setting( 'pcm_crm_export_settings', 'pcm_crm_npsp_namespace', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'pcm_crm_sanitize_checkbox',
 		'default'           => '',
 	) );
 
-	register_setting( 'pcm_crm_theme_settings', 'pcm_crm_theme', array(
+	pcm_crm_register_setting( 'pcm_crm_theme_settings', 'pcm_crm_theme', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'pcm_crm_sanitize_theme',
 		'default'           => 'pcm',
 	) );
 
-	register_setting( 'pcm_crm_modules_settings', PCM_CRM_MODULES_OPTION, array(
+	pcm_crm_register_setting( 'pcm_crm_modules_settings', PCM_CRM_MODULES_OPTION, array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_sanitize_modules',
 		'default'           => array(),
 	) );
 
-	register_setting( 'pcm_crm_pipeline_settings', 'pcm_crm_stall_days', array(
+	pcm_crm_register_setting( 'pcm_crm_pipeline_settings', 'pcm_crm_stall_days', array(
 		'type'              => 'integer',
 		'sanitize_callback' => 'absint',
 		'default'           => 30,
 	) );
 
-	register_setting( 'pcm_crm_sales_process_settings', 'pcm_crm_stages', array(
+	pcm_crm_register_setting( 'pcm_crm_sales_process_settings', 'pcm_crm_stages', array(
 		'type'              => 'array',
 		'sanitize_callback' => 'pcm_crm_sanitize_stage_probabilities',
 	) );
@@ -120,10 +120,6 @@ function pcm_crm_settings_tabs() {
 
 function pcm_crm_current_settings_tab() {
 	return pcm_crm_current_setup_key();
-}
-
-function pcm_crm_settings_url( $pcm_tab ) {
-	return admin_url( 'admin.php?page=pcm-crm-settings&tab=' . $pcm_tab );
 }
 
 function pcm_crm_sanitize_checkbox( $pcm_value ) {
@@ -922,7 +918,7 @@ function pcm_crm_render_fields_tab() {
 	<div class="pcm-crm-object-switch">
 		<?php foreach ( pcm_crm_customisable_objects() as $pcm_slug => $pcm_label ) : ?>
 			<a class="pcm-crm-object-pill<?php echo $pcm_slug === $pcm_object ? ' is-active' : ''; ?>"
-				href="<?php echo esc_url( add_query_arg( 'object', $pcm_slug, pcm_crm_settings_url( 'fields' ) ) ); ?>">
+				href="<?php echo esc_url( add_query_arg( 'object', $pcm_slug, pcm_crm_setup_url( 'fields' ) ) ); ?>">
 				<?php echo esc_html( $pcm_label ); ?>
 			</a>
 		<?php endforeach; ?>
@@ -1270,7 +1266,7 @@ function pcm_crm_handle_samples() {
 	}
 
 	$pcm_task = isset( $_POST['task'] ) ? sanitize_key( wp_unslash( $_POST['task'] ) ) : '';
-	$pcm_back = pcm_crm_settings_url( 'samples' );
+	$pcm_back = pcm_crm_setup_url( 'samples' );
 
 	if ( 'delete' === $pcm_task ) {
 		$pcm_removed = pcm_crm_delete_sample_data();
