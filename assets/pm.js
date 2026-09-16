@@ -1067,7 +1067,7 @@
 		]));
 
 		mount.actions.appendChild(el('button.pcm-btn.pcm-btn-quiet', { type: 'button', text: 'Copy last week’s rows', onclick: copyLastWeek }));
-		mount.actions.appendChild(el('a.pcm-btn.pcm-btn-quiet', { href: (window.PCM_CRM.adminUrl || 'admin.php') + '?page=pcm-crm-time', text: 'All entries' }));
+		mount.actions.appendChild(el('a.pcm-btn.pcm-btn-quiet', { href: app.helpers.screenUrl('pcm-crm-time'), text: 'All entries' }));
 
 		loadTimesheet();
 	}

@@ -75,6 +75,10 @@ require_once PCM_CRM_DIR . 'includes/permissions.php';
 // The CRM Settings pages over that model. After setup.php (register function),
 // permissions.php (the model) and capabilities.php (the staff role constant).
 require_once PCM_CRM_DIR . 'includes/access-settings.php';
+// Where a screen lives in each host, and the Employee Portal address setting.
+require_once PCM_CRM_DIR . 'includes/urls.php';
+// The staff role's wp-admin lockout. After urls.php, which it redirects through.
+require_once PCM_CRM_DIR . 'includes/roles.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-model.php';
 require_once PCM_CRM_DIR . 'includes/model-account.php';
 require_once PCM_CRM_DIR . 'includes/model-contact.php';
@@ -95,6 +99,10 @@ require_once PCM_CRM_DIR . 'admin/settings.php';
 require_once PCM_CRM_DIR . 'public/email.php';
 require_once PCM_CRM_DIR . 'public/intake.php';
 require_once PCM_CRM_DIR . 'public/form.php';
+// Unconditional, like the files above — it has to answer /staff/… whatever
+// the module switches say, the same reason includes/permissions.php declares
+// every area whether or not its module is active.
+require_once PCM_CRM_DIR . 'public/staff.php';
 
 // Last, so a module can register against everything above it — objects, related
 // lists, merge prefixes, settings tabs — without the core files knowing it

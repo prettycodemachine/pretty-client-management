@@ -48,16 +48,119 @@
   --pcm-control: 38px;
   --pcm-control-lg: 44px;
 
+  /* The filter bar sticks under whatever sits above it — wp-admin's admin
+     bar (32px desktop) here, nothing at all on the front end, where
+     .pcm-crm-front overrides this to 0 rather than leaving a 32px gap above
+     a page that has no bar to clear. */
+  --pcm-sticky-top: 32px;
+
   font-family: var(--font-body);
   color: var(--pcm-body);
-  /* wp-admin's own 20px right gutter plus the menu's left one leaves the wide
-     screens (pipeline, dashboard) too narrow; reclaim it. */
-  margin-right: 20px;
 }
+
+/* wp-admin's own 20px right gutter plus the menu's left one leaves the wide
+   screens (pipeline, dashboard) too narrow; reclaim it. Meaningless on the
+   front end, which has no admin-menu gutter to reclaim from. */
+.pcm-crm:not(.pcm-crm-front) { margin-right: 20px; }
 
 .pcm-crm *,
 .pcm-crm *::before,
 .pcm-crm *::after { box-sizing: border-box; }
+
+/* Front-end host -------------------------------------------------------------
+   The nav that replaces wp-admin's own chrome, and the page frame around it.
+   Kept in crm.css rather than a separate stylesheet — the front-end host has
+   no equivalent of setup.css's "only loads on Setup screens" carve-out, since
+   the nav renders on every screen there is. A dark band in the same register
+   as .pcm-setup-band (setup.css), but not sharing its tokens: those only
+   exist once setup.css has loaded, which the front-end nav cannot assume. */
+.pcm-crm-front { --pcm-sticky-top: 0; }
+
+/* background: ink / color: paper, never a literal white — ink and paper are
+   an inverting pair (setup.css's identical .pcm-setup-band does the same):
+   in the dark and neon themes --pcm-ink is itself a near-white "high
+   contrast" colour and --pcm-paper is the dark one, so a literal #fff text
+   colour here would print white-on-white the moment either of those themes
+   is active. */
+.pcm-crm-front-nav {
+  background: var(--pcm-ink);
+  color: var(--pcm-paper);
+}
+.pcm-crm-front-nav-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pcm-crm-front-brand {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--pcm-paper);
+  text-decoration: none;
+}
+.pcm-crm-front-brand:hover { text-decoration: underline; }
+.pcm-crm-front-account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.86rem;
+  color: var(--pcm-paper);
+}
+.pcm-crm-front-account-name { font-weight: 700; }
+.pcm-crm-front-logout {
+  /* Full paper, not a reduced opacity — opacity blends toward the ink
+     background behind it, and there is no per-theme guarantee that a
+     partway blend still clears 4.5:1 the way the full ink/paper pair does.
+     The underline alone is what sets it apart from the name beside it. */
+  color: var(--pcm-paper);
+  font-size: 0.8rem;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+.pcm-crm-front-logout:hover { border-bottom-width: 2px; }
+
+.pcm-crm-front-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+/* The app bar (pcm_crm_app_bar(), reused unchanged from wp-admin) is row two
+   of the front-end nav, sitting inside the main column rather than the dark
+   band — it is already a bordered white card with its own shadow, and a
+   second dark surface directly under the first would fight it rather than
+   read as a second row of the same nav. */
+.pcm-crm-front-main > .pcm-crm-appbar { margin-top: 0; margin-bottom: 20px; }
+
+.pcm-crm-front-deny {
+  max-width: 520px;
+  margin: 60px auto;
+  padding: 32px;
+  text-align: center;
+  border: 2px solid var(--pcm-ink);
+  border-radius: var(--radius);
+  background: var(--pcm-paper);
+}
+.pcm-crm-front-deny h1 { margin: 0 0 10px; }
+.pcm-crm-front-deny p { margin: 0 0 10px; }
+.pcm-crm-front-deny a { color: var(--pcm-blue-deep); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .pcm-crm-front-nav-inner { padding: 12px 16px; }
+  .pcm-crm-front-main { padding: 16px 16px 40px; }
+}
+
+/* Insurance against the theme's own p { max-width: 640px } (style.css)
+   reaching this page — it should not be able to, since the front-end host
+   dequeues the theme's stylesheet outright (public/staff.php), but Speed
+   Optimizer combining a stale copy back in is the exact failure mode
+   includes/assets.php exists to prevent, and a one-line rule here costs
+   nothing against the day that prevention has a gap. */
+.pcm-crm p { max-width: none; }
 
 .pcm-crm h1, .pcm-crm h2, .pcm-crm h3, .pcm-crm h4 {
   font-family: var(--font-display);
@@ -139,7 +242,7 @@
 /* Filter bar ---------------------------------------------------------------- */
 .pcm-crm-filters {
   position: sticky;
-  top: 32px;
+  top: var(--pcm-sticky-top, 32px);
   z-index: 20;
   display: flex;
   align-items: flex-end;
@@ -1101,7 +1204,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   .pcm-crm-tabs { flex-wrap: nowrap; overflow-x: auto; }
   .pcm-crm-tab { white-space: nowrap; }
   .pcm-crm-related-row { grid-template-columns: 1fr auto; }
-  .pcm-crm { margin-right: 12px; }
+  .pcm-crm:not(.pcm-crm-front) { margin-right: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1153,6 +1256,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 @media print {
   #adminmenumain, #adminmenuback, #adminmenuwrap,
   #wpadminbar, #wpfooter, .notice, .update-nag,
+  .pcm-crm-front-nav,
   .pcm-crm-head-actions, .pcm-crm-filter-actions,
   .pcm-crm-builder button, .pcm-crm-builder-panel,
   .pcm-crm-drawer, .pcm-crm-scrim { display: none !important; }

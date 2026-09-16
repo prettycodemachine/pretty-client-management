@@ -545,3 +545,170 @@ $GLOBALS['pcm_test_users']         = array();
 $GLOBALS['pcm_test_user_caps']     = array();
 $GLOBALS['pcm_test_user_meta']     = array();
 $GLOBALS['pcm_crm_setting_groups'] = array();
+
+echo "\n--- the front-end slug map, both directions ---\n";
+
+check( 'the CRM app derives cleanly from pcm_crm_apps() items',
+	pcm_crm_front_slug_map(),
+	array(
+		'pcm-crm' => 'home', 'pcm-crm-accounts' => 'accounts', 'pcm-crm-contacts' => 'contacts',
+		'pcm-crm-opportunities' => 'opportunities', 'pcm-crm-pipeline' => 'pipeline',
+		'pcm-crm-activities' => 'activities', 'pcm-crm-reports' => 'reports',
+	)
+);
+check( 'the CRM dashboard is the one override — "home", not "dashboard"',
+	pcm_crm_front_slug( 'pcm-crm' ), 'home' );
+check( 'every other slug is simply its data-view key',
+	pcm_crm_front_slug( 'pcm-crm-contacts' ), 'contacts' );
+check( 'an object with no front route answers empty rather than guessing',
+	pcm_crm_front_slug( 'pcm-crm-recycle-bin' ), '' );
+check( 'the reverse map is exact — a word in a URL resolves to one admin slug',
+	pcm_crm_slug_for_front( 'contacts' ), 'pcm-crm-contacts' );
+check( 'and the override reverses too', pcm_crm_slug_for_front( 'home' ), 'pcm-crm' );
+check( 'an unknown word resolves to nothing, not a guess',
+	pcm_crm_slug_for_front( 'nonsense' ), '' );
+
+echo "\n--- every screen callbacks() names has a route, and vice versa ---\n";
+
+// The two lists (admin/menu.php's pcm_crm_screen_callbacks() and
+// pcm_crm_apps()'s items, which pcm_crm_front_slug_map() is built from) are
+// kept separately on purpose — but "separately" only stays safe while
+// nothing drifts, so this is the completeness check for that seam, the same
+// shape the REST route table above already uses.
+$pcm_callback_slugs = array_keys( pcm_crm_screen_callbacks() );
+$pcm_routable_slugs = array_keys( pcm_crm_front_slug_map() );
+sort( $pcm_callback_slugs );
+sort( $pcm_routable_slugs );
+
+check( 'every routable CRM slug has a render callback, and only those',
+	$pcm_callback_slugs, $pcm_routable_slugs );
+
+foreach ( pcm_crm_screen_callbacks() as $pcm_slug => $pcm_callback ) {
+	check( "callback for $pcm_slug is a real, callable function", is_callable( $pcm_callback ), true );
+}
+
+echo "\n--- pcm_crm_screen_url(), both hosts ---\n";
+
+check( 'admin host: unchanged shape',
+	pcm_crm_screen_url( 'pcm-crm-contacts', array(), 'admin' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-contacts' );
+check( 'admin host with an id: the #id= shorthand',
+	pcm_crm_screen_url( 'pcm-crm-contacts', array( 'id' => 5 ), 'admin' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-contacts#id=5' );
+check( 'front host: the pretty shape',
+	pcm_crm_screen_url( 'pcm-crm-contacts', array(), 'front' ), 'https://example.com/staff/contacts/' );
+check( 'front host with an id: a path segment, not a hash',
+	pcm_crm_screen_url( 'pcm-crm-contacts', array( 'id' => 5 ), 'front' ), 'https://example.com/staff/contacts/5/' );
+check( 'front host, a slug with no route yet: falls through to the admin shape',
+	pcm_crm_screen_url( 'pcm-crm-settings', array(), 'front' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-settings' );
+
+echo "\n--- who a link should point at ---\n";
+
+$GLOBALS['pcm_test_users'] = array(
+	1 => (object) array( 'ID' => 1 ),
+	9 => (object) array( 'ID' => 9, 'roles' => array( PCM_CRM_STAFF_ROLE ) ),
+);
+$GLOBALS['pcm_test_user_caps'] = array(
+	1 => array( 'manage_options' => true, PCM_CRM_CAP => true ),
+	9 => array( PCM_CRM_CAP => true ),
+);
+
+check( 'an administrator always resolves to admin', pcm_crm_link_host_for_user( 1 ), 'admin' );
+check( 'staff resolves to front', pcm_crm_link_host_for_user( 9 ), 'front' );
+check( 'an unknown id falls back to admin — the shape that has always worked',
+	pcm_crm_link_host_for_user( 999 ), 'admin' );
+check( 'id 0 falls back to admin too', pcm_crm_link_host_for_user( 0 ), 'admin' );
+
+echo "\n--- the Employee Portal address, sanitised ---\n";
+
+check( 'a reserved word is refused, keeping the current value',
+	pcm_crm_sanitize_front_base( 'wp-admin' ), pcm_crm_front_base() );
+check( 'a plain word is slugified', pcm_crm_sanitize_front_base( 'Team Portal' ), 'team-portal' );
+check( 'blank falls back to the default', pcm_crm_sanitize_front_base( '' ), 'staff' );
+
+$GLOBALS['pcm_test_pages']['crew'] = true;
+check( 'a base colliding with a real page is refused',
+	pcm_crm_sanitize_front_base( 'crew' ), pcm_crm_front_base() );
+check( 'a clean value is accepted', pcm_crm_sanitize_front_base( 'crew2' ), 'crew2' );
+unset( $GLOBALS['pcm_test_pages']['crew'] );
+
+echo "\n--- translating a wp-admin page a locked-out staff member lands on ---\n";
+
+check( 'a routable CRM screen redirects to its front-end equivalent',
+	pcm_crm_staff_redirect_target( 'pcm-crm-contacts' ), 'https://example.com/staff/contacts/' );
+check( 'CRM Settings and its app-backed pages are exempt — no redirect at all',
+	pcm_crm_staff_redirect_target( 'pcm-crm-settings' ), '' );
+check( 'the recycle bin, an app-backed Setup page, is exempt the same way',
+	pcm_crm_staff_redirect_target( 'pcm-crm-recycle-bin' ), '' );
+check( 'no page at all (the bare wp-admin dashboard) goes to the front-end home',
+	pcm_crm_staff_redirect_target( '' ), 'https://example.com/staff/' );
+check( 'a page nobody registered also falls back to the front-end home',
+	pcm_crm_staff_redirect_target( 'some-other-plugins-page' ), 'https://example.com/staff/' );
+
+echo "\n--- which admin hook needs which assets — the enqueue regression ---\n";
+
+// CRM Settings became a top-level menu, which changed every one of these
+// hook suffixes: the app-backed Setup pages are now submenus of
+// pcm-crm-settings, so a hook-contains-that-string test (what this used to
+// be) would now also match them and wrongly skip loading crm.js. Exact
+// suffixes WordPress's own get_plugin_page_hookname() produces for a
+// top-level menu ("toplevel_page_<slug>") and a submenu
+// ("<parent-slug>_page_<own-slug>", parent already sanitised — pcm-crm-
+// settings needs no further sanitising since it is already a bare slug).
+check( 'the bare Settings home has the skin but no app to mount',
+	array(
+		pcm_crm_is_setup_screen( 'toplevel_page_pcm-crm-settings' ),
+		pcm_crm_hook_is_page( 'toplevel_page_pcm-crm-settings', PCM_CRM_SETUP_SLUG ),
+	),
+	array( true, true )
+);
+
+foreach ( array( 'pcm-crm-templates', 'pcm-crm-sequences', 'pcm-crm-schedules', 'pcm-crm-recycle-bin' ) as $pcm_slug ) {
+	$pcm_hook = 'pcm-crm-settings_page_' . $pcm_slug;
+
+	check( "$pcm_slug has the Setup skin AND the app — this is the regression",
+		array( pcm_crm_is_setup_screen( $pcm_hook ), pcm_crm_hook_is_page( $pcm_hook, PCM_CRM_SETUP_SLUG ) ),
+		array( true, false )
+	);
+}
+
+check( 'an ordinary CRM work screen has neither',
+	array(
+		pcm_crm_is_setup_screen( 'pcm-crm_page_pcm-crm-accounts' ),
+		pcm_crm_hook_is_page( 'pcm-crm_page_pcm-crm-accounts', PCM_CRM_SETUP_SLUG ),
+	),
+	array( false, false )
+);
+
+echo "\n--- pcm_crm_screen()'s host inference and shell class ---\n";
+
+check( 'wants_wrap is the whole admin/front difference — front drops it',
+	array( pcm_crm_wants_wrap( 'admin' ), pcm_crm_wants_wrap( 'front' ) ), array( true, false ) );
+check( 'the embedded (Setup-frame) shell never carries "wrap" either way',
+	pcm_crm_shell_class( 'admin', 'recycle' ), 'pcm-crm pcm-crm-embedded' );
+check( 'an ordinary admin screen keeps "wrap"', pcm_crm_shell_class( 'admin', '' ), 'wrap pcm-crm' );
+check( 'the front-end shell never gets it', pcm_crm_shell_class( 'front', '' ), 'pcm-crm pcm-crm-front' );
+
+echo "\n--- the config the front-end host actually localizes ---\n";
+
+$GLOBALS['pcm_test_is_admin'] = false;
+pcm_test_set_query_vars( array( 'pcm_crm_screen' => 'contacts', 'pcm_crm_id' => 5 ) );
+unset( $GLOBALS['pcm_test_localized'] );
+pcm_crm_front_assets();
+
+$pcm_front_cfg = isset( $GLOBALS['pcm_test_localized']['pcm-crm']['PCM_CRM'] ) ? $GLOBALS['pcm_test_localized']['pcm-crm']['PCM_CRM'] : array();
+
+check( 'host is front', isset( $pcm_front_cfg['host'] ) ? $pcm_front_cfg['host'] : null, 'front' );
+check( 'the record id in the URL reaches the config, for init() to seed state with',
+	isset( $pcm_front_cfg['recordId'] ) ? $pcm_front_cfg['recordId'] : null, 5 );
+check( 'the slug map rides along too, so screenUrl() needs no separate request',
+	isset( $pcm_front_cfg['screens'] ) ? $pcm_front_cfg['screens']['pcm-crm-contacts'] : null, 'contacts' );
+
+pcm_test_set_query_vars( array( 'pcm_crm_screen' => 'settings' ) );
+unset( $GLOBALS['pcm_test_localized'] );
+pcm_crm_front_assets();
+check( 'the settings route enqueues no app at all — there is nothing there to mount it against',
+	isset( $GLOBALS['pcm_test_localized']['pcm-crm'] ), false );
+
+$GLOBALS['pcm_test_is_admin']  = true;
+$GLOBALS['pcm_test_users']     = array();
+$GLOBALS['pcm_test_user_caps'] = array();
+pcm_test_set_query_vars( array() );

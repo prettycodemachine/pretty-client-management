@@ -55,6 +55,30 @@ function apply_filters( $h, $v ) {
 $GLOBALS['pcm_test_filters'] = array();
 
 function get_bloginfo( $s = '' ) { return 'Pretty Code Machine'; }
+function bloginfo( $s = '' ) { echo get_bloginfo( $s ); }
+
+/**
+ * Pages, keyed by slug — the shape the front-base collision check needs.
+ * Seed with $GLOBALS['pcm_test_pages']['some-slug'] = true (or a post object).
+ */
+function get_page_by_path( $pcm_path ) {
+	if ( empty( $GLOBALS['pcm_test_pages'][ $pcm_path ] ) ) { return null; }
+
+	$pcm_page = $GLOBALS['pcm_test_pages'][ $pcm_path ];
+
+	return is_object( $pcm_page ) ? $pcm_page : (object) array( 'post_name' => $pcm_path );
+}
+
+function status_header() {}
+function language_attributes() { echo 'lang="en-US"'; }
+function body_class( $pcm_extra = '' ) {
+	echo 'class="' . implode( ' ', array_merge( array( 'pcm-body' ), (array) $pcm_extra ) ) . '"';
+}
+function wp_body_open() {}
+function wp_head() {}
+function wp_footer() {}
+function get_stylesheet_uri() { return 'https://example.com/theme/style.css'; }
+function is_page( $p = null ) { return false; }
 
 function pcm_test_add_filter( $h, $cb ) { $GLOBALS['pcm_test_filters'][$h][] = $cb; }
 function pcm_test_reset_filters( $h ) { unset( $GLOBALS['pcm_test_filters'][$h] ); }
@@ -85,7 +109,18 @@ function wp_list_pluck( $rows, $key ) {
 	}, $rows );
 }
 function current_time( $t ) { return 'timestamp' === $t ? time() : date( 'Y-m-d H:i:s' ); }
-function get_current_user_id() { return 1; }
+/**
+ * Kept in step with wp_get_current_user() below rather than a second,
+ * independent "1" — real WordPress never lets these two disagree about who
+ * is asking, and a permission check that reads one while a role check reads
+ * the other is exactly the kind of test that would pass for the wrong
+ * reason. Defaults to 1 (unchanged) when no test has set a current user, so
+ * every existing assertion that never touches pcm_test_current_user keeps
+ * seeing the same id it always has.
+ */
+function get_current_user_id() {
+	return isset( $GLOBALS['pcm_test_current_user'] ) ? (int) $GLOBALS['pcm_test_current_user']->ID : 1;
+}
 function home_url( $p = '/' ) { return 'https://' . ( isset( $GLOBALS['pcm_test_host'] ) ? $GLOBALS['pcm_test_host'] : 'example.com' ) . $p; }
 function admin_url( $p = '' ) { return 'https://example.com/wp-admin/' . $p; }
 function set_url_scheme( $u, $s ) { return preg_replace( '#^https?://#', $s . '://', $u ); }
@@ -108,6 +143,7 @@ function wpautop( $pee, $br = true ) {
 	return $out;
 }
 function get_attached_file() { return ''; } function wp_kses_post( $s ) { return $s; }
+function get_post_mime_type() { return ''; }
 function wp_strip_all_tags( $s ) { return trim( strip_tags( (string) $s ) ); }
 function plugin_dir_path( $f ) { return dirname( $f ) . '/'; }
 function plugin_dir_url() { return 'https://example.com/plugin/'; }
@@ -120,6 +156,15 @@ function plugin_dir_url() { return 'https://example.com/plugin/'; }
  * assuming one fixed arity.
  */
 function add_query_arg( ...$pcm_args ) {
+	// add_query_arg( null, null ) is the documented idiom for "the current URL,
+	// unmodified" (public/portal.php, public/staff.php both use it) — real
+	// WordPress itself sets $qs[null] for this, which is only a PHP 8.1+
+	// deprecation notice rather than a fatal, but nothing this stub needs to
+	// reproduce to be useful; treated here as "no modifications" instead.
+	if ( null === $pcm_args[0] ) {
+		return isset( $pcm_args[1] ) ? $pcm_args[1] : '';
+	}
+
 	if ( is_array( $pcm_args[0] ) ) {
 		$pcm_new = $pcm_args[0];
 		$pcm_url = isset( $pcm_args[1] ) ? $pcm_args[1] : '';
@@ -266,10 +311,29 @@ function user_can( $pcm_user, $pcm_cap = '' ) {
 
 	return current_user_can( $pcm_cap );
 }
-function is_admin() { return false; } function get_theme_mod() { return 0; }
+/**
+ * Settable, defaulting true — nearly every check in this suite renders a
+ * screen the way wp-admin would, and pcm_crm_is_front_request() (a later
+ * addition) reads !is_admin() to tell the two hosts apart. A test that wants
+ * the front-end branch sets $GLOBALS['pcm_test_is_admin'] = false and puts it
+ * back afterwards, the same shape pcm_test_set_caps() already uses.
+ */
+$GLOBALS['pcm_test_is_admin'] = true;
+function is_admin() { return $GLOBALS['pcm_test_is_admin']; }
+function get_theme_mod() { return 0; }
 function wp_get_attachment_image_src() { return false; }
 function get_current_screen() { return null; }
-function wp_enqueue_style() {} function wp_enqueue_script() {} function wp_localize_script() {}
+function wp_enqueue_style() {} function wp_enqueue_script() {}
+function wp_dequeue_style() {} function wp_dequeue_script() {}
+
+/**
+ * Recorded by handle, so a test can inspect exactly what config a caller
+ * localized — the enqueue functions above stay no-ops since nothing here
+ * asserts what was enqueued, only what a script was configured with.
+ */
+function wp_localize_script( $pcm_handle, $pcm_name, $pcm_data ) {
+	$GLOBALS['pcm_test_localized'][ $pcm_handle ][ $pcm_name ] = $pcm_data;
+}
 function wp_enqueue_media() {} function wp_create_nonce() { return 'nonce'; }
 function rest_url( $n ) { return 'https://example.com/wp-json/' . $n; }
 function wp_nonce_url( $u ) { return $u; }
@@ -349,6 +413,7 @@ function wp_safe_redirect( $pcm_location = '', $pcm_status = 302 ) {
 }
 function wp_redirect( $pcm_location = '', $pcm_status = 302 ) { return wp_safe_redirect( $pcm_location, $pcm_status ); }
 function wp_login_url( $pcm_redirect = '' ) { return 'https://example.com/wp-login.php'; }
+function wp_logout_url( $pcm_redirect = '' ) { return 'https://example.com/wp-login.php?action=logout'; }
 function wp_get_referer() { return ''; } function wp_nonce_field( $a = -1, $n = "_wpnonce" ) { echo '<input type="hidden" name="' . $n . '" value="nonce">'; }
 function shortcode_exists() { return true; } function do_shortcode( $s ) { return $s; }
 function wp_unslash( $v ) { return $v; }

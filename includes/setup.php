@@ -251,8 +251,9 @@ function pcm_crm_setup_open( $pcm_key ) {
 	$pcm_groups = pcm_crm_setup_groups();
 	$pcm_group  = $pcm_page && isset( $pcm_groups[ $pcm_page['group'] ] ) ? $pcm_groups[ $pcm_page['group'] ] : null;
 	$pcm_title  = $pcm_page ? $pcm_page['label'] : __( 'CRM Settings', 'pcm-crm' );
+	$pcm_host   = pcm_crm_is_front_request() ? 'front' : 'admin';
 	?>
-	<div class="wrap pcm-crm pcm-setup" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
+	<div class="<?php echo esc_attr( ( pcm_crm_wants_wrap( $pcm_host ) ? 'wrap ' : '' ) . 'pcm-crm pcm-setup' ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
 		<header class="pcm-setup-band">
 			<span class="pcm-setup-mark dashicons dashicons-admin-generic" aria-hidden="true"></span>
 			<div class="pcm-setup-heading">

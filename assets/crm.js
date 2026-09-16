@@ -306,8 +306,10 @@
 		var hash = Object.keys(pruned).length ? '#' + encodeURIComponent(JSON.stringify(pruned)) : '';
 
 		// A record on its own is written the short way, the same form the
-		// notification email links to.
-		if (state.recordId && pageMode(state.view)) {
+		// notification email links to — unless the path itself already names
+		// this record (the front end's /staff/contacts/5/), in which case a
+		// second #id=5 alongside it would be pure noise.
+		if (state.recordId && pageMode(state.view) && !(cfg.host === 'front' && cfg.recordId === state.recordId)) {
 			hash = '#id=' + state.recordId;
 		}
 
@@ -1601,10 +1603,33 @@
 		return (directory[object] && directory[object].page) || '';
 	}
 
+	/**
+	 * A link to one of the app's own screens, in the shape this host uses.
+	 *
+	 * Every place that used to build '?page=' + slug by hand now calls this
+	 * instead, so moving a screen onto the front end is a change to cfg (host,
+	 * frontBase, screens) rather than a change at every place that links to it.
+	 *
+	 * cfg.screens maps an admin page slug to its front-end one; a slug absent
+	 * from that map has no front-end route yet (CRM Settings, until it is
+	 * wired), and falls through to the admin shape rather than linking nowhere.
+	 */
+	function screenUrl(page, id, fragment) {
+		if (cfg.host === 'front' && cfg.frontBase) {
+			var slug = cfg.screens && cfg.screens[page];
+
+			if (slug) {
+				return cfg.frontBase + slug + '/' + (id ? id + '/' : '') + (fragment || '');
+			}
+		}
+
+		return (cfg.adminUrl || 'admin.php') + '?page=' + page + (id ? '#id=' + id : (fragment || ''));
+	}
+
 	function recordUrl(object, id) {
 		var page = objectPage(object);
 
-		return page && id ? (cfg.adminUrl || 'admin.php') + '?page=' + page + '#id=' + id : '';
+		return page && id ? screenUrl(page, id) : '';
 	}
 
 	/**
@@ -4401,7 +4426,7 @@
 			if (payload[key] === undefined) { delete payload[key]; }
 		});
 
-		window.location.href = cfg.adminUrl + '?page=pcm-crm-reports#' + encodeURIComponent(JSON.stringify(payload));
+		window.location.href = screenUrl('pcm-crm-reports', 0, '#' + encodeURIComponent(JSON.stringify(payload)));
 	}
 
 	/**
@@ -4878,7 +4903,7 @@
 			dom.actions.appendChild(el('span.pcm-crm-drill', {}, [
 				'Showing: ' + state.drillTitle,
 				el('a.pcm-crm-drill-clear', {
-					href: cfg.adminUrl + '?page=pcm-crm-reports',
+					href: screenUrl('pcm-crm-reports'),
 					title: 'Clear this drill-down',
 					text: '×'
 				})
@@ -5122,6 +5147,13 @@
 		state.view = root.dataset.view;
 		readHash();
 
+		// The front-end router puts a record's id in the path itself
+		// (/staff/contacts/5/), not the hash — seed it the same way an #id=N
+		// link would, but only when the hash did not already say something.
+		if (!window.location.hash && cfg.recordId) {
+			state.recordId = cfg.recordId;
+		}
+
 		dom.scrim.addEventListener('click', function () { closeDrawer(); });
 		document.addEventListener('keydown', function (event) {
 			if (event.key !== 'Escape') { return; }
@@ -5213,6 +5245,7 @@
 			reloadRecord: reloadRecord,
 			recordLink: recordLink,
 			recordUrl: recordUrl,
+			screenUrl: screenUrl,
 			objectIcon: objectIcon,
 			quickCreate: quickCreate,
 			currentRecord: function () { return current; },
