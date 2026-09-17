@@ -406,10 +406,15 @@ function pcm_crm_send_notification( array $pcm_values, $pcm_contact_id = 0 ) {
 	$pcm_message = pcm_crm_submission_summary( $pcm_values ) . "\n";
 
 	if ( $pcm_contact_id ) {
-		$pcm_message .= "\nOpen in the CRM: " . set_url_scheme(
-			admin_url( 'admin.php?page=pcm-crm-contacts#id=' . $pcm_contact_id ),
+		// The configured recipient (pcm_crm_contact_recipient()) is not
+		// necessarily the person triggering this send, and is not even
+		// guaranteed to be a WordPress user at all — pcm_crm_link_host_for_email()
+		// resolves the right shape when it is, and falls back to the admin
+		// link (the shape that has always worked) otherwise.
+		$pcm_message .= "\nOpen in the CRM: " . esc_url_raw( set_url_scheme(
+			pcm_crm_screen_url( 'pcm-crm-contacts', array( 'id' => $pcm_contact_id ), pcm_crm_link_host_for_email( pcm_crm_contact_recipient() ) ),
 			'https'
-		) . "\n";
+		) ) . "\n";
 	}
 
 	$pcm_headers = $pcm_email ? array( 'Reply-To: ' . $pcm_email ) : array();

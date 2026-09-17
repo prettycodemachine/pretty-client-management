@@ -660,8 +660,8 @@ check( 'front host, a slug with no route yet: falls through to the admin shape',
 echo "\n--- who a link should point at ---\n";
 
 $GLOBALS['pcm_test_users'] = array(
-	1 => (object) array( 'ID' => 1 ),
-	9 => (object) array( 'ID' => 9, 'roles' => array( PCM_CRM_STAFF_ROLE ) ),
+	1 => (object) array( 'ID' => 1, 'user_email' => 'admin@example.com' ),
+	9 => (object) array( 'ID' => 9, 'user_email' => 'staffer@example.com', 'roles' => array( PCM_CRM_STAFF_ROLE ) ),
 );
 $GLOBALS['pcm_test_user_caps'] = array(
 	1 => array( 'manage_options' => true, PCM_CRM_CAP => true ),
@@ -673,6 +673,18 @@ check( 'staff resolves to front', pcm_crm_link_host_for_user( 9 ), 'front' );
 check( 'an unknown id falls back to admin — the shape that has always worked',
 	pcm_crm_link_host_for_user( 999 ), 'admin' );
 check( 'id 0 falls back to admin too', pcm_crm_link_host_for_user( 0 ), 'admin' );
+
+// The same question, asked by email — the contact-form notification
+// (public/email.php) has no request or user id, only whatever address is
+// configured as the recipient.
+check( "a staff member's own email resolves the same way their id does",
+	pcm_crm_link_host_for_email( 'staffer@example.com' ), 'front' );
+check( "an administrator's email resolves to admin",
+	pcm_crm_link_host_for_email( 'admin@example.com' ), 'admin' );
+check( 'an address belonging to no WordPress user falls back to admin',
+	pcm_crm_link_host_for_email( 'nobody@example.com' ), 'admin' );
+check( 'an empty address falls back to admin too, rather than a stray lookup',
+	pcm_crm_link_host_for_email( '' ), 'admin' );
 
 echo "\n--- the Employee Portal address, sanitised ---\n";
 
@@ -989,3 +1001,47 @@ check( 'the logo URL falls through unchanged',
 
 unset( $_REQUEST['redirect_to'] );
 $GLOBALS['pcm_test_users'] = array();
+
+echo "\n--- My Profile: what is wrong with a submitted change, if anything ---\n";
+
+// A plain function, checkable without wp_safe_redirect()'s exit — the same
+// shape pcm_crm_clean_user_access() and pcm_crm_staff_redirect_target()
+// already use.
+check( 'a clean change has nothing wrong with it',
+	pcm_crm_my_profile_validation_error( 5, 'me@example.com', '', '' ), '' );
+check( 'an invalid email is caught',
+	pcm_crm_my_profile_validation_error( 5, 'not-an-email', '', '' ), 'email-invalid' );
+
+$GLOBALS['pcm_test_users'][5] = (object) array( 'ID' => 5, 'user_email' => 'me@example.com', 'user_login' => 'me' );
+$GLOBALS['pcm_test_users'][6] = (object) array( 'ID' => 6, 'user_email' => 'someone-else@example.com', 'user_login' => 'other' );
+
+check( 'an email already yours is not "taken" — you may resave your own address',
+	pcm_crm_my_profile_validation_error( 5, 'me@example.com', '', '' ), '' );
+check( 'an email belonging to a different account is refused',
+	pcm_crm_my_profile_validation_error( 5, 'someone-else@example.com', '', '' ), 'email-taken' );
+
+check( 'both password fields blank means "leave it unchanged" — not an error',
+	pcm_crm_my_profile_validation_error( 5, 'me@example.com', '', '' ), '' );
+check( 'mismatched passwords are caught',
+	pcm_crm_my_profile_validation_error( 5, 'me@example.com', 'a-long-enough-password', 'a-different-one' ), 'password-mismatch' );
+check( 'a matching but too-short password is caught',
+	pcm_crm_my_profile_validation_error( 5, 'me@example.com', 'short', 'short' ), 'password-short' );
+check( 'a matching, long-enough password passes',
+	pcm_crm_my_profile_validation_error( 5, 'me@example.com', 'a-long-enough-password', 'a-long-enough-password' ), '' );
+
+$GLOBALS['pcm_test_users'] = array();
+
+echo "\n--- My Profile stays outside the slug map and the Setup registry, on purpose ---\n";
+
+// pcm_crm_front_route() (public/staff-template.php) is what actually
+// dispatches 'profile' — untestable here the way pcm_crm_render_settings()
+// above is, because that file runs pcm_crm_front_gate() at load time and
+// would redirect or exit the moment it was required into a CLI test. What is
+// checkable without loading it: 'profile' deliberately has no entry in
+// pcm_crm_front_slug_map() (it is not part of pcm_crm_apps() or the Setup
+// registry — see public/staff-profile.php for why) or pcm_crm_setup_pages(),
+// so a future change that tried to fold it into either would be visible here
+// as a new, unexpected match rather than silently reintroducing the
+// Settings-gate problem this file exists to avoid.
+check( 'profile has no admin-slug mapping', pcm_crm_slug_for_front( 'profile' ), '' );
+check( 'and it is not a registered Setup page either', pcm_crm_setup_page( 'profile' ), null );

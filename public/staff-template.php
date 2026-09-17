@@ -33,10 +33,10 @@ if ( ! function_exists( 'pcm_crm_front_route' ) ) :
 /**
  * Draw the screen this request's path names.
  *
- * 'home' and 'settings' are handled directly; anything else is looked up
- * through pcm_crm_slug_for_front() (includes/urls.php) — the reverse of the
- * same map that built the URL in the first place — so a screen this map
- * does not know about 404s rather than guessing.
+ * 'home', 'settings' and 'profile' are handled directly; anything else is
+ * looked up through pcm_crm_slug_for_front() (includes/urls.php) — the
+ * reverse of the same map that built the URL in the first place — so a
+ * screen this map does not know about 404s rather than guessing.
  */
 function pcm_crm_front_route( $pcm_screen, $pcm_id, $pcm_tab ) {
 	if ( 'home' === $pcm_screen ) {
@@ -44,20 +44,20 @@ function pcm_crm_front_route( $pcm_screen, $pcm_id, $pcm_tab ) {
 		return;
 	}
 
-	if ( 'settings' === $pcm_screen ) {
+	if ( in_array( $pcm_screen, array( 'settings', 'profile' ), true ) ) {
 		// submit_button(), settings_errors() and add_settings_error() live in
 		// wp-admin/includes/template.php, which WordPress only auto-loads for
-		// an actual wp-admin request — every CRM Settings tab calls at least
-		// one of them, so this host needs the file pulled in by hand, the
-		// same well-worn technique any front-end use of these admin form
-		// helpers requires. Guarded because a later pcm_crm_screen() call this
-		// same request (an "Open it in wp-admin" fallback link is never
-		// followed from here, but a defensive require costs nothing) must not
-		// redeclare it.
+		// an actual wp-admin request — every CRM Settings tab, and the My
+		// Profile form below, calls at least one of them, so this host needs
+		// the file pulled in by hand, the same well-worn technique any
+		// front-end use of these admin form helpers requires. Guarded because
+		// a later pcm_crm_screen() call this same request must not redeclare it.
 		if ( ! function_exists( 'submit_button' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/template.php';
 		}
+	}
 
+	if ( 'settings' === $pcm_screen ) {
 		// pcm_crm_render_settings() (includes/setup.php) is already host-aware:
 		// it reads pcm_crm_tab via pcm_crm_current_setup_key()'s front branch,
 		// and denies with pcm_crm_front_deny() rather than wp_die() when the
@@ -66,6 +66,15 @@ function pcm_crm_front_route( $pcm_screen, $pcm_id, $pcm_tab ) {
 		// screen naming one of those slugs never reaches this branch, since
 		// pcm_crm_slug_for_front() only maps the plain Settings tabs.
 		pcm_crm_render_settings();
+		return;
+	}
+
+	if ( 'profile' === $pcm_screen ) {
+		// No permission gate here beyond pcm_crm_front_gate() (already run
+		// for every /staff/ request) — editing your own name and password is
+		// not a CRM permission, and a Sales-only staff member with no
+		// Settings access at all still needs to reach this (public/staff-profile.php).
+		pcm_crm_render_my_profile();
 		return;
 	}
 

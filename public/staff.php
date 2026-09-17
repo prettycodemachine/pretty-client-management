@@ -134,8 +134,11 @@ function pcm_crm_front_assets() {
 	}
 
 	pcm_crm_enqueue_app( 'front', array(
+		// My Profile (public/staff-profile.php) is a plain form like Settings,
+		// but it never draws inside the Setup frame — see that file for why —
+		// so it takes 'no_app' without 'setup_frame'.
 		'setup_frame' => 'settings' === $pcm_screen,
-		'no_app'      => 'settings' === $pcm_screen,
+		'no_app'      => in_array( $pcm_screen, array( 'settings', 'profile' ), true ),
 		'record_id'   => get_query_var( 'pcm_crm_id', 0 ),
 	) );
 }
@@ -229,7 +232,9 @@ function pcm_crm_front_nav() {
 				<?php echo esc_html( get_bloginfo( 'name' ) ); ?>
 			</a>
 			<div class="pcm-crm-front-account">
-				<span class="pcm-crm-front-account-name"><?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?></span>
+				<a class="pcm-crm-front-account-name" href="<?php echo esc_url( pcm_crm_front_base_url() . 'profile/' ); ?>">
+					<?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?>
+				</a>
 				<a class="pcm-crm-front-logout" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">
 					<?php esc_html_e( 'Log out', 'pcm-crm' ); ?>
 				</a>

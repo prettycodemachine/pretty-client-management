@@ -103,6 +103,7 @@ require_once PCM_CRM_DIR . 'public/form.php';
 // the module switches say, the same reason includes/permissions.php declares
 // every area whether or not its module is active.
 require_once PCM_CRM_DIR . 'public/staff.php';
+require_once PCM_CRM_DIR . 'public/staff-profile.php';
 
 // Last, so a module can register against everything above it — objects, related
 // lists, merge prefixes, settings tabs — without the core files knowing it

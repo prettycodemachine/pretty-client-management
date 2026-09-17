@@ -111,7 +111,11 @@
   font-size: 0.86rem;
   color: var(--pcm-paper);
 }
-.pcm-crm-front-account-name { font-weight: 700; }
+/* Now a link to My Profile, not plain text — an anchor does not inherit
+   color from .pcm-crm-front-account the way a <span> did, so both have to be
+   restated here rather than assumed. */
+.pcm-crm-front-account-name { font-weight: 700; color: var(--pcm-paper); text-decoration: none; }
+.pcm-crm-front-account-name:hover { text-decoration: underline; }
 .pcm-crm-front-logout {
   /* Full paper, not a reduced opacity — opacity blends toward the ink
      background behind it, and there is no per-theme guarantee that a

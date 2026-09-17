@@ -239,6 +239,22 @@ function pcm_crm_link_host() {
 }
 
 /**
+ * The same question, for a caller that only has an email address — the
+ * contact-form notification (public/email.php) goes to whatever address is
+ * configured as the recipient, which is not necessarily tied to any request
+ * or "current user" and is not even guaranteed to belong to a WordPress user
+ * at all (a shared inbox, an address with no account on this site). Resolved
+ * via the one WP_User it might belong to, falling through to 'admin' — the
+ * shape that has always worked — exactly like an unresolvable user id does
+ * above.
+ */
+function pcm_crm_link_host_for_email( $pcm_email ) {
+	$pcm_user = $pcm_email ? get_user_by( 'email', $pcm_email ) : null;
+
+	return $pcm_user ? pcm_crm_link_host_for_user( $pcm_user->ID ) : 'admin';
+}
+
+/**
  * Whether the request being served right now is on the front end.
  *
  * A different question from pcm_crm_link_host_for_user(): that one is "which
