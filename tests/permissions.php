@@ -604,6 +604,46 @@ foreach ( pcm_crm_screen_callbacks() as $pcm_slug => $pcm_callback ) {
 	check( "callback for $pcm_slug is a real, callable function", is_callable( $pcm_callback ), true );
 }
 
+echo "\n--- the same completeness check, with Projects switched on ---\n";
+
+// The check above runs with the pm module off, so it never actually exercises
+// pm-menu.php's own pcm_crm_screen_callbacks filter — a slug pcm_crm_apps()
+// routes but pcm_crm_screen_callbacks() does not name would pass the check
+// above silently. This is what happened in practice: a staff member granted
+// Projects saw a working "Go to Projects" link (pcm_crm_screen_url() resolves
+// it from pcm_crm_apps() alone) that 404'd the moment they followed it,
+// because the seven Projects screens had never been added to the router's
+// dispatch table.
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1 ) );
+pcm_crm_load_modules();
+pcm_test_add_filter( 'pcm_crm_apps', 'pcm_crm_pm_app' );
+pcm_test_add_filter( 'pcm_crm_screen_callbacks', 'pcm_crm_pm_screen_callbacks' );
+
+$pcm_pm_callback_slugs = array_keys( pcm_crm_screen_callbacks() );
+$pcm_pm_routable_slugs = array_keys( pcm_crm_front_slug_map() );
+sort( $pcm_pm_callback_slugs );
+sort( $pcm_pm_routable_slugs );
+
+check( 'with Projects on, every routable slug — CRM and PM — still has a callback',
+	$pcm_pm_callback_slugs, $pcm_pm_routable_slugs );
+
+$pcm_pm_slugs = array( 'pcm-crm-projects', 'pcm-crm-project-tasks', 'pcm-crm-timesheet',
+	'pcm-crm-time', 'pcm-crm-raid', 'pcm-crm-milestones', 'pcm-crm-help-tickets' );
+
+$pcm_pm_callbacks = pcm_crm_screen_callbacks();
+
+foreach ( $pcm_pm_slugs as $pcm_slug ) {
+	check( "$pcm_slug is routable from the front-end word for it",
+		'' !== pcm_crm_front_slug( $pcm_slug ), true );
+	check( "$pcm_slug has a callable render callback",
+		isset( $pcm_pm_callbacks[ $pcm_slug ] ) && is_callable( $pcm_pm_callbacks[ $pcm_slug ] ), true );
+}
+
+pcm_test_reset_filters( 'pcm_crm_apps' );
+pcm_test_reset_filters( 'pcm_crm_screen_callbacks' );
+update_option( PCM_CRM_MODULES_OPTION, array() );
+pcm_crm_load_modules();
+
 echo "\n--- pcm_crm_screen_url(), both hosts ---\n";
 
 check( 'admin host: unchanged shape',
@@ -725,6 +765,56 @@ pcm_crm_front_assets();
 check( 'the settings route enqueues no app at all — there is nothing there to mount it against',
 	isset( $GLOBALS['pcm_test_localized']['pcm-crm'] ), false );
 
+$GLOBALS['pcm_test_is_admin'] = true;
+pcm_test_set_query_vars( array() );
+
+echo "\n--- CRM Settings on the front-end host ---\n";
+
+// pcm_crm_setup_url() is the single seam every Setup link already goes
+// through, so this is the one place the admin shape has to stay byte-for-byte
+// — a notification email or a bookmark sent months ago still has to resolve.
+check( 'admin: Home is unchanged', pcm_crm_setup_url( 'home' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-settings' );
+check( 'admin: a plain tab is unchanged', pcm_crm_setup_url( 'pipeline' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-settings&tab=pipeline' );
+check( 'admin: an app-backed page is unchanged', pcm_crm_setup_url( 'templates' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-templates' );
+
+$GLOBALS['pcm_test_is_admin'] = false;
+
+check( 'front: Home is the base URL', pcm_crm_setup_url( 'home' ), 'https://example.com/staff/settings/' );
+check( 'front: a plain tab is a path segment', pcm_crm_setup_url( 'pipeline' ), 'https://example.com/staff/settings/pipeline/' );
+check( 'front: an app-backed page has no route yet, falls through to the admin shape',
+	pcm_crm_setup_url( 'templates' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-templates' );
+
+// pcm_crm_current_setup_key() reads pcm_crm_tab (the router's own query var,
+// public/staff.php's rewrite rules), never $_GET['tab'], once it knows it is
+// answering a front-end request.
+pcm_test_set_query_vars( array( 'pcm_crm_tab' => 'pipeline' ) );
+check( 'front: a real tab in the path resolves', pcm_crm_current_setup_key(), 'pipeline' );
+
+pcm_test_set_query_vars( array( 'pcm_crm_tab' => '' ) );
+check( 'front: no tab at all is Home', pcm_crm_current_setup_key(), 'home' );
+
+pcm_test_set_query_vars( array( 'pcm_crm_tab' => 'not-a-real-tab' ) );
+check( 'front: an unknown tab falls back to Home rather than a blank page', pcm_crm_current_setup_key(), 'home' );
+
+// pcm_crm_render_settings() denies with the same front-end screen every other
+// area gate uses (pcm_crm_screen(), admin/menu.php) — wp_die() halts the whole
+// request, which is a wp-admin answer this host's template cannot recover
+// from cleanly.
+pcm_test_set_query_vars( array( 'pcm_crm_tab' => '' ) );
+pcm_test_set_caps( array() );
+pcm_crm_flush_permissions();
+
+ob_start();
+pcm_crm_render_settings();
+$pcm_settings_html = ob_get_clean();
+
+check( 'front, no Settings access: the shared deny screen, not a wp_die() halt',
+	false !== strpos( $pcm_settings_html, 'Not available' ), true );
+check( 'and specifically the CRM Settings message, not the generic one',
+	false !== strpos( $pcm_settings_html, 'CRM Settings' ), true );
+
+pcm_test_reset_caps();
+pcm_crm_flush_permissions();
 $GLOBALS['pcm_test_is_admin'] = true;
 pcm_test_set_query_vars( array() );
 

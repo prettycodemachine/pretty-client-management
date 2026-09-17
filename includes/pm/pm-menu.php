@@ -80,6 +80,27 @@ function pcm_crm_pm_render_help_tickets() {
 }
 
 /**
+ * Map the seven Projects screens into the front-end router's dispatch table
+ * (pcm_crm_screen_callbacks(), admin/menu.php) — without this, a staff member
+ * granted Projects access sees a working-looking "Go to Projects" link in the
+ * app bar (pcm_crm_screen_url() already resolves it, since the front-end slug
+ * map is derived from pcm_crm_apps() and needs no separate entry here) that
+ * 404s the moment they follow it.
+ */
+function pcm_crm_pm_screen_callbacks( $pcm_callbacks ) {
+	$pcm_callbacks['pcm-crm-projects']      = 'pcm_crm_pm_render_projects';
+	$pcm_callbacks['pcm-crm-project-tasks'] = 'pcm_crm_pm_render_tasks';
+	$pcm_callbacks['pcm-crm-timesheet']     = 'pcm_crm_pm_render_timesheet';
+	$pcm_callbacks['pcm-crm-time']          = 'pcm_crm_pm_render_time';
+	$pcm_callbacks['pcm-crm-raid']          = 'pcm_crm_pm_render_raid';
+	$pcm_callbacks['pcm-crm-milestones']    = 'pcm_crm_pm_render_milestones';
+	$pcm_callbacks['pcm-crm-help-tickets']  = 'pcm_crm_pm_render_help_tickets';
+
+	return $pcm_callbacks;
+}
+add_filter( 'pcm_crm_screen_callbacks', 'pcm_crm_pm_screen_callbacks' );
+
+/**
  * The Projects app's bar.
  */
 function pcm_crm_pm_app( $pcm_apps ) {
@@ -137,3 +158,38 @@ function pcm_crm_pm_assets( $pcm_hook ) {
 	wp_enqueue_script( 'pcm-crm-help-tickets', pcm_crm_asset( 'help-tickets.js' ), array( 'pcm-crm' ), null, true );
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_pm_assets' );
+
+/**
+ * The front-end twin of pcm_crm_pm_assets() — same reasoning, both directions:
+ * pm.css loads on every front-end CRM screen while the module is on, not only
+ * the Projects ones, because a project's meter can appear inside an Account
+ * or Opportunity related list; the settings screen (no_app on the front-end
+ * enqueue, public/staff.php) takes the skin only, since it has no crm.js
+ * container for pm.js to register against either.
+ */
+function pcm_crm_pm_front_assets() {
+	$pcm_screen = get_query_var( 'pcm_crm_screen', '' );
+
+	if ( '' === $pcm_screen ) {
+		return;
+	}
+
+	wp_enqueue_style( 'pcm-crm-pm', pcm_crm_asset( 'pm.css' ), array( 'pcm-crm' ), null );
+
+	if ( 'settings' === $pcm_screen ) {
+		return;
+	}
+
+	// wp.media's browse frame is styled by core admin CSS this host never
+	// otherwise loads. wp_enqueue_media() pulls in 'media-views' itself, but
+	// 'buttons' is registered explicitly rather than trusted to ride along as
+	// a dependency — the one wp-admin stylesheet this front end genuinely
+	// needs, so it earns its own line rather than an assumption about core's
+	// own dependency graph.
+	wp_enqueue_style( 'buttons' );
+	wp_enqueue_media();
+
+	wp_enqueue_script( 'pcm-crm-pm', pcm_crm_asset( 'pm.js' ), array( 'pcm-crm' ), null, true );
+	wp_enqueue_script( 'pcm-crm-help-tickets', pcm_crm_asset( 'help-tickets.js' ), array( 'pcm-crm' ), null, true );
+}
+add_action( 'wp_enqueue_scripts', 'pcm_crm_pm_front_assets' );

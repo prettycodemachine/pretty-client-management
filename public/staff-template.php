@@ -45,15 +45,27 @@ function pcm_crm_front_route( $pcm_screen, $pcm_id, $pcm_tab ) {
 	}
 
 	if ( 'settings' === $pcm_screen ) {
-		// CRM Settings has no front-end route of its own yet. The door out
-		// of wp-admin's copy works today regardless — the lockout
-		// (pcm_crm_staff_redirect_target(), includes/roles.php) leaves
-		// Settings reachable there for exactly this reason.
-		pcm_crm_front_deny( sprintf(
-			/* translators: %s: a link to CRM Settings in wp-admin */
-			__( 'CRM Settings is not on the employee portal yet. %s', 'pcm-crm' ),
-			'<a href="' . esc_url( pcm_crm_setup_url( 'home' ) ) . '">' . esc_html__( 'Open it in wp-admin', 'pcm-crm' ) . '</a>'
-		) );
+		// submit_button(), settings_errors() and add_settings_error() live in
+		// wp-admin/includes/template.php, which WordPress only auto-loads for
+		// an actual wp-admin request — every CRM Settings tab calls at least
+		// one of them, so this host needs the file pulled in by hand, the
+		// same well-worn technique any front-end use of these admin form
+		// helpers requires. Guarded because a later pcm_crm_screen() call this
+		// same request (an "Open it in wp-admin" fallback link is never
+		// followed from here, but a defensive require costs nothing) must not
+		// redeclare it.
+		if ( ! function_exists( 'submit_button' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/template.php';
+		}
+
+		// pcm_crm_render_settings() (includes/setup.php) is already host-aware:
+		// it reads pcm_crm_tab via pcm_crm_current_setup_key()'s front branch,
+		// and denies with pcm_crm_front_deny() rather than wp_die() when the
+		// visitor lacks Settings access. An app-backed Setup page (Templates,
+		// Sequences, Schedules, the bin) still has no front-end route — a
+		// screen naming one of those slugs never reaches this branch, since
+		// pcm_crm_slug_for_front() only maps the plain Settings tabs.
+		pcm_crm_render_settings();
 		return;
 	}
 

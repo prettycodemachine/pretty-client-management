@@ -208,6 +208,23 @@ function pcm_crm_settings_assets( $pcm_hook ) {
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_settings_assets' );
 
+/**
+ * The front-end twin of pcm_crm_settings_assets() — the employee portal's
+ * /staff/settings/ route needs the same media picker and settings.js that
+ * every wp-admin CRM Settings tab already gets, gated on the query var the
+ * front-end router sets rather than a hook suffix that does not exist here.
+ */
+function pcm_crm_settings_front_assets() {
+	if ( 'settings' !== get_query_var( 'pcm_crm_screen', '' ) ) {
+		return;
+	}
+
+	wp_enqueue_style( 'buttons' );
+	wp_enqueue_media();
+	wp_enqueue_script( 'pcm-crm-settings', pcm_crm_asset( 'settings.js' ), array( 'jquery' ), null, true );
+}
+add_action( 'wp_enqueue_scripts', 'pcm_crm_settings_front_assets' );
+
 // pcm_crm_render_settings() lives in includes/setup.php, with the frame it draws.
 
 /* ---------------------------------------------------------------------------
@@ -358,13 +375,27 @@ function pcm_crm_render_form_tab() {
 				</button>
 			<?php endforeach; ?>
 		</div>
-		<?php
-		wp_editor(
-			pcm_crm_autoresponder_body(),
-			'pcm_autoresponder_body',
-			array( 'textarea_name' => 'pcm_autoresponder_body', 'textarea_rows' => 14, 'media_buttons' => false )
-		);
-		?>
+		<?php if ( pcm_crm_is_front_request() ) : ?>
+			<?php
+			// A plain textarea on this host, not a compromise: wp_editor()
+			// needs TinyMCE plus wp-admin's own CSS, the heaviest single
+			// dependency this screen could pull in, and pcm_crm_format_body()
+			// already treats a textarea's contents identically to what
+			// wp_editor()'s own Text tab stores — paragraphs separated by
+			// blank lines, no <p> tags. Same option, edited two ways, runs
+			// the identical path.
+			?>
+			<textarea id="pcm_autoresponder_body" name="pcm_autoresponder_body" rows="14"
+				class="large-text"><?php echo esc_textarea( pcm_crm_autoresponder_body() ); ?></textarea>
+		<?php else : ?>
+			<?php
+			wp_editor(
+				pcm_crm_autoresponder_body(),
+				'pcm_autoresponder_body',
+				array( 'textarea_name' => 'pcm_autoresponder_body', 'textarea_rows' => 14, 'media_buttons' => false )
+			);
+			?>
+		<?php endif; ?>
 		<p class="description" style="margin-top:8px">
 			<?php esc_html_e( 'The message is wrapped in the branded email layout automatically — no need to add a logo or signature styling here.', 'pcm-crm' ); ?>
 		</p>

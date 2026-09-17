@@ -142,6 +142,31 @@ function pcm_crm_front_assets() {
 add_action( 'wp_enqueue_scripts', 'pcm_crm_front_assets' );
 
 /**
+ * Define window.ajaxurl on the front-end host, before anything in wp_footer
+ * can need it.
+ *
+ * wp-admin defines this global for free (core's 'common' script, printed on
+ * every admin page); the front end never does. wp.media's own Backbone
+ * models — querying, deleting, and editing an attachment's details, not the
+ * Plupload upload itself, which carries its own localized URL — read
+ * window.ajaxurl directly to reach admin-ajax.php, and every CRM screen that
+ * can open the media picker (CRM Settings' Contact Form logo/attachments,
+ * the Projects module's Documents tab) is host-agnostic code that has always
+ * assumed this global exists. Printed in wp_head rather than attached as an
+ * inline script on some other handle, so it does not depend on getting the
+ * dependency order of wp.media's own script chain right — it is simply
+ * defined before wp_footer, where every enqueued script actually runs.
+ */
+function pcm_crm_front_ajaxurl() {
+	if ( '' === get_query_var( 'pcm_crm_screen', '' ) ) {
+		return;
+	}
+
+	printf( "<script>window.ajaxurl = %s;</script>\n", wp_json_encode( admin_url( 'admin-ajax.php' ) ) );
+}
+add_action( 'wp_head', 'pcm_crm_front_ajaxurl' );
+
+/**
  * Take the theme's own front-end assets back off a CRM screen.
  *
  * Priority 20, after pcm_crm_front_assets() has already enqueued the app's

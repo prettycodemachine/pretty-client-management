@@ -190,8 +190,16 @@
 .pcm-crm-sub { margin: 0; color: var(--pcm-body); font-size: 0.92rem; }
 .pcm-crm-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Buttons ------------------------------------------------------------------- */
-.pcm-crm .pcm-btn {
+/* Buttons ---------------------------------------------------------------------
+   .button/.button-primary/.button-secondary are wp-admin's own classes,
+   joined onto the same rules as .pcm-btn/.pcm-btn-primary rather than given a
+   second stylesheet — CRM Settings renders plain WordPress markup
+   (submit_button(), a <button class="button">) on both hosts, and this is
+   what makes it look like the rest of the app without rewriting that markup.
+   ------------------------------------------------------------------------- */
+.pcm-crm .pcm-btn,
+.pcm-crm .button,
+.pcm-crm .button-secondary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -208,24 +216,49 @@
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.pcm-crm .pcm-btn:hover { background: var(--pcm-paper-tint); color: var(--pcm-ink); }
-.pcm-crm .pcm-btn-primary {
+.pcm-crm .pcm-btn:hover,
+.pcm-crm .button:hover,
+.pcm-crm .button-secondary:hover { background: var(--pcm-paper-tint); color: var(--pcm-ink); }
+.pcm-crm .pcm-btn-primary,
+.pcm-crm .button-primary {
   background: var(--pcm-accent-deep);
   border-color: var(--pcm-accent-deep);
   color: #fff;
 }
-.pcm-crm .pcm-btn-primary:hover { background: var(--pcm-accent-deeper); border-color: var(--pcm-accent-deeper); color: #fff; }
+.pcm-crm .pcm-btn-primary:hover,
+.pcm-crm .button-primary:hover { background: var(--pcm-accent-deeper); border-color: var(--pcm-accent-deeper); color: #fff; }
 .pcm-crm .pcm-btn-quiet { border-color: var(--pcm-gray-light); font-weight: 600; }
 .pcm-crm .pcm-btn-sm { padding: 6px 12px; font-size: 0.82rem; }
 .pcm-crm .pcm-btn-danger { color: var(--pcm-accent-deep); border-color: var(--pcm-accent-deep); }
 .pcm-crm .pcm-btn-danger:hover { background: var(--pcm-accent-deep); color: #fff; }
 .pcm-crm .pcm-btn:focus-visible,
+.pcm-crm .button:focus-visible,
+.pcm-crm .button-primary:focus-visible,
 .pcm-crm input:focus-visible,
 .pcm-crm select:focus-visible,
 .pcm-crm textarea:focus-visible {
   outline: 2px solid var(--pcm-blue-deep);
   outline-offset: 2px;
 }
+
+/* .button-link is wp-admin's own bare-link button — an icon-sized action
+   (remove, move up/down) that should never look like a bordered .button.
+   Partial handling already existed per-context (.pcm-crm-field-move
+   .button-link below, setup.css's own copy); this is the base rule every
+   other use — CRM Settings' logo/attachment removers among them — falls
+   back to. */
+.pcm-crm .button-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--pcm-accent-deep);
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+.pcm-crm .button-link:hover { color: var(--pcm-accent-deeper); }
 
 /* Cards --------------------------------------------------------------------- */
 .pcm-crm-card {
@@ -1155,7 +1188,44 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-steps { max-width: 760px; line-height: 1.7; }
 .pcm-crm-steps li { margin-bottom: 10px; }
 
-.pcm-crm-settings .form-table th { font-family: var(--font-display); color: var(--pcm-ink); }
+/* CRM Settings' plain WordPress forms (form-table, submit_button()'s markup,
+   settings_errors()'s notices) share this stylesheet rather than a second one
+   — see the button shim above for why. .pcm-crm-settings never matched
+   anything in the actual markup (the container carries .pcm-setup, from
+   pcm_crm_setup_open()); scoped to .pcm-crm here so it also reaches the
+   handful of tabs that render outside the Setup frame's own nav wrapper. */
+.pcm-crm .form-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.pcm-crm .form-table th {
+  width: 220px;
+  padding: 14px 10px 14px 0;
+  text-align: left;
+  vertical-align: top;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--pcm-ink);
+}
+.pcm-crm .form-table td { padding: 10px 0; vertical-align: top; }
+.pcm-crm .form-table tr { border-bottom: 1px solid var(--pcm-gray-light); }
+@media (max-width: 782px) {
+  .pcm-crm .form-table th,
+  .pcm-crm .form-table td { display: block; width: auto; padding: 6px 0; }
+}
+
+/* .notice is wp-admin's settings-error banner (settings_errors(), CRM
+   Settings' own save-result messages). Token-built rather than hex, so
+   tests/contrast.js — which discovers its tokens from this stylesheet rather
+   than a fixed list — covers these for free in every theme. */
+.pcm-crm .notice {
+  border-left: 4px solid var(--pcm-gray);
+  background: var(--pcm-paper);
+  padding: 10px 14px;
+  margin: 0 0 16px;
+  border-radius: 0 8px 8px 0;
+}
+.pcm-crm .notice p { margin: 0.5em 0; }
+.pcm-crm .notice-success { border-left-color: var(--pcm-green); }
+.pcm-crm .notice-warning { border-left-color: var(--pcm-accent); }
+.pcm-crm .notice-error { border-left-color: var(--pcm-accent-deep); color: var(--pcm-accent-deep); }
 .pcm-crm-attachment-list { list-style: none; margin: 0 0 10px; padding: 0; }
 .pcm-crm-attachment {
   display: flex;

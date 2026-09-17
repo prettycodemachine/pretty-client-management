@@ -170,6 +170,32 @@ function pcm_crm_setup_page( $pcm_key ) {
 }
 
 function pcm_crm_setup_url( $pcm_key ) {
+	// The front end has its own shape (/staff/settings/, /staff/settings/<key>/)
+	// for the plain Settings tabs — the pages whose own slug IS
+	// PCM_CRM_SETUP_SLUG. The app-backed Setup pages (Templates, Sequences,
+	// Schedules, the bin) have no front-end route of their own yet, so they
+	// fall through to the admin shape below exactly as pcm_crm_screen_url()
+	// already does for a slug its own map does not know — the lockout
+	// (pcm_crm_staff_redirect_target(), includes/roles.php) is what then lets
+	// a front-end user actually follow one there.
+	//
+	// Decided from the request being served (pcm_crm_is_front_request()),
+	// not pcm_crm_link_host() — this renders a link into the page currently
+	// on screen, the same question pcm_crm_setup_open() already asks for its
+	// own shell, not "which host does this viewer prefer" (that question is
+	// pcm_crm_screen_url()'s, for a cron email with no request to read at
+	// all). An administrator previewing the front end must get a front-end
+	// link here, even though their own preferred host is wp-admin.
+	if ( pcm_crm_is_front_request() ) {
+		$pcm_page = 'home' === $pcm_key ? null : pcm_crm_setup_page( $pcm_key );
+
+		if ( 'home' === $pcm_key || ( $pcm_page && PCM_CRM_SETUP_SLUG === $pcm_page['page'] ) ) {
+			$pcm_base = pcm_crm_front_base_url() . 'settings/';
+
+			return 'home' === $pcm_key ? $pcm_base : $pcm_base . $pcm_key . '/';
+		}
+	}
+
 	if ( 'home' === $pcm_key ) {
 		return admin_url( 'admin.php?page=' . PCM_CRM_SETUP_SLUG );
 	}
@@ -236,8 +262,19 @@ function pcm_crm_current_setup_key( $pcm_slug = PCM_CRM_SETUP_SLUG ) {
 		}
 	}
 
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
-	$pcm_tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'home';
+	// The front-end router (public/staff-template.php) carries the tab as a
+	// path segment through the pcm_crm_tab query var, never $_GET['tab'] — the
+	// rewrite rule in public/staff.php is what turns /staff/settings/<key>/
+	// into that query var in the first place.
+	if ( pcm_crm_is_front_request() ) {
+		$pcm_tab = sanitize_key( get_query_var( 'pcm_crm_tab', '' ) );
+	} else {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
+		$pcm_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+	}
+
+	if ( '' === $pcm_tab ) { $pcm_tab = 'home'; }
+
 	$pcm_page = pcm_crm_setup_page( $pcm_tab );
 
 	return ( $pcm_page && PCM_CRM_SETUP_SLUG === $pcm_page['page'] ) ? $pcm_tab : 'home';
@@ -266,9 +303,13 @@ function pcm_crm_setup_open( $pcm_key ) {
 				<h1><?php echo esc_html( $pcm_title ); ?></h1>
 			</div>
 			<nav class="pcm-setup-exits" aria-label="<?php esc_attr_e( 'Back to the apps', 'pcm-crm' ); ?>">
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=pcm-crm' ) ); ?>">← <?php esc_html_e( 'CRM', 'pcm-crm' ); ?></a>
-				<?php if ( function_exists( 'pcm_crm_module_active' ) && pcm_crm_module_active( 'pm' ) ) : ?>
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=pcm-crm-projects' ) ); ?>">← <?php esc_html_e( 'Projects', 'pcm-crm' ); ?></a>
+				<?php // Same courtesy as pcm_crm_app_bar() (admin/menu.php): a door only
+				// shows if pcm_crm_can() says it actually opens. ?>
+				<?php if ( pcm_crm_can( 'crm', 'view' ) ) : ?>
+					<a href="<?php echo esc_url( pcm_crm_screen_url( 'pcm-crm' ) ); ?>">← <?php esc_html_e( 'CRM', 'pcm-crm' ); ?></a>
+				<?php endif; ?>
+				<?php if ( function_exists( 'pcm_crm_module_active' ) && pcm_crm_module_active( 'pm' ) && pcm_crm_can( 'pm', 'view' ) ) : ?>
+					<a href="<?php echo esc_url( pcm_crm_screen_url( 'pcm-crm-projects' ) ); ?>">← <?php esc_html_e( 'Projects', 'pcm-crm' ); ?></a>
 				<?php endif; ?>
 			</nav>
 		</header>
@@ -338,6 +379,14 @@ function pcm_crm_setup_close() {
  */
 function pcm_crm_render_settings() {
 	if ( ! pcm_crm_can( 'settings', 'view' ) ) {
+		// wp_die() is a wp-admin answer — the front-end router
+		// (public/staff-template.php) needs the same deny screen every other
+		// front-end area gate uses (pcm_crm_screen(), admin/menu.php).
+		if ( pcm_crm_is_front_request() ) {
+			pcm_crm_front_deny( __( 'You do not have access to CRM Settings.', 'pcm-crm' ) );
+			return;
+		}
+
 		wp_die( esc_html__( 'You do not have access to CRM Settings.', 'pcm-crm' ) );
 	}
 
