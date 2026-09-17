@@ -691,9 +691,15 @@ echo "\n--- translating a wp-admin page a locked-out staff member lands on ---\n
 
 check( 'a routable CRM screen redirects to its front-end equivalent',
 	pcm_crm_staff_redirect_target( 'pcm-crm-contacts' ), 'https://example.com/staff/contacts/' );
-check( 'CRM Settings and its app-backed pages are exempt — no redirect at all',
-	pcm_crm_staff_redirect_target( 'pcm-crm-settings' ), '' );
-check( 'the recycle bin, an app-backed Setup page, is exempt the same way',
+// CRM Settings itself now has a front-end route (Home, plus every plain
+// tab) — only the four app-backed Setup pages still lack one.
+check( 'CRM Settings, no tab named, redirects to the front-end Home',
+	pcm_crm_staff_redirect_target( 'pcm-crm-settings' ), 'https://example.com/staff/settings/' );
+check( 'CRM Settings with a real tab redirects to that tab, not just Home',
+	pcm_crm_staff_redirect_target( 'pcm-crm-settings', 'pipeline' ), 'https://example.com/staff/settings/pipeline/' );
+check( 'an unrecognised tab falls back to Home rather than a broken URL',
+	pcm_crm_staff_redirect_target( 'pcm-crm-settings', 'not-a-real-tab' ), 'https://example.com/staff/settings/' );
+check( 'the recycle bin, an app-backed Setup page, is still exempt — no route yet',
 	pcm_crm_staff_redirect_target( 'pcm-crm-recycle-bin' ), '' );
 check( 'no page at all (the bare wp-admin dashboard) goes to the front-end home',
 	pcm_crm_staff_redirect_target( '' ), 'https://example.com/staff/' );
@@ -902,3 +908,84 @@ pcm_crm_flush_permissions();
 $GLOBALS['pcm_test_users']     = array();
 $GLOBALS['pcm_test_user_caps'] = array();
 $GLOBALS['pcm_test_user_meta'] = array();
+
+echo "\n--- inviting a staff member ---\n";
+
+update_option( PCM_CRM_PROFILES_OPTION, array(
+	'sales' => array( 'label' => 'Sales', 'description' => '', 'grants' => array( 'crm' => array( 'view' ) ) ),
+) );
+update_option( PCM_CRM_SETS_OPTION, array(
+	'exporter' => array( 'label' => 'Exporter', 'description' => '', 'grants' => array( 'crm' => array( 'export' ) ) ),
+) );
+
+$pcm_invite = pcm_crm_invite_staff( 'newhire@example.com', 'Nadia', 'Nguyen', 'sales', array( 'exporter' ) );
+
+check( 'inviting a brand-new email succeeds', is_wp_error( $pcm_invite ), false );
+
+$pcm_new_id = is_array( $pcm_invite ) ? $pcm_invite['user_id'] : 0;
+
+check( 'the new account holds the Staff role',
+	$pcm_new_id && in_array( PCM_CRM_STAFF_ROLE, (array) get_userdata( $pcm_new_id )->roles, true ), true );
+check( 'their profile is assigned in the same call, not a second step',
+	pcm_crm_user_profile_key( $pcm_new_id ), 'sales' );
+check( 'and their permission sets', pcm_crm_user_set_keys( $pcm_new_id ), array( 'exporter' ) );
+check( 'their name is recorded — pcm_crm_user_label() otherwise falls back to the login',
+	array( get_userdata( $pcm_new_id )->first_name, get_userdata( $pcm_new_id )->last_name ),
+	array( 'Nadia', 'Nguyen' )
+);
+
+echo "\n--- inviting the same address again resends rather than colliding ---\n";
+
+$pcm_resend = pcm_crm_invite_staff( 'newhire@example.com', 'Nadia', 'Nguyen', 'sales', array() );
+
+check( 'a second invite to the same address reuses the same account',
+	is_array( $pcm_resend ) ? $pcm_resend['user_id'] : null, $pcm_new_id );
+check( 'and updates their access rather than leaving the first grant stuck',
+	pcm_crm_user_set_keys( $pcm_new_id ), array() );
+
+echo "\n--- refusals ---\n";
+
+$pcm_bad_email = pcm_crm_invite_staff( 'not-an-email', '', '', '' );
+check( 'an invalid email is refused', is_wp_error( $pcm_bad_email ), true );
+check( 'with the right result code',
+	is_wp_error( $pcm_bad_email ) ? pcm_crm_invite_result_code( $pcm_bad_email->get_error_code() ) : null,
+	'pcm_crm_staff_bad_email'
+);
+
+$pcm_bad_profile = pcm_crm_invite_staff( 'someone-else@example.com', '', '', 'not-a-real-profile' );
+check( 'an unrecognised profile is refused', is_wp_error( $pcm_bad_profile ), true );
+check( 'with the right result code',
+	is_wp_error( $pcm_bad_profile ) ? pcm_crm_invite_result_code( $pcm_bad_profile->get_error_code() ) : null,
+	'pcm_crm_staff_bad_profile'
+);
+
+$GLOBALS['pcm_test_users'][999] = (object) array(
+	'ID' => 999, 'user_login' => 'admin', 'user_email' => 'admin@example.com', 'roles' => array( 'administrator' ),
+);
+
+$pcm_taken = pcm_crm_invite_staff( 'admin@example.com', '', '', '' );
+check( 'an email already belonging to a different kind of account is refused', is_wp_error( $pcm_taken ), true );
+check( 'with the right result code',
+	is_wp_error( $pcm_taken ) ? pcm_crm_invite_result_code( $pcm_taken->get_error_code() ) : null,
+	'pcm_crm_staff_email_taken'
+);
+
+check( 'an unrecognised error code still narrows to a canned message, never raw text',
+	pcm_crm_invite_result_code( 'something_a_future_change_might_add' ), 'pcm_crm_staff_failed' );
+
+echo "\n--- branding wp-login.php for a staff invite link ---\n";
+
+$_REQUEST['redirect_to'] = 'https://example.com/staff/';
+check( 'a redirect_to under the staff base is a branded visit', pcm_crm_staff_is_login_visit(), true );
+check( 'the login logo then points home',
+	pcm_crm_staff_login_logo_url( 'https://example.com/wp-login.php' ), 'https://example.com/' );
+check( 'and the header text is the site name',
+	pcm_crm_staff_login_logo_text( 'WordPress' ), get_bloginfo( 'name' ) );
+
+$_REQUEST['redirect_to'] = 'https://example.com/wp-admin/';
+check( 'an ordinary wp-admin redirect is not a branded visit', pcm_crm_staff_is_login_visit(), false );
+check( 'the logo URL falls through unchanged',
+	pcm_crm_staff_login_logo_url( 'https://example.com/wp-login.php' ), 'https://example.com/wp-login.php' );
+
+unset( $_REQUEST['redirect_to'] );
+$GLOBALS['pcm_test_users'] = array();

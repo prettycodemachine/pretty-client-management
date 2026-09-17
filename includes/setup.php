@@ -169,7 +169,7 @@ function pcm_crm_setup_page( $pcm_key ) {
 	return isset( $pcm_pages[ $pcm_key ] ) ? $pcm_pages[ $pcm_key ] : null;
 }
 
-function pcm_crm_setup_url( $pcm_key ) {
+function pcm_crm_setup_url( $pcm_key, $pcm_host = '' ) {
 	// The front end has its own shape (/staff/settings/, /staff/settings/<key>/)
 	// for the plain Settings tabs — the pages whose own slug IS
 	// PCM_CRM_SETUP_SLUG. The app-backed Setup pages (Templates, Sequences,
@@ -179,14 +179,21 @@ function pcm_crm_setup_url( $pcm_key ) {
 	// (pcm_crm_staff_redirect_target(), includes/roles.php) is what then lets
 	// a front-end user actually follow one there.
 	//
-	// Decided from the request being served (pcm_crm_is_front_request()),
-	// not pcm_crm_link_host() — this renders a link into the page currently
-	// on screen, the same question pcm_crm_setup_open() already asks for its
-	// own shell, not "which host does this viewer prefer" (that question is
-	// pcm_crm_screen_url()'s, for a cron email with no request to read at
-	// all). An administrator previewing the front end must get a front-end
-	// link here, even though their own preferred host is wp-admin.
-	if ( pcm_crm_is_front_request() ) {
+	// $pcm_host defaults from the request being served
+	// (pcm_crm_is_front_request()), not pcm_crm_link_host() — a link rendered
+	// into the page currently on screen asks the same question
+	// pcm_crm_setup_open() already asks for its own shell, not "which host
+	// does this viewer prefer" (pcm_crm_screen_url()'s question, for a cron
+	// email with no request to read at all). An administrator previewing the
+	// front end must get a front-end link here, even though their own
+	// preferred host is wp-admin. An explicit $pcm_host is for the one caller
+	// that is neither of those: pcm_crm_staff_redirect_target()
+	// (includes/roles.php) decides a *destination* to redirect an admin_init
+	// request away from wp-admin — is_admin() is still true at that point, so
+	// the auto-detected host would just rebuild the URL being left.
+	$pcm_host = $pcm_host ? $pcm_host : ( pcm_crm_is_front_request() ? 'front' : 'admin' );
+
+	if ( 'front' === $pcm_host ) {
 		$pcm_page = 'home' === $pcm_key ? null : pcm_crm_setup_page( $pcm_key );
 
 		if ( 'home' === $pcm_key || ( $pcm_page && PCM_CRM_SETUP_SLUG === $pcm_page['page'] ) ) {

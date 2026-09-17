@@ -442,6 +442,183 @@ function pcm_crm_clean_user_access( array $pcm_post ) {
 	return array( 'profile' => $pcm_profile, 'sets' => $pcm_sets );
 }
 
+/**
+ * Create or reuse a WP user for a new staff member, and email them a way in.
+ *
+ * The twin of pcm_crm_portal_invite_contact() (includes/portal/portal-admin.php)
+ * for the other side of the front end — same shape (create-or-reuse, refuse an
+ * email belonging to a different kind of account, a password-reset link, a
+ * courtesy email) with two real differences: there is no Contact to link to,
+ * and the assignment this whole screen exists for (pcm_crm_assign_permissions())
+ * happens in the same call rather than as a second step, so an invited user is
+ * never left holding the Staff role with no profile at all — the state
+ * pcm_crm_render_access_user_form() already treats as "no CRM access."
+ *
+ * Reuses an existing Staff user for the same email — inviting someone a
+ * second time (a lost email, a name filled in later) resends rather than
+ * colliding on wp_insert_user(), the same reasoning the portal invite uses.
+ * Reset keys are single-use and expire after 24 hours; a second invite is the
+ * only recovery this plugin offers, deliberately, rather than a "resend"
+ * mechanism that has to reason about an outstanding key's state.
+ */
+function pcm_crm_invite_staff( $pcm_email, $pcm_first, $pcm_last, $pcm_profile_key, array $pcm_set_keys = array() ) {
+	if ( ! is_email( $pcm_email ) ) {
+		return new WP_Error( 'pcm_crm_staff_bad_email', __( 'Enter a valid email address.', 'pcm-crm' ) );
+	}
+
+	if ( $pcm_profile_key && ! pcm_crm_profile( $pcm_profile_key ) ) {
+		return new WP_Error( 'pcm_crm_staff_bad_profile', __( 'That profile no longer exists.', 'pcm-crm' ) );
+	}
+
+	pcm_crm_ensure_staff_role();
+
+	$pcm_user = get_user_by( 'email', $pcm_email );
+
+	if ( $pcm_user && ! in_array( PCM_CRM_STAFF_ROLE, (array) $pcm_user->roles, true ) ) {
+		return new WP_Error( 'pcm_crm_staff_email_taken', __( 'That email already belongs to a different kind of account on this site.', 'pcm-crm' ) );
+	}
+
+	if ( ! $pcm_user ) {
+		$pcm_user_id = wp_insert_user( array(
+			'user_login' => sanitize_user( $pcm_email, true ),
+			'user_email' => $pcm_email,
+			'user_pass'  => wp_generate_password( 32 ),
+			'first_name' => $pcm_first,
+			'last_name'  => $pcm_last,
+			'role'       => PCM_CRM_STAFF_ROLE,
+		) );
+
+		if ( is_wp_error( $pcm_user_id ) ) {
+			return $pcm_user_id;
+		}
+
+		$pcm_user = get_user_by( 'id', $pcm_user_id );
+	} elseif ( $pcm_first || $pcm_last ) {
+		// A resend can also be the first time a name gets filled in —
+		// pcm_crm_user_label() falls back to the login (the email address)
+		// until one is set, so an owner who reads as an email address on
+		// every record they touch is otherwise stuck that way.
+		wp_update_user( array( 'ID' => $pcm_user->ID, 'first_name' => $pcm_first, 'last_name' => $pcm_last ) );
+	}
+
+	pcm_crm_assign_permissions( $pcm_user->ID, $pcm_profile_key, $pcm_set_keys );
+
+	$pcm_key = get_password_reset_key( $pcm_user );
+
+	if ( is_wp_error( $pcm_key ) ) {
+		return $pcm_key;
+	}
+
+	$pcm_url = add_query_arg( array(
+		'action'      => 'rp',
+		'key'         => $pcm_key,
+		'login'       => rawurlencode( $pcm_user->user_login ),
+		'redirect_to' => rawurlencode( pcm_crm_front_base_url() ),
+	), wp_login_url() );
+
+	$pcm_body = pcm_crm_email_wrapper( pcm_crm_format_body( sprintf(
+		/* translators: 1: the invited person's first name or email, 2: a set-password link */
+		__( "Hi %1\$s,\n\nYou now have access to the employee portal.\n\nSet your password to get started: %2\$s", 'pcm-crm' ),
+		$pcm_first ? $pcm_first : $pcm_email,
+		esc_url_raw( $pcm_url )
+	) ) );
+
+	add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
+	$pcm_sent = wp_mail( $pcm_email, __( 'You’re invited to the employee portal', 'pcm-crm' ), $pcm_body );
+	remove_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
+
+	if ( ! $pcm_sent ) {
+		return new WP_Error( 'pcm_crm_mail_failed', __( 'The account was created, but the invitation email could not be sent.', 'pcm-crm' ) );
+	}
+
+	return array( 'invited' => true, 'user_id' => (int) $pcm_user->ID );
+}
+
+/**
+ * A WP_Error's code, narrowed to the short set pcm_crm_invite_result_notice()
+ * knows how to word — the same "canned result code in the query string, not
+ * the raw message" shape pcm_crm_handle_test_email() (admin/settings.php)
+ * already uses, so a message never has to survive being round-tripped through
+ * a URL.
+ */
+function pcm_crm_invite_result_code( $pcm_error_code ) {
+	$pcm_known = array( 'pcm_crm_staff_bad_email', 'pcm_crm_staff_bad_profile', 'pcm_crm_staff_email_taken', 'pcm_crm_mail_failed' );
+
+	return in_array( $pcm_error_code, $pcm_known, true ) ? $pcm_error_code : 'pcm_crm_staff_failed';
+}
+
+function pcm_crm_handle_invite_staff() {
+	if (
+		! pcm_crm_can( 'settings', 'edit' ) ||
+		! isset( $_POST['pcm_crm_invite_staff_nonce'] ) ||
+		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_invite_staff_nonce'] ), 'pcm_crm_invite_staff' )
+	) {
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+	}
+
+	$pcm_back  = pcm_crm_setup_url( 'access-users' );
+	$pcm_email = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+	$pcm_first = isset( $_POST['first_name'] ) ? sanitize_text_field( wp_unslash( $_POST['first_name'] ) ) : '';
+	$pcm_last  = isset( $_POST['last_name'] ) ? sanitize_text_field( wp_unslash( $_POST['last_name'] ) ) : '';
+	$pcm_clean = pcm_crm_clean_user_access( wp_unslash( $_POST ) );
+
+	$pcm_result = pcm_crm_invite_staff( $pcm_email, $pcm_first, $pcm_last, $pcm_clean['profile'], $pcm_clean['sets'] );
+
+	if ( is_wp_error( $pcm_result ) ) {
+		wp_safe_redirect( add_query_arg( 'pcm_crm_invite', pcm_crm_invite_result_code( $pcm_result->get_error_code() ), $pcm_back ) );
+		exit;
+	}
+
+	wp_safe_redirect( add_query_arg( array( 'pcm_crm_invite' => 'sent', 'user' => $pcm_result['user_id'] ), $pcm_back ) );
+	exit;
+}
+add_action( 'admin_post_pcm_crm_invite_staff', 'pcm_crm_handle_invite_staff' );
+
+/**
+ * Resend, from a row on the Staff Access list — the existing user's own
+ * email, name and current assignment, unchanged. Kept separate from
+ * pcm_crm_handle_invite_staff() rather than reusing its form: this one has no
+ * fields to post beyond which user, and posting a resend through the same
+ * form would mean either re-rendering it pre-filled (a second render path for
+ * one action) or trusting whatever profile/sets happened to be in the main
+ * form's own fields at the moment "Resend" was clicked, which may not be this
+ * user's.
+ */
+function pcm_crm_handle_resend_staff_invite() {
+	if (
+		! pcm_crm_can( 'settings', 'edit' ) ||
+		! isset( $_POST['pcm_crm_resend_staff_nonce'] ) ||
+		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_resend_staff_nonce'] ), 'pcm_crm_resend_staff' )
+	) {
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+	}
+
+	$pcm_back    = pcm_crm_setup_url( 'access-users' );
+	$pcm_user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+	$pcm_user    = $pcm_user_id ? get_userdata( $pcm_user_id ) : null;
+
+	if ( ! $pcm_user || ! in_array( PCM_CRM_STAFF_ROLE, (array) $pcm_user->roles, true ) ) {
+		wp_die( esc_html__( 'That user does not hold the Staff role.', 'pcm-crm' ), 404 );
+	}
+
+	$pcm_result = pcm_crm_invite_staff(
+		$pcm_user->user_email,
+		$pcm_user->first_name,
+		$pcm_user->last_name,
+		pcm_crm_user_profile_key( $pcm_user_id ),
+		pcm_crm_user_set_keys( $pcm_user_id )
+	);
+
+	if ( is_wp_error( $pcm_result ) ) {
+		wp_safe_redirect( add_query_arg( 'pcm_crm_invite', pcm_crm_invite_result_code( $pcm_result->get_error_code() ), $pcm_back ) );
+		exit;
+	}
+
+	wp_safe_redirect( add_query_arg( array( 'pcm_crm_invite' => 'sent', 'user' => $pcm_user_id ), $pcm_back ) );
+	exit;
+}
+add_action( 'admin_post_pcm_crm_resend_staff_invite', 'pcm_crm_handle_resend_staff_invite' );
+
 function pcm_crm_handle_save_user_access() {
 	if (
 		! pcm_crm_can( 'settings', 'edit' ) ||
@@ -470,14 +647,41 @@ function pcm_crm_handle_save_user_access() {
 }
 add_action( 'admin_post_pcm_crm_save_user_access', 'pcm_crm_handle_save_user_access' );
 
+/**
+ * Word the result of an invite or resend — the canned messages behind the
+ * short codes pcm_crm_invite_result_code() narrows a WP_Error to.
+ */
+function pcm_crm_invite_result_message( $pcm_result ) {
+	$pcm_messages = array(
+		'sent'                       => array( 'success', __( 'Invitation sent.', 'pcm-crm' ) ),
+		'pcm_crm_staff_bad_email'    => array( 'error', __( 'Enter a valid email address.', 'pcm-crm' ) ),
+		'pcm_crm_staff_bad_profile'  => array( 'error', __( 'That profile no longer exists.', 'pcm-crm' ) ),
+		'pcm_crm_staff_email_taken'  => array( 'error', __( 'That email already belongs to a different kind of account on this site.', 'pcm-crm' ) ),
+		'pcm_crm_mail_failed'        => array( 'error', __( 'The account was created, but the invitation email could not be sent.', 'pcm-crm' ) ),
+		'pcm_crm_staff_failed'       => array( 'error', __( 'Something went wrong and the invitation was not sent.', 'pcm-crm' ) ),
+	);
+
+	return isset( $pcm_messages[ $pcm_result ] ) ? $pcm_messages[ $pcm_result ] : null;
+}
+
 function pcm_crm_render_access_users_page() {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
 	$pcm_editing_id = isset( $_GET['user'] ) ? absint( $_GET['user'] ) : 0;
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only
 	$pcm_result = isset( $_GET['pcm_access'] ) ? sanitize_key( wp_unslash( $_GET['pcm_access'] ) ) : '';
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only
+	$pcm_invite_result = isset( $_GET['pcm_crm_invite'] ) ? sanitize_key( wp_unslash( $_GET['pcm_crm_invite'] ) ) : '';
 
 	if ( 'saved' === $pcm_result ) {
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Access updated.', 'pcm-crm' ) );
+	}
+
+	if ( $pcm_invite_result ) {
+		$pcm_invite_notice = pcm_crm_invite_result_message( $pcm_invite_result );
+
+		if ( $pcm_invite_notice ) {
+			printf( '<div class="notice notice-%s is-dismissible"><p>%s</p></div>', esc_attr( $pcm_invite_notice[0] ), esc_html( $pcm_invite_notice[1] ) );
+		}
 	}
 
 	if ( $pcm_editing_id ) {
@@ -488,8 +692,65 @@ function pcm_crm_render_access_users_page() {
 	$pcm_users = pcm_crm_staff_users();
 	?>
 	<div class="pcm-crm-card">
+		<h2><?php esc_html_e( 'Invite a staff member', 'pcm-crm' ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'Everyone holding the Staff role. Add a Staff member from Users → Add New in the WordPress admin menu — this screen only assigns what they can reach once they exist.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Creates their account if it does not exist yet, and emails them a link to set their own password. Inviting the same address again resends the link — useful if it expired (24 hours) or never arrived.', 'pcm-crm' ); ?>
+		</p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pcm-setup-type-form">
+			<input type="hidden" name="action" value="pcm_crm_invite_staff">
+			<?php wp_nonce_field( 'pcm_crm_invite_staff', 'pcm_crm_invite_staff_nonce' ); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="pcm-crm-invite-email"><?php esc_html_e( 'Email', 'pcm-crm' ); ?></label></th>
+					<td><input type="email" class="regular-text" id="pcm-crm-invite-email" name="email" required></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="pcm-crm-invite-first"><?php esc_html_e( 'First name', 'pcm-crm' ); ?></label></th>
+					<td><input type="text" class="regular-text" id="pcm-crm-invite-first" name="first_name"></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="pcm-crm-invite-last"><?php esc_html_e( 'Last name', 'pcm-crm' ); ?></label></th>
+					<td><input type="text" class="regular-text" id="pcm-crm-invite-last" name="last_name"></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Profile', 'pcm-crm' ); ?></th>
+					<td>
+						<label>
+							<input type="radio" name="profile" value="" checked>
+							<?php esc_html_e( 'None — no CRM access', 'pcm-crm' ); ?>
+						</label><br>
+						<?php foreach ( pcm_crm_profiles() as $pcm_key => $pcm_profile ) : ?>
+							<label>
+								<input type="radio" name="profile" value="<?php echo esc_attr( $pcm_key ); ?>">
+								<strong><?php echo esc_html( $pcm_profile['label'] ); ?></strong>
+								<?php if ( $pcm_profile['description'] ) : ?> — <span class="description"><?php echo esc_html( $pcm_profile['description'] ); ?></span><?php endif; ?>
+							</label><br>
+						<?php endforeach; ?>
+					</td>
+				</tr>
+				<?php $pcm_invite_sets = pcm_crm_permission_sets(); ?>
+				<?php if ( $pcm_invite_sets ) : ?>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Permission Sets', 'pcm-crm' ); ?></th>
+						<td>
+							<?php foreach ( $pcm_invite_sets as $pcm_key => $pcm_set ) : ?>
+								<label>
+									<input type="checkbox" name="sets[]" value="<?php echo esc_attr( $pcm_key ); ?>">
+									<strong><?php echo esc_html( $pcm_set['label'] ); ?></strong>
+									<?php if ( $pcm_set['description'] ) : ?> — <span class="description"><?php echo esc_html( $pcm_set['description'] ); ?></span><?php endif; ?>
+								</label><br>
+							<?php endforeach; ?>
+						</td>
+					</tr>
+				<?php endif; ?>
+			</table>
+			<?php submit_button( __( 'Send Invitation', 'pcm-crm' ) ); ?>
+		</form>
+	</div>
+
+	<div class="pcm-crm-card">
+		<p class="description">
+			<?php esc_html_e( 'Everyone holding the Staff role — invited here, or added from Users → Add New in the WordPress admin menu and given the Staff role by hand.', 'pcm-crm' ); ?>
 		</p>
 	</div>
 
@@ -526,7 +787,16 @@ function pcm_crm_render_access_users_page() {
 							</td>
 							<td><?php echo $pcm_profile ? esc_html( $pcm_profile['label'] ) : esc_html__( 'None — no CRM access', 'pcm-crm' ); ?></td>
 							<td><?php echo $pcm_set_labels ? esc_html( implode( ', ', $pcm_set_labels ) ) : '—'; ?></td>
-							<td><a href="<?php echo esc_url( add_query_arg( 'user', $pcm_user->ID, pcm_crm_setup_url( 'access-users' ) ) ); ?>"><?php esc_html_e( 'Edit access', 'pcm-crm' ); ?></a></td>
+							<td>
+								<a href="<?php echo esc_url( add_query_arg( 'user', $pcm_user->ID, pcm_crm_setup_url( 'access-users' ) ) ); ?>"><?php esc_html_e( 'Edit access', 'pcm-crm' ); ?></a>
+								·
+								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+									<input type="hidden" name="action" value="pcm_crm_resend_staff_invite">
+									<input type="hidden" name="user_id" value="<?php echo esc_attr( $pcm_user->ID ); ?>">
+									<?php wp_nonce_field( 'pcm_crm_resend_staff', 'pcm_crm_resend_staff_nonce' ); ?>
+									<button type="submit" class="button-link"><?php esc_html_e( 'Resend invite', 'pcm-crm' ); ?></button>
+								</form>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 				</tbody>

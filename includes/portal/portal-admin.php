@@ -45,11 +45,7 @@ add_action( 'admin_init', 'pcm_crm_portal_redirect_from_admin' );
  * login screen is untouched the rest of the time.
  */
 function pcm_crm_portal_is_login_visit() {
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only, decides styling only
-	$pcm_redirect = isset( $_REQUEST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) : '';
-	$pcm_portal   = pcm_crm_portal_url();
-
-	return $pcm_portal && $pcm_redirect && 0 === strpos( $pcm_redirect, $pcm_portal );
+	return pcm_crm_is_branded_login_visit( pcm_crm_portal_url() );
 }
 
 function pcm_crm_portal_login_logo_url() {
@@ -71,22 +67,7 @@ function pcm_crm_portal_login_style() {
 		return;
 	}
 
-	$pcm_logo = pcm_crm_email_logo_url();
-	?>
-	<style>
-		#login h1 a, .login h1 a {
-			<?php if ( $pcm_logo ) : ?>
-			background-image: url('<?php echo esc_url( $pcm_logo ); ?>');
-			background-size: contain;
-			<?php endif; ?>
-			width: 100%;
-			height: 84px;
-		}
-		.login #backtoblog a, .login #nav a { color: #3f6b96; }
-		.wp-core-ui .button-primary { background: #c94040; border-color: #c94040; }
-		.wp-core-ui .button-primary:hover, .wp-core-ui .button-primary:focus { background: #af3232; border-color: #af3232; }
-	</style>
-	<?php
+	pcm_crm_branded_login_style();
 }
 add_action( 'login_enqueue_scripts', 'pcm_crm_portal_login_style' );
 

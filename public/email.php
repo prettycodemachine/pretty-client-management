@@ -258,6 +258,50 @@ function pcm_crm_email_logo_url() {
 }
 
 /**
+ * Whether a wp-login.php visit is plainly headed for one of this plugin's own
+ * destinations — the Client Portal or the employee portal — rather than the
+ * ordinary wp-admin login screen, so a set-password link from an invite email
+ * shows this brand's own logo and colours instead of the site's default admin
+ * login page. Shared rather than answered per destination: $pcm_prefix is
+ * whichever URL a caller's own invite flow set as redirect_to (the Client
+ * Portal page, or the employee portal's front base), and matching a request's
+ * own redirect_to against it is the whole question either destination needs
+ * answered.
+ */
+function pcm_crm_is_branded_login_visit( $pcm_prefix ) {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only, decides styling only
+	$pcm_redirect = isset( $_REQUEST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) : '';
+
+	return $pcm_prefix && $pcm_redirect && 0 === strpos( $pcm_redirect, $pcm_prefix );
+}
+
+/**
+ * The actual paint job for a branded wp-login.php visit — the logo swap and
+ * the CRM's own colours on the primary button and links. Has nothing
+ * destination-specific about it, unlike pcm_crm_is_branded_login_visit()
+ * above, which is why it is a caller's job to decide whether to call this at
+ * all and this function's job only to draw once that is decided.
+ */
+function pcm_crm_branded_login_style() {
+	$pcm_logo = pcm_crm_email_logo_url();
+	?>
+	<style>
+		#login h1 a, .login h1 a {
+			<?php if ( $pcm_logo ) : ?>
+			background-image: url('<?php echo esc_url( $pcm_logo ); ?>');
+			background-size: contain;
+			<?php endif; ?>
+			width: 100%;
+			height: 84px;
+		}
+		.login #backtoblog a, .login #nav a { color: #3f6b96; }
+		.wp-core-ui .button-primary { background: #c94040; border-color: #c94040; }
+		.wp-core-ui .button-primary:hover, .wp-core-ui .button-primary:focus { background: #af3232; border-color: #af3232; }
+	</style>
+	<?php
+}
+
+/**
  * Replace the {{TOKEN}} placeholders.
  *
  * Tokens are derived from the form's own fields, so one cannot name a field

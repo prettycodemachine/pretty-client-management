@@ -39,15 +39,37 @@ function pcm_crm_admin_endpoint_allowed() {
  * same reason the access-settings.php save handlers keep their own refusal
  * logic in functions like pcm_crm_profile_in_use() rather than inline.
  *
- * An empty string means "do not redirect" — CRM Settings has no front-end
- * home yet, so a staff member holding Settings access is deliberately left
- * free to reach it in wp-admin rather than stranding that grant with nowhere
- * to go. That exception narrows as CRM Settings itself gains a front-end
- * route.
+ * An empty string means "do not redirect." The four app-backed Setup pages
+ * (Templates, Sequences, Schedules, the bin) still have none of their own, so
+ * a staff member holding Settings access is deliberately left free to reach
+ * those specifically in wp-admin rather than stranding that grant with
+ * nowhere to go — that narrows further as each gains a front-end route in
+ * turn. The plain Settings tabs (the pages whose own slug IS
+ * PCM_CRM_SETUP_SLUG) are not in that exception any more: pcm_crm_setup_url()
+ * now has a front-end shape for them, so this redirects there instead —
+ * $pcm_tab carries the ?tab= a staff member's link may have named, the same
+ * way pcm_crm_current_setup_key() reads it, so page=pcm-crm-settings&tab=
+ * pipeline lands on /staff/settings/pipeline/, not merely /staff/settings/.
  */
-function pcm_crm_staff_redirect_target( $pcm_page ) {
-	if ( $pcm_page && in_array( $pcm_page, pcm_crm_setup_slugs(), true ) ) {
-		return '';
+function pcm_crm_staff_redirect_target( $pcm_page, $pcm_tab = '' ) {
+	$pcm_setup_pages = pcm_crm_setup_slugs();
+
+	if ( $pcm_page && in_array( $pcm_page, $pcm_setup_pages, true ) ) {
+		if ( PCM_CRM_SETUP_SLUG !== $pcm_page ) {
+			// One of the four app-backed pages — no front-end route yet.
+			return '';
+		}
+
+		// An unrecognised or missing tab resolves to Home, the same fallback
+		// pcm_crm_current_setup_key() already applies — pcm_crm_setup_url()
+		// falls through to the *admin* shape for a $pcm_key it cannot find a
+		// registered page for, which here would mean redirecting a staff
+		// member back to the very wp-admin URL they are being redirected away
+		// from.
+		$pcm_tab_page = $pcm_tab ? pcm_crm_setup_page( $pcm_tab ) : null;
+		$pcm_tab      = ( $pcm_tab_page && PCM_CRM_SETUP_SLUG === $pcm_tab_page['page'] ) ? $pcm_tab : 'home';
+
+		return pcm_crm_setup_url( $pcm_tab, 'front' );
 	}
 
 	// A link sent before the front end existed still names a screen; send
@@ -91,8 +113,11 @@ function pcm_crm_redirect_staff_from_admin() {
 	}
 
 	global $plugin_page;
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only, decides a redirect destination
 	$pcm_page   = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : (string) $plugin_page;
-	$pcm_target = pcm_crm_staff_redirect_target( $pcm_page );
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only, decides a redirect destination
+	$pcm_tab    = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+	$pcm_target = pcm_crm_staff_redirect_target( $pcm_page, $pcm_tab );
 
 	if ( '' === $pcm_target ) {
 		return;
@@ -128,3 +153,36 @@ function pcm_crm_prune_admin_bar( $pcm_bar ) {
 	) );
 }
 add_action( 'admin_bar_menu', 'pcm_crm_prune_admin_bar', 999 );
+
+/**
+ * Brand wp-login.php for a staff invite's set-password link, the way
+ * pcm_crm_portal_login_style() already does for the Client Portal's — the
+ * paint job is shared (pcm_crm_branded_login_style(), public/email.php),
+ * only the destination this checks against differs. Kept in this file rather
+ * than beside the portal's own copy because the portal's is only loaded when
+ * the portal module is on (includes/modules.php); staff exist whatever the
+ * module switches say, so their invite link has to render branded
+ * regardless.
+ */
+function pcm_crm_staff_is_login_visit() {
+	return pcm_crm_is_branded_login_visit( pcm_crm_front_base_url() );
+}
+
+function pcm_crm_staff_login_logo_url( $pcm_url ) {
+	return pcm_crm_staff_is_login_visit() ? home_url( '/' ) : $pcm_url;
+}
+add_filter( 'login_headerurl', 'pcm_crm_staff_login_logo_url' );
+
+function pcm_crm_staff_login_logo_text( $pcm_text ) {
+	return pcm_crm_staff_is_login_visit() ? get_bloginfo( 'name' ) : $pcm_text;
+}
+add_filter( 'login_headertext', 'pcm_crm_staff_login_logo_text' );
+
+function pcm_crm_staff_login_style() {
+	if ( ! pcm_crm_staff_is_login_visit() ) {
+		return;
+	}
+
+	pcm_crm_branded_login_style();
+}
+add_action( 'login_enqueue_scripts', 'pcm_crm_staff_login_style' );

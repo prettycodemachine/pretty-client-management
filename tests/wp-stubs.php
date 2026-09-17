@@ -263,8 +263,61 @@ function get_users( $pcm_args = array() ) {
 function get_user_by( $field, $value ) {
 	foreach ( (array) ( isset( $GLOBALS['pcm_test_users'] ) ? $GLOBALS['pcm_test_users'] : array() ) as $id => $user ) {
 		if ( 'login' === $field && isset( $user->user_login ) && $user->user_login === $value ) { return $user; }
+		if ( 'email' === $field && isset( $user->user_email ) && $user->user_email === $value ) { return $user; }
+		if ( 'id' === $field && (int) $id === (int) $value ) { return $user; }
 	}
 	return null;
+}
+
+function sanitize_user( $pcm_username, $pcm_strict = false ) {
+	return strtolower( preg_replace( '/[^a-z0-9_.\-@]/i', '', (string) $pcm_username ) );
+}
+
+function wp_generate_password( $pcm_length = 12, $pcm_special_chars = true, $pcm_extra_special = false ) {
+	return 'test-generated-password';
+}
+
+/**
+ * A minimal wp_insert_user(): assigns the next integer id and stores the row
+ * in the same $GLOBALS['pcm_test_users'] fixture get_user_by()/get_userdata()
+ * already read from, with 'role' (the single string real wp_insert_user()
+ * also accepts) becoming a one-element ->roles array — enough to exercise an
+ * invite flow like pcm_crm_invite_staff() end to end without a real database.
+ */
+function wp_insert_user( array $pcm_args ) {
+	if ( ! isset( $GLOBALS['pcm_test_users'] ) ) { $GLOBALS['pcm_test_users'] = array(); }
+
+	$pcm_id = $GLOBALS['pcm_test_users'] ? max( array_keys( $GLOBALS['pcm_test_users'] ) ) + 1 : 1;
+
+	$GLOBALS['pcm_test_users'][ $pcm_id ] = (object) array(
+		'ID'         => $pcm_id,
+		'user_login' => isset( $pcm_args['user_login'] ) ? $pcm_args['user_login'] : '',
+		'user_email' => isset( $pcm_args['user_email'] ) ? $pcm_args['user_email'] : '',
+		'first_name' => isset( $pcm_args['first_name'] ) ? $pcm_args['first_name'] : '',
+		'last_name'  => isset( $pcm_args['last_name'] ) ? $pcm_args['last_name'] : '',
+		'roles'      => isset( $pcm_args['role'] ) ? array( $pcm_args['role'] ) : array(),
+	);
+
+	return $pcm_id;
+}
+
+function wp_update_user( array $pcm_args ) {
+	$pcm_id = isset( $pcm_args['ID'] ) ? (int) $pcm_args['ID'] : 0;
+
+	if ( ! $pcm_id || ! isset( $GLOBALS['pcm_test_users'][ $pcm_id ] ) ) {
+		return new WP_Error( 'invalid_user_id', 'Invalid user ID.' );
+	}
+
+	foreach ( $pcm_args as $pcm_key => $pcm_value ) {
+		if ( 'ID' === $pcm_key ) { continue; }
+		$GLOBALS['pcm_test_users'][ $pcm_id ]->$pcm_key = $pcm_value;
+	}
+
+	return $pcm_id;
+}
+
+function get_password_reset_key( $pcm_user ) {
+	return 'test-reset-key';
 }
 function wp_delete_file( $f ) { @unlink( $f ); }
 function get_temp_dir() { return sys_get_temp_dir() . '/'; }
