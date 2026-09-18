@@ -262,7 +262,7 @@ function pcm_crm_render_form_tab() {
 		</div>
 	</div>
 
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_form_settings' ); ?>
 
 		<h2><?php esc_html_e( 'Form fields', 'pcm-crm' ); ?></h2>
@@ -656,7 +656,7 @@ function pcm_crm_render_export_tab() {
 			<?php esc_html_e( 'Only closed-won deals go in the donations file. NPSP creates a received donation per row and has no pipeline stage to carry, so an open deal loaded this way would post as income you have not had.', 'pcm-crm' ); ?>
 		</p>
 
-		<form method="post" action="options.php">
+		<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
 			<?php settings_fields( 'pcm_crm_export_settings' ); ?>
 			<p>
 				<label>
@@ -723,7 +723,7 @@ function pcm_crm_render_export_tab() {
 function pcm_crm_render_modules_tab() {
 	$pcm_modules = pcm_crm_modules();
 	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_modules_settings' ); ?>
 
 		<p class="description">
@@ -801,7 +801,7 @@ function pcm_crm_sanitize_stage_probabilities( $pcm_value ) {
 function pcm_crm_render_sales_process_tab() {
 	$pcm_stages = pcm_crm_stages();
 	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_sales_process_settings' ); ?>
 		<p class="description"><?php esc_html_e( 'Every deal’s probability follows its stage automatically — a hand-tuned figure on one deal still survives until that deal’s stage changes. These are the shipped defaults; change any of them to match how you actually sell.', 'pcm-crm' ); ?></p>
 		<table class="widefat striped pcm-setup-table">
@@ -838,7 +838,7 @@ function pcm_crm_render_sales_process_tab() {
 
 function pcm_crm_render_pipeline_tab() {
 	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_pipeline_settings' ); ?>
 		<h2><?php esc_html_e( 'Stalled deals', 'pcm-crm' ); ?></h2>
 		<table class="form-table" role="presentation">
@@ -955,7 +955,7 @@ function pcm_crm_render_fields_tab() {
 		<?php endforeach; ?>
 	</div>
 
-	<form method="post" action="options.php" class="pcm-crm-fields-form" data-object="<?php echo esc_attr( $pcm_object ); ?>">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-fields-form" data-object="<?php echo esc_attr( $pcm_object ); ?>">
 		<?php settings_fields( 'pcm_crm_fields_settings' ); ?>
 
 		<div class="pcm-crm-card">
@@ -1376,7 +1376,7 @@ add_action( 'admin_notices', 'pcm_crm_samples_notice' );
 function pcm_crm_render_theme_tab() {
 	$pcm_current = pcm_crm_theme();
 	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_theme_settings' ); ?>
 
 		<h2><?php esc_html_e( 'Theme', 'pcm-crm' ); ?></h2>

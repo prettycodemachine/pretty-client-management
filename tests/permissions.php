@@ -864,6 +864,33 @@ pcm_crm_flush_permissions();
 $GLOBALS['pcm_test_is_admin'] = true;
 pcm_test_set_query_vars( array() );
 
+echo "\n--- every settings form posts to an absolute URL, not a relative one ---\n";
+
+// A literal action="options.php" resolves relative to the *current* page,
+// which works by accident in wp-admin (already living at .../wp-admin/) and
+// silently posts to a nonsense URL on the front end
+// (.../staff/settings/pipeline/options.php, a 404 that lands on the theme's
+// own 404 page) — a real bug, reported from a real browser actually
+// submitting the Pipeline tab, and one no curl request or test stub could
+// have caught: both always address options.php directly rather than letting
+// a browser resolve a relative action against the page it is rendering.
+// Checked directly against the source rather than by rendering, since
+// several of these forms need state (a posted object, a specific tab) this
+// suite has no reason to fabricate just to prove a string is absolute.
+$pcm_settings_files = array(
+	'admin/settings.php',
+	'includes/urls.php',
+	'includes/portal/portal-admin.php',
+	'includes/pm/pm-settings.php',
+);
+
+foreach ( $pcm_settings_files as $pcm_rel_path ) {
+	$pcm_source = file_get_contents( PCM_CRM_DIR . $pcm_rel_path );
+
+	check( "$pcm_rel_path has no relative options.php/admin-post.php form action left",
+		(bool) preg_match( '/action=["\'](?:options|admin-post|admin)\.php["\']/', $pcm_source ), false );
+}
+
 echo "\n--- the app bar hides doors a viewer cannot walk through ---\n";
 
 // A staff member with only Sales must not see a live-looking "Go to

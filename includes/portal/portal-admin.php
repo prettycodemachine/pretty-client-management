@@ -249,7 +249,7 @@ function pcm_crm_portal_render_setup_page() {
 	$pcm_page_id = (int) get_option( 'pcm_crm_portal_page_id', 0 );
 	$pcm_pages   = get_pages( array( 'sort_column' => 'post_title' ) );
 	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_portal_settings' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>

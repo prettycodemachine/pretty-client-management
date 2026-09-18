@@ -103,7 +103,7 @@ add_action( 'admin_init', 'pcm_crm_register_front_settings' );
 
 function pcm_crm_render_employee_portal_tab() {
 	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_front_settings' ); ?>
 		<p class="description">
 			<?php esc_html_e( 'Staff sign in and work from this address rather than wp-admin. Changing it takes effect on the next page load.', 'pcm-crm' ); ?>

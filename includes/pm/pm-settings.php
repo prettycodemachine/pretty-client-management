@@ -625,7 +625,7 @@ function pcm_crm_pm_render_time_page() {
 	$pcm_settings = pcm_crm_pm_time_settings();
 	$pcm_name     = PCM_CRM_PM_TIME_OPTION;
 	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_pm_time_settings' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
@@ -681,7 +681,7 @@ function pcm_crm_pm_render_time_page() {
 function pcm_crm_pm_render_picklists_page() {
 	$pcm_name = PCM_CRM_PM_PICKLISTS_OPTION;
 	?>
-	<form method="post" action="options.php" class="pcm-crm-card">
+	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_pm_picklist_settings' ); ?>
 		<p class="description"><?php esc_html_e( 'One choice per line. Removing a choice does not change records that already use it.', 'pcm-crm' ); ?></p>
 		<table class="form-table" role="presentation">
