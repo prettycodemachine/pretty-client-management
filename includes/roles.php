@@ -51,8 +51,22 @@ function pcm_crm_admin_endpoint_allowed() {
  * lands on /staff/settings/pipeline/, not merely /staff/settings/. Everything
  * else, app-backed Setup pages included, resolves through the same
  * pcm_crm_screen_url() lookup an ordinary CRM screen already does.
+ *
+ * $pcm_pagenow answers one destination the rest of this function structurally
+ * cannot: wp-admin/profile.php is a standalone top-level admin file, never
+ * reached through admin.php?page=, so $pcm_page is always empty for it —
+ * indistinguishable, by $pcm_page alone, from the bare wp-admin dashboard
+ * (which correctly falls through to the front-end home below). Core's own
+ * $pagenow global is what actually tells the two apart; the admin bar's own
+ * "Howdy" dropdown links here, and without this it silently dropped a staff
+ * member on the front-end home instead of public/staff-profile.php, a real
+ * screen this plugin gives them for exactly this.
  */
-function pcm_crm_staff_redirect_target( $pcm_page, $pcm_tab = '' ) {
+function pcm_crm_staff_redirect_target( $pcm_page, $pcm_tab = '', $pcm_pagenow = '' ) {
+	if ( 'profile.php' === $pcm_pagenow ) {
+		return pcm_crm_front_base_url() . 'profile/';
+	}
+
 	if ( PCM_CRM_SETUP_SLUG === $pcm_page ) {
 		// An unrecognised or missing tab resolves to Home, the same fallback
 		// pcm_crm_current_setup_key() already applies — pcm_crm_setup_url()
@@ -106,12 +120,12 @@ function pcm_crm_redirect_staff_from_admin() {
 		return;
 	}
 
-	global $plugin_page;
+	global $plugin_page, $pagenow;
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only, decides a redirect destination
 	$pcm_page   = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : (string) $plugin_page;
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only, decides a redirect destination
 	$pcm_tab    = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
-	$pcm_target = pcm_crm_staff_redirect_target( $pcm_page, $pcm_tab );
+	$pcm_target = pcm_crm_staff_redirect_target( $pcm_page, $pcm_tab, (string) $pagenow );
 
 	if ( '' === $pcm_target ) {
 		return;

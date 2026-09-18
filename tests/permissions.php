@@ -728,6 +728,16 @@ check( 'no page at all (the bare wp-admin dashboard) goes to the front-end home'
 	pcm_crm_staff_redirect_target( '' ), 'https://example.com/staff/' );
 check( 'a page nobody registered also falls back to the front-end home',
 	pcm_crm_staff_redirect_target( 'some-other-plugins-page' ), 'https://example.com/staff/' );
+// profile.php is a standalone top-level admin file, never reached through
+// admin.php?page= — $pcm_page is empty for it exactly like the bare wp-admin
+// dashboard is, so without $pcm_pagenow the two are the same case and the
+// admin bar's own "Howdy" dropdown silently dropped a staff member on the
+// front-end home instead of their actual profile page. Real bug, found by
+// actually clicking that link as a real staff account, not by curl.
+check( "wp-admin's own profile.php goes to the real front-end profile page, not just home",
+	pcm_crm_staff_redirect_target( '', '', 'profile.php' ), 'https://example.com/staff/profile/' );
+check( 'an ordinary admin.php?page= screen is unaffected — pagenow is admin.php there, not profile.php',
+	pcm_crm_staff_redirect_target( 'pcm-crm-contacts', '', 'admin.php' ), 'https://example.com/staff/contacts/' );
 
 echo "\n--- which admin hook needs which assets — the enqueue regression ---\n";
 
