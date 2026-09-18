@@ -139,6 +139,15 @@ function pcm_crm_front_overrides() {
 		// The CRM app's own top-level slug reads as "home" on the front end,
 		// where there is no separate top-level menu to land on first.
 		'pcm-crm' => 'home',
+		// The four app-backed Setup pages are not part of any pcm_crm_apps()
+		// item tuple — they are their own top-level admin pages — so they need
+		// an entry here rather than deriving one. Each word matches the key it
+		// is already registered under (pcm_crm_register_setup_page(),
+		// includes/setup.php), which is what the Setup nav already calls it.
+		'pcm-crm-templates'   => 'templates',
+		'pcm-crm-sequences'   => 'sequences',
+		'pcm-crm-schedules'   => 'schedules',
+		'pcm-crm-recycle-bin' => 'recycle-bin',
 	) );
 }
 

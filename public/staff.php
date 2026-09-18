@@ -126,6 +126,27 @@ function pcm_crm_front_gate() {
  * template is plugin-owned, so there is no such ordering problem: it can
  * enqueue on the normal hook like any other page.
  */
+/**
+ * Whether a front-end screen word draws inside the Setup frame — the plain
+ * 'settings' screen itself, or one of the four app-backed Setup pages
+ * (Templates, Sequences, Schedules, the bin), which share that frame but are
+ * reached through the ordinary screen_callbacks dispatch rather than
+ * 'settings' own tab switch. A plain function so pcm_crm_front_assets()'s
+ * 'setup_frame' decision is checkable directly rather than only by its side
+ * effects (which styles got enqueued).
+ *
+ * pcm_crm_is_setup_screen() (includes/setup.php) answers the equivalent
+ * question on the admin host, but it matches a *hook suffix*
+ * ("...settings_page_pcm-crm-templates"), not a bare admin slug, so it is not
+ * reusable here as-is — pcm_crm_setup_slugs() is the flat list it is itself
+ * built from, and a plain membership check against this screen's resolved
+ * admin slug is what that list is for.
+ */
+function pcm_crm_front_screen_wants_setup_frame( $pcm_screen ) {
+	return 'settings' === $pcm_screen
+		|| in_array( pcm_crm_slug_for_front( $pcm_screen ), pcm_crm_setup_slugs(), true );
+}
+
 function pcm_crm_front_assets() {
 	$pcm_screen = get_query_var( 'pcm_crm_screen', '' );
 
@@ -134,11 +155,11 @@ function pcm_crm_front_assets() {
 	}
 
 	pcm_crm_enqueue_app( 'front', array(
+		'setup_frame' => pcm_crm_front_screen_wants_setup_frame( $pcm_screen ),
 		// My Profile and Media (public/staff-profile.php, public/staff-media.php)
 		// are both plain pages like Settings, but neither draws inside the
 		// Setup frame — see those files for why — so they take 'no_app'
 		// without 'setup_frame'.
-		'setup_frame' => 'settings' === $pcm_screen,
 		'no_app'      => in_array( $pcm_screen, array( 'settings', 'profile', 'media' ), true ),
 		'record_id'   => get_query_var( 'pcm_crm_id', 0 ),
 	) );

@@ -172,12 +172,18 @@ function pcm_crm_setup_page( $pcm_key ) {
 function pcm_crm_setup_url( $pcm_key, $pcm_host = '' ) {
 	// The front end has its own shape (/staff/settings/, /staff/settings/<key>/)
 	// for the plain Settings tabs — the pages whose own slug IS
-	// PCM_CRM_SETUP_SLUG. The app-backed Setup pages (Templates, Sequences,
-	// Schedules, the bin) have no front-end route of their own yet, so they
-	// fall through to the admin shape below exactly as pcm_crm_screen_url()
-	// already does for a slug its own map does not know — the lockout
-	// (pcm_crm_staff_redirect_target(), includes/roles.php) is what then lets
-	// a front-end user actually follow one there.
+	// PCM_CRM_SETUP_SLUG, drawn inline by pcm_crm_render_settings()'s own tab
+	// switch. The app-backed Setup pages (Templates, Sequences, Schedules, the
+	// bin) are a different shape entirely — each is its own top-level admin
+	// page with its own render callback, reached the same way any ordinary
+	// CRM screen is (pcm_crm_screen_callbacks(), admin/menu.php; the front
+	// slug, pcm_crm_front_overrides(), includes/urls.php) — so their front URL
+	// goes through pcm_crm_screen_url() below rather than the /settings/<key>/
+	// shape, which would dispatch to the wrong render entirely if it tried.
+	// A page pcm_crm_screen_url() has no route for yet falls through to the
+	// admin shape at the bottom of this function, same as it always has — the
+	// lockout (pcm_crm_staff_redirect_target(), includes/roles.php) is what
+	// then lets a front-end user actually follow one there.
 	//
 	// $pcm_host defaults from the request being served
 	// (pcm_crm_is_front_request()), not pcm_crm_link_host() — a link rendered
@@ -200,6 +206,14 @@ function pcm_crm_setup_url( $pcm_key, $pcm_host = '' ) {
 			$pcm_base = pcm_crm_front_base_url() . 'settings/';
 
 			return 'home' === $pcm_key ? $pcm_base : $pcm_base . $pcm_key . '/';
+		}
+
+		if ( $pcm_page ) {
+			$pcm_front_slug = pcm_crm_front_slug( $pcm_page['page'] );
+
+			if ( $pcm_front_slug ) {
+				return pcm_crm_screen_url( $pcm_page['page'], array(), 'front' );
+			}
 		}
 	}
 

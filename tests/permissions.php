@@ -565,10 +565,16 @@ $GLOBALS['pcm_crm_setting_groups'] = array();
 
 echo "\n--- the front-end slug map, both directions ---\n";
 
-check( 'the CRM app derives cleanly from pcm_crm_apps() items',
+check( 'the CRM app derives cleanly from pcm_crm_apps() items, plus the app-backed Setup pages',
 	pcm_crm_front_slug_map(),
 	array(
-		'pcm-crm' => 'home', 'pcm-crm-accounts' => 'accounts', 'pcm-crm-contacts' => 'contacts',
+		// pcm_crm_front_overrides() (includes/urls.php) is seeded first —
+		// 'pcm-crm' and the four app-backed pages — before pcm_crm_apps()'s
+		// own items are appended, so this order is what the map actually
+		// produces, not an arbitrary listing.
+		'pcm-crm' => 'home', 'pcm-crm-templates' => 'templates', 'pcm-crm-sequences' => 'sequences',
+		'pcm-crm-schedules' => 'schedules', 'pcm-crm-recycle-bin' => 'recycle-bin',
+		'pcm-crm-accounts' => 'accounts', 'pcm-crm-contacts' => 'contacts',
 		'pcm-crm-opportunities' => 'opportunities', 'pcm-crm-pipeline' => 'pipeline',
 		'pcm-crm-activities' => 'activities', 'pcm-crm-reports' => 'reports',
 	)
@@ -577,8 +583,13 @@ check( 'the CRM dashboard is the one override — "home", not "dashboard"',
 	pcm_crm_front_slug( 'pcm-crm' ), 'home' );
 check( 'every other slug is simply its data-view key',
 	pcm_crm_front_slug( 'pcm-crm-contacts' ), 'contacts' );
-check( 'an object with no front route answers empty rather than guessing',
-	pcm_crm_front_slug( 'pcm-crm-recycle-bin' ), '' );
+check( 'an app-backed Setup page is now routable too',
+	pcm_crm_front_slug( 'pcm-crm-recycle-bin' ), 'recycle-bin' );
+// The plain CRM Settings screen itself is the one slug that genuinely has no
+// entry — it is handled as its own special case ('settings' === $pcm_screen,
+// public/staff-template.php), not through this map.
+check( 'CRM Settings itself answers empty rather than guessing — it is routed specially, not through this map',
+	pcm_crm_front_slug( 'pcm-crm-settings' ), '' );
 check( 'the reverse map is exact — a word in a URL resolves to one admin slug',
 	pcm_crm_slug_for_front( 'contacts' ), 'pcm-crm-contacts' );
 check( 'and the override reverses too', pcm_crm_slug_for_front( 'home' ), 'pcm-crm' );
@@ -703,16 +714,16 @@ echo "\n--- translating a wp-admin page a locked-out staff member lands on ---\n
 
 check( 'a routable CRM screen redirects to its front-end equivalent',
 	pcm_crm_staff_redirect_target( 'pcm-crm-contacts' ), 'https://example.com/staff/contacts/' );
-// CRM Settings itself now has a front-end route (Home, plus every plain
-// tab) — only the four app-backed Setup pages still lack one.
+// Every Setup page has a front-end route now — CRM Settings itself (Home,
+// plus every plain tab) and, since, the four app-backed pages too.
 check( 'CRM Settings, no tab named, redirects to the front-end Home',
 	pcm_crm_staff_redirect_target( 'pcm-crm-settings' ), 'https://example.com/staff/settings/' );
 check( 'CRM Settings with a real tab redirects to that tab, not just Home',
 	pcm_crm_staff_redirect_target( 'pcm-crm-settings', 'pipeline' ), 'https://example.com/staff/settings/pipeline/' );
 check( 'an unrecognised tab falls back to Home rather than a broken URL',
 	pcm_crm_staff_redirect_target( 'pcm-crm-settings', 'not-a-real-tab' ), 'https://example.com/staff/settings/' );
-check( 'the recycle bin, an app-backed Setup page, is still exempt — no route yet',
-	pcm_crm_staff_redirect_target( 'pcm-crm-recycle-bin' ), '' );
+check( 'the recycle bin, an app-backed Setup page, redirects too — nothing is exempt any more',
+	pcm_crm_staff_redirect_target( 'pcm-crm-recycle-bin' ), 'https://example.com/staff/recycle-bin/' );
 check( 'no page at all (the bare wp-admin dashboard) goes to the front-end home',
 	pcm_crm_staff_redirect_target( '' ), 'https://example.com/staff/' );
 check( 'a page nobody registered also falls back to the front-end home',
@@ -783,6 +794,23 @@ pcm_crm_front_assets();
 check( 'the settings route enqueues no app at all — there is nothing there to mount it against',
 	isset( $GLOBALS['pcm_test_localized']['pcm-crm'] ), false );
 
+// The four app-backed Setup pages need the opposite of Settings on both
+// counts: they share its frame (setup_frame) but, unlike Settings, they do
+// have an app to mount (no crm.js means Templates never draws at all).
+check( 'settings wants the Setup frame', pcm_crm_front_screen_wants_setup_frame( 'settings' ), true );
+check( 'and so does an app-backed page', pcm_crm_front_screen_wants_setup_frame( 'templates' ), true );
+check( 'an ordinary CRM screen does not', pcm_crm_front_screen_wants_setup_frame( 'contacts' ), false );
+check( 'neither does My Profile or Media, which draw outside it on purpose',
+	array( pcm_crm_front_screen_wants_setup_frame( 'profile' ), pcm_crm_front_screen_wants_setup_frame( 'media' ) ),
+	array( false, false )
+);
+
+pcm_test_set_query_vars( array( 'pcm_crm_screen' => 'templates' ) );
+unset( $GLOBALS['pcm_test_localized'] );
+pcm_crm_front_assets();
+check( 'templates enqueues the app — crm.js has to mount it',
+	isset( $GLOBALS['pcm_test_localized']['pcm-crm']['PCM_CRM'] ), true );
+
 $GLOBALS['pcm_test_is_admin'] = true;
 pcm_test_set_query_vars( array() );
 
@@ -799,8 +827,8 @@ $GLOBALS['pcm_test_is_admin'] = false;
 
 check( 'front: Home is the base URL', pcm_crm_setup_url( 'home' ), 'https://example.com/staff/settings/' );
 check( 'front: a plain tab is a path segment', pcm_crm_setup_url( 'pipeline' ), 'https://example.com/staff/settings/pipeline/' );
-check( 'front: an app-backed page has no route yet, falls through to the admin shape',
-	pcm_crm_setup_url( 'templates' ), 'https://example.com/wp-admin/admin.php?page=pcm-crm-templates' );
+check( 'front: an app-backed page now has its own route, via pcm_crm_screen_url() rather than the /settings/<key>/ shape',
+	pcm_crm_setup_url( 'templates' ), 'https://example.com/staff/templates/' );
 
 // pcm_crm_current_setup_key() reads pcm_crm_tab (the router's own query var,
 // public/staff.php's rewrite rules), never $_GET['tab'], once it knows it is

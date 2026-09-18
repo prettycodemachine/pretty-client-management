@@ -477,6 +477,14 @@ function pcm_crm_screen_callbacks() {
 		'pcm-crm-pipeline'      => 'pcm_crm_render_pipeline',
 		'pcm-crm-activities'    => 'pcm_crm_render_activities',
 		'pcm-crm-reports'       => 'pcm_crm_render_reports',
+		// The four app-backed Setup pages — each its own top-level admin page
+		// (pcm_crm_menu()'s own $pcm_renderers), not part of pcm_crm_apps(),
+		// but routable the same way once given a front slug
+		// (pcm_crm_front_overrides(), includes/urls.php).
+		'pcm-crm-templates'     => 'pcm_crm_render_templates',
+		'pcm-crm-sequences'     => 'pcm_crm_render_sequences',
+		'pcm-crm-schedules'     => 'pcm_crm_render_schedules',
+		'pcm-crm-recycle-bin'   => 'pcm_crm_render_recycle_bin',
 	) );
 }
 
