@@ -35,7 +35,7 @@ define( 'PCM_CRM_CAP', 'pcm_crm_manage' );
  * capability never reaches an install that already has the role.
  */
 define( 'PCM_CRM_STAFF_ROLE', 'pcm_crm_staff' );
-define( 'PCM_CRM_ROLE_VERSION', 1 );
+define( 'PCM_CRM_ROLE_VERSION', 2 );
 
 /**
  * The capability options.php asks about before it will save a settings form.
@@ -104,6 +104,7 @@ require_once PCM_CRM_DIR . 'public/form.php';
 // every area whether or not its module is active.
 require_once PCM_CRM_DIR . 'public/staff.php';
 require_once PCM_CRM_DIR . 'public/staff-profile.php';
+require_once PCM_CRM_DIR . 'public/staff-media.php';
 
 // Last, so a module can register against everything above it — objects, related
 // lists, merge prefixes, settings tabs — without the core files knowing it

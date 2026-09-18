@@ -134,13 +134,23 @@ function pcm_crm_front_assets() {
 	}
 
 	pcm_crm_enqueue_app( 'front', array(
-		// My Profile (public/staff-profile.php) is a plain form like Settings,
-		// but it never draws inside the Setup frame — see that file for why —
-		// so it takes 'no_app' without 'setup_frame'.
+		// My Profile and Media (public/staff-profile.php, public/staff-media.php)
+		// are both plain pages like Settings, but neither draws inside the
+		// Setup frame — see those files for why — so they take 'no_app'
+		// without 'setup_frame'.
 		'setup_frame' => 'settings' === $pcm_screen,
-		'no_app'      => in_array( $pcm_screen, array( 'settings', 'profile' ), true ),
+		'no_app'      => in_array( $pcm_screen, array( 'settings', 'profile', 'media' ), true ),
 		'record_id'   => get_query_var( 'pcm_crm_id', 0 ),
 	) );
+
+	if ( 'media' === $pcm_screen ) {
+		// Same reasoning as pcm_crm_pm_front_assets() (includes/pm/pm-menu.php):
+		// 'buttons' is registered explicitly rather than trusted to ride along
+		// as a dependency of 'media-views'.
+		wp_enqueue_style( 'buttons' );
+		wp_enqueue_media();
+		wp_enqueue_script( 'pcm-crm-media-library', pcm_crm_asset( 'media-library.js' ), array(), null, true );
+	}
 }
 add_action( 'wp_enqueue_scripts', 'pcm_crm_front_assets' );
 

@@ -37,8 +37,15 @@ function pcm_crm_add_capabilities() {
  */
 function pcm_crm_staff_capabilities() {
 	return apply_filters( 'pcm_crm_staff_capabilities', array(
-		'read'      => true,
-		PCM_CRM_CAP => true,
+		'read'         => true,
+		PCM_CRM_CAP    => true,
+		// wp.media's browse and upload views both gate on this — without it
+		// the Media area (includes/permissions.php) can grant view/edit all
+		// it likes and the front-end Media page (public/staff-media.php)
+		// would still show an empty, un-uploadable library. It does not grant
+		// delete_posts, which is what deleting an attachment actually needs —
+		// exactly why the Media area offers no delete action of its own.
+		'upload_files' => true,
 	) );
 }
 

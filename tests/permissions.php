@@ -1045,3 +1045,90 @@ echo "\n--- My Profile stays outside the slug map and the Setup registry, on pur
 // Settings-gate problem this file exists to avoid.
 check( 'profile has no admin-slug mapping', pcm_crm_slug_for_front( 'profile' ), '' );
 check( 'and it is not a registered Setup page either', pcm_crm_setup_page( 'profile' ), null );
+
+echo "\n--- the Media area ---\n";
+
+check( 'the staff role holds upload_files — without it wp.media shows an empty, un-uploadable library',
+	! empty( pcm_crm_staff_capabilities()['upload_files'] ), true );
+
+pcm_test_set_caps( array() );
+pcm_crm_flush_permissions();
+
+ob_start();
+pcm_crm_render_media_library();
+$pcm_media_html = ob_get_clean();
+
+check( 'no media access: the shared deny screen, not the library',
+	array( false !== strpos( $pcm_media_html, 'Not available' ), false !== strpos( $pcm_media_html, 'media-open' ) ),
+	array( true, false )
+);
+
+update_option( PCM_CRM_PROFILES_OPTION, array(
+	'media-viewer' => array( 'label' => 'Viewer', 'description' => '', 'grants' => array( 'media' => array( 'view' ) ) ),
+	'media-editor' => array( 'label' => 'Editor', 'description' => '', 'grants' => array( 'media' => array( 'view', 'edit' ) ) ),
+) );
+$GLOBALS['pcm_test_users'] = array( 20 => (object) array( 'ID' => 20, 'roles' => array( PCM_CRM_STAFF_ROLE ) ) );
+$GLOBALS['pcm_test_current_user'] = $GLOBALS['pcm_test_users'][20];
+pcm_test_set_caps( array( PCM_CRM_CAP => true ) );
+
+update_user_meta( 20, PCM_CRM_PROFILE_META, 'media-viewer' );
+pcm_crm_flush_permissions( 20 );
+
+ob_start();
+pcm_crm_render_media_library();
+$pcm_media_html = ob_get_clean();
+
+check( 'view-only: the library renders, worded as browse-only',
+	array( false !== strpos( $pcm_media_html, 'data-role="media-open"' ), false !== strpos( $pcm_media_html, 'Browse Media Library' ) ),
+	array( true, true )
+);
+check( 'and not worded as though they can add files',
+	false !== strpos( $pcm_media_html, 'Open Media Library' ), false );
+
+update_user_meta( 20, PCM_CRM_PROFILE_META, 'media-editor' );
+pcm_crm_flush_permissions( 20 );
+
+ob_start();
+pcm_crm_render_media_library();
+$pcm_media_html = ob_get_clean();
+
+check( 'edit access: worded to invite adding files',
+	false !== strpos( $pcm_media_html, 'Open Media Library' ), true );
+
+pcm_test_reset_caps();
+$GLOBALS['pcm_test_current_user'] = null;
+$GLOBALS['pcm_test_users']        = array();
+update_option( PCM_CRM_PROFILES_OPTION, array() );
+pcm_crm_flush_permissions();
+
+echo "\n--- the Media door in the app bar — front only, and gated the same way as CRM Settings ---\n";
+
+$GLOBALS['pcm_test_users'] = array( 21 => (object) array( 'ID' => 21, 'roles' => array( PCM_CRM_STAFF_ROLE ) ) );
+$GLOBALS['pcm_test_current_user'] = $GLOBALS['pcm_test_users'][21];
+pcm_test_set_caps( array( PCM_CRM_CAP => true ) );
+
+update_option( PCM_CRM_PROFILES_OPTION, array(
+	'media-only' => array( 'label' => 'Media', 'description' => '', 'grants' => array( 'crm' => array( 'view' ), 'media' => array( 'view' ) ) ),
+) );
+update_user_meta( 21, PCM_CRM_PROFILE_META, 'media-only' );
+pcm_crm_flush_permissions( 21 );
+
+ob_start();
+pcm_crm_app_bar( 'contacts', 'crm', 'front' );
+$pcm_bar_html = ob_get_clean();
+
+check( 'a viewer granted media on the front end sees the door',
+	false !== strpos( $pcm_bar_html, 'Media' ), true );
+
+ob_start();
+pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
+$pcm_bar_html = ob_get_clean();
+
+check( 'the same viewer sees no Media door in wp-admin — there is nowhere for it to go',
+	false !== strpos( $pcm_bar_html, 'Media' ), false );
+
+pcm_test_reset_caps();
+$GLOBALS['pcm_test_current_user'] = null;
+$GLOBALS['pcm_test_users']        = array();
+update_option( PCM_CRM_PROFILES_OPTION, array() );
+pcm_crm_flush_permissions();
