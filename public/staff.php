@@ -184,7 +184,7 @@ add_action( 'wp_enqueue_scripts', 'pcm_crm_front_assets' );
  * models — querying, deleting, and editing an attachment's details, not the
  * Plupload upload itself, which carries its own localized URL — read
  * window.ajaxurl directly to reach admin-ajax.php, and every CRM screen that
- * can open the media picker (CRM Settings' Contact Form logo/attachments,
+ * can open the media picker (PCM Settings' Contact Form logo/attachments,
  * the Projects module's Documents tab) is host-agnostic code that has always
  * assumed this global exists. Printed in wp_head rather than attached as an
  * inline script on some other handle, so it does not depend on getting the
@@ -234,7 +234,7 @@ add_action( 'wp_enqueue_scripts', 'pcm_crm_front_dequeue_theme', 20 );
  *
  * $pcm_message is trusted markup, not escaped here — every caller builds it
  * from a translated string plus its own esc_url()/esc_html__() pieces (the
- * "CRM Settings isn't here yet, open it in wp-admin" link needs an actual
+ * "PCM Settings isn't here yet, open it in wp-admin" link needs an actual
  * <a>), never from anything a visitor supplied.
  */
 function pcm_crm_front_deny( $pcm_message = '' ) {

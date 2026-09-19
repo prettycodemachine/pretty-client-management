@@ -8,7 +8,7 @@
  *
  * Deliberately NOT a registered Setup page (pcm_crm_register_setup_page()):
  * every one of those is gated on pcm_crm_can( 'settings', 'view' ) and draws
- * inside the full CRM Settings frame, its nav included — right for
+ * inside the full PCM Settings frame, its nav included — right for
  * configuration, wrong for a page that has nothing to do with the Settings
  * permission and that a Sales-only staff member with no Settings access at
  * all still needs. It gets its own route (/profile/, not /settings/profile/)

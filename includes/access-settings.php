@@ -1,6 +1,6 @@
 <?php
 /**
- * CRM Settings › Platform: Profiles, Permission Sets, and who holds them.
+ * PCM Settings › Platform: Profiles, Permission Sets, and who holds them.
  *
  * The model itself — areas, actions, resolution — lives in permissions.php and
  * knows nothing about screens. This is only the editor over it: three Setup

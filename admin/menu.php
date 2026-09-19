@@ -56,14 +56,14 @@ function pcm_crm_menu() {
 	   page=pcm-crm-recycle-bin and a drill-down to one of the others, and
 	   moving a screen must not break a link already sent. They no longer get
 	   a submenu entry of their own, though — registered here and immediately
-	   hidden, so the URL still works but the sidebar shows only CRM Settings.
-	   Each is still one click away from CRM Settings' own nav
+	   hidden, so the URL still works but the sidebar shows only PCM Settings.
+	   Each is still one click away from PCM Settings' own nav
 	   (pcm_crm_setup_open()'s left-hand groups), which is what "lives within
-	   CRM Settings" means for them now.
+	   PCM Settings" means for them now.
 	   ------------------------------------------------------------------- */
 	add_menu_page(
-		__( 'CRM Settings', 'pcm-crm' ),
-		__( 'CRM Settings', 'pcm-crm' ),
+		__( 'PCM Settings', 'pcm-crm' ),
+		__( 'PCM Settings', 'pcm-crm' ),
 		$pcm_cap,
 		PCM_CRM_SETUP_SLUG,
 		'pcm_crm_render_settings',
@@ -72,7 +72,7 @@ function pcm_crm_menu() {
 	);
 
 	// Without this, WordPress's own default submenu item for a single-page
-	// top-level menu repeats the top-level label — "CRM Settings" under "CRM
+	// top-level menu repeats the top-level label — "PCM Settings" under "CRM
 	// Settings" — where the in-frame nav (pcm_crm_setup_open()) already calls
 	// this destination "Home".
 	add_submenu_page( PCM_CRM_SETUP_SLUG, __( 'Home', 'pcm-crm' ), __( 'Home', 'pcm-crm' ), $pcm_cap, PCM_CRM_SETUP_SLUG, 'pcm_crm_render_settings' );
@@ -95,7 +95,7 @@ function pcm_crm_menu() {
 			// these four pages unable to resolve their own parent at
 			// request time — "Sorry, you are not allowed to access this
 			// page," WordPress's own message, not this plugin's — the
-			// moment CRM Settings became a top-level menu instead of a
+			// moment PCM Settings became a top-level menu instead of a
 			// submenu of Settings (whose parent registration WordPress
 			// already keeps stable on its own, independent of this
 			// plugin's $submenu entries). Hidden from the sidebar with CSS
@@ -111,7 +111,7 @@ add_action( 'admin_menu', 'pcm_crm_menu' );
  * Hide the app-backed Setup pages' sidebar rows without touching WordPress's
  * own $submenu registration — see the comment in pcm_crm_menu() above for
  * why removing the registration entirely broke the pages themselves. Each
- * is still one click away through CRM Settings' own left-hand nav
+ * is still one click away through PCM Settings' own left-hand nav
  * (pcm_crm_setup_open()'s groups), which is what "hidden from the sidebar"
  * means for them now.
  */
@@ -150,7 +150,7 @@ function pcm_crm_is_crm_screen( $pcm_hook = '' ) {
  * from drifting the way two independent copies of an enqueue list always do.
  *
  * $pcm_args carries what only the caller can know: 'setup_frame' (draw inside
- * the CRM Settings skin — needs setup.css) and 'no_app' (this page has no
+ * the PCM Settings skin — needs setup.css) and 'no_app' (this page has no
  * crm.js container to mount at all — the bare Settings tabs, a plain
  * WordPress form, as opposed to the app-backed Setup pages like Templates,
  * which have both the skin and the app), and 'record_id' (the front-end
@@ -212,7 +212,7 @@ function pcm_crm_enqueue_app( $pcm_host, array $pcm_args = array() ) {
  * pcm_crm_is_setup_screen() (includes/setup.php) already uses and for the
  * same reason: WordPress prefixes a submenu's hook with its parent's
  * sanitised title, so a plain substring test drifts whenever a page's parent
- * changes — which is exactly what silently broke here once CRM Settings
+ * changes — which is exactly what silently broke here once PCM Settings
  * became a top-level menu (`b24a67c` then this phase): the app-backed Setup
  * pages (Templates, Sequences, Schedules, the bin) are now submenus of
  * pcm-crm-settings, so a hook-contains-"pcm-crm-settings" test started
@@ -229,7 +229,7 @@ function pcm_crm_admin_assets( $pcm_hook ) {
 		return;
 	}
 
-	// The bare CRM Settings screen (Pipeline, Fields, Theme, …) is a plain
+	// The bare PCM Settings screen (Pipeline, Fields, Theme, …) is a plain
 	// WordPress form with nothing for crm.js to mount against; every other
 	// Setup page — the app-backed ones included — has an app underneath and
 	// needs it. Both kinds share the Setup skin.
@@ -243,7 +243,7 @@ add_action( 'admin_enqueue_scripts', 'pcm_crm_admin_assets' );
 /**
  * Which permission area a screen belongs to.
  *
- * A screen inside the CRM Settings frame is Settings whatever app it borrows
+ * A screen inside the PCM Settings frame is Settings whatever app it borrows
  * its body from — the recycle bin and the template list are configuration, and
  * granting somebody the CRM should not hand them the bin. Otherwise the answer
  * is the app's own declared area, so a module brings one with it.
@@ -300,8 +300,8 @@ function pcm_crm_shell_class( $pcm_host, $pcm_setup ) {
  * would only mean the sixteenth one added later forgets it.
  */
 function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '', array $pcm_args = array() ) {
-	// A CRM Settings page that is an app screen underneath — templates, the bin
-	// — draws inside the CRM Settings frame, which carries its title and
+	// A PCM Settings page that is an app screen underneath — templates, the bin
+	// — draws inside the PCM Settings frame, which carries its title and
 	// description, so the shell below keeps only the actions row.
 	$pcm_setup = isset( $pcm_args['setup'] ) ? $pcm_args['setup'] : '';
 	$pcm_host  = isset( $pcm_args['host'] ) ? $pcm_args['host'] : ( pcm_crm_is_front_request() ? 'front' : 'admin' );
@@ -380,10 +380,10 @@ function pcm_crm_apps() {
 
 /**
  * The bar across the top of a work screen: which app you are in, its screens,
- * and the door to CRM Settings.
+ * and the door to PCM Settings.
  *
  * It is what makes a record screen read as part of an app rather than a lone
- * WordPress page — and, with CRM Settings drawn in its own frame, what makes
+ * WordPress page — and, with PCM Settings drawn in its own frame, what makes
  * the two unmistakable for each other. Unchanged between hosts apart from its
  * links: on the front end it is the row directly under the brand bar
  * (pcm_crm_front_nav(), public/staff.php), reusing the same registries —
@@ -411,7 +411,7 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 	// Media has no wp-admin route at all (public/staff-media.php) — an
 	// administrator already has the real Media Library there, and staff are
 	// meant to reach it only through the front end, per the same reasoning
-	// CRM Settings' app-backed pages stay admin-only until they get one.
+	// PCM Settings' app-backed pages stay admin-only until they get one.
 	$pcm_media_reachable = 'front' === $pcm_host && pcm_crm_can( 'media', 'view' );
 	?>
 	<nav class="pcm-crm-appbar" aria-label="<?php echo esc_attr( $pcm_apps[ $pcm_app ]['label'] ); ?>">
@@ -450,7 +450,7 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 		<?php if ( $pcm_settings_reachable ) : ?>
 			<a class="pcm-crm-appbar-setup" href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>">
 				<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
-				<?php esc_html_e( 'CRM Settings', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'PCM Settings', 'pcm-crm' ); ?>
 			</a>
 		<?php endif; ?>
 	</nav>

@@ -207,7 +207,7 @@ function pcm_crm_screen_url( $pcm_slug, array $pcm_args = array(), $pcm_host = '
 			return $pcm_url . $pcm_fragment;
 		}
 
-		// No front-end route for this screen yet — CRM Settings and its
+		// No front-end route for this screen yet — PCM Settings and its
 		// app-backed pages, until a later phase wires them. Falling through
 		// to the admin shape is what keeps the link working rather than
 		// pointing nowhere; pcm_crm_redirect_from_admin() (includes/roles.php)

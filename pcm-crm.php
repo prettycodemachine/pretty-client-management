@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: PCM CRM
+ * Plugin Name: Pretty Client Management
  * Plugin URI:  https://prettycodemachine.com
- * Description: Accounts, Contacts, Opportunities and Activities for Pretty Code Machine — modelled on Salesforce's standard objects so the data can be migrated into a real org later. Also owns the site's contact form.
+ * Description: Accounts, Contacts, Opportunities and Activities — modelled on Salesforce's standard objects so the data can be migrated into a real org later. Also owns the site's contact form.
  * Version:     0.1.0
  * Author:      Jason Jensen
  * Author URI:  https://prettycodemachine.com
@@ -72,7 +72,7 @@ require_once PCM_CRM_DIR . 'includes/modules.php';
 // After objects and modules, both of which it resolves areas from, and before
 // anything that gates on the answer.
 require_once PCM_CRM_DIR . 'includes/permissions.php';
-// The CRM Settings pages over that model. After setup.php (register function),
+// The PCM Settings pages over that model. After setup.php (register function),
 // permissions.php (the model) and capabilities.php (the staff role constant).
 require_once PCM_CRM_DIR . 'includes/access-settings.php';
 // Where a screen lives in each host, and the Employee Portal address setting.

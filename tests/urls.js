@@ -93,7 +93,7 @@ check('front: a record link is a path segment, not a hash',
 check('front: a fragment with no id is appended after the trailing slash',
 	screenUrl('pcm-crm-reports', 0, '#foo'), 'https://example.com/staff/reports/#foo');
 
-// --- front host, screen has no route yet (CRM Settings, before it is wired) ---
+// --- front host, screen has no route yet (PCM Settings, before it is wired) ---
 check('front: an unmapped screen falls through to the admin shape rather than linking nowhere',
 	screenUrl('pcm-crm-settings'), '/wp-admin/admin.php?page=pcm-crm-settings');
 

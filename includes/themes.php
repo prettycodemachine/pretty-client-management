@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 function pcm_crm_themes() {
 	return array(
 		'pcm' => array(
-			'label'       => __( 'Pretty Code Machine', 'pcm-crm' ),
+			'label'       => __( 'Pretty Client Management', 'pcm-crm' ),
 			'description' => __( 'The house palette — raspberry and powder blue on paper.', 'pcm-crm' ),
 			'swatch'      => array( '#c94040', '#aac8e6', '#ffffff' ),
 		),

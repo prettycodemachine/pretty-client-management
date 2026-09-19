@@ -1,5 +1,5 @@
 /* ==========================================================================
-   PCM CRM — admin skin
+   Pretty Client Management — admin skin
 
    The tokens are copied literally from the theme's style.css rather than
    imported: the plugin has to look right whichever theme is active, and an
@@ -197,7 +197,7 @@
 /* Buttons ---------------------------------------------------------------------
    .button/.button-primary/.button-secondary are wp-admin's own classes,
    joined onto the same rules as .pcm-btn/.pcm-btn-primary rather than given a
-   second stylesheet — CRM Settings renders plain WordPress markup
+   second stylesheet — PCM Settings renders plain WordPress markup
    (submit_button(), a <button class="button">) on both hosts, and this is
    what makes it look like the rest of the app without rewriting that markup.
    ------------------------------------------------------------------------- */
@@ -249,7 +249,7 @@
    (remove, move up/down) that should never look like a bordered .button.
    Partial handling already existed per-context (.pcm-crm-field-move
    .button-link below, setup.css's own copy); this is the base rule every
-   other use — CRM Settings' logo/attachment removers among them — falls
+   other use — PCM Settings' logo/attachment removers among them — falls
    back to. */
 .pcm-crm .button-link {
   background: none;
@@ -1197,7 +1197,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-steps { max-width: 760px; line-height: 1.7; }
 .pcm-crm-steps li { margin-bottom: 10px; }
 
-/* CRM Settings' plain WordPress forms (form-table, submit_button()'s markup,
+/* PCM Settings' plain WordPress forms (form-table, submit_button()'s markup,
    settings_errors()'s notices) share this stylesheet rather than a second one
    — see the button shim above for why. .pcm-crm-settings never matched
    anything in the actual markup (the container carries .pcm-setup, from

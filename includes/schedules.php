@@ -177,7 +177,7 @@ add_filter( 'pcm_crm_validate', 'pcm_crm_validate_schedule', 10, 4 );
 function pcm_crm_cron_interval( $pcm_schedules ) {
 	$pcm_schedules['pcm_crm_quarter_hour'] = array(
 		'interval' => 15 * MINUTE_IN_SECONDS,
-		'display'  => __( 'Every 15 minutes (PCM CRM)', 'pcm-crm' ),
+		'display'  => __( 'Every 15 minutes (Pretty Client Management)', 'pcm-crm' ),
 	);
 
 	return $pcm_schedules;

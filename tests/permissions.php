@@ -149,7 +149,7 @@ echo "\n--- administrators need no profile ---\n";
 pcm_crm_flush_permissions();
 check( 'an administrator may edit the CRM', pcm_crm_can( 'crm', 'edit' ), true );
 check( 'and delete in Projects', pcm_crm_can( 'pm', 'delete' ), true );
-check( 'and reach CRM Settings', pcm_crm_can( 'settings', 'edit' ), true );
+check( 'and reach PCM Settings', pcm_crm_can( 'settings', 'edit' ), true );
 check( 'with no profile assigned', pcm_crm_user_profile_key( get_current_user_id() ), '' );
 
 echo "\n--- the union gate ---\n";
@@ -440,7 +440,7 @@ $GLOBALS['pcm_test_users']     = array();
 $GLOBALS['pcm_test_user_caps'] = array();
 $GLOBALS['pcm_test_user_meta'] = array();
 
-echo "\n--- CRM Settings: top-level menu, not a Settings submenu ---\n";
+echo "\n--- PCM Settings: top-level menu, not a Settings submenu ---\n";
 
 $GLOBALS['pcm_test_menus'] = array();
 pcm_crm_menu();
@@ -449,7 +449,7 @@ $pcm_settings_menu = null;
 foreach ( $GLOBALS['pcm_test_menus'] as $pcm_menu ) {
 	if ( 'menu' === $pcm_menu['type'] && 'pcm-crm-settings' === $pcm_menu['slug'] ) { $pcm_settings_menu = $pcm_menu; }
 }
-check( 'CRM Settings registers as its own top-level menu, not under Settings',
+check( 'PCM Settings registers as its own top-level menu, not under Settings',
 	$pcm_settings_menu && '' === $pcm_settings_menu['parent'], true );
 
 // remove_submenu_page() is deliberately never called for these four:
@@ -472,7 +472,7 @@ foreach ( $GLOBALS['pcm_test_menus'] as $pcm_menu ) {
 }
 $pcm_app_backed = array( 'pcm-crm-recycle-bin', 'pcm-crm-schedules', 'pcm-crm-sequences', 'pcm-crm-templates' );
 
-check( 'each app-backed page is registered as an ordinary submenu of CRM Settings',
+check( 'each app-backed page is registered as an ordinary submenu of PCM Settings',
 	array_values( array_diff( $pcm_app_backed, $pcm_registered ) ), array() );
 check( 'and none of them is ever unregistered — that is what broke them',
 	$pcm_removed, array() );
@@ -585,10 +585,10 @@ check( 'every other slug is simply its data-view key',
 	pcm_crm_front_slug( 'pcm-crm-contacts' ), 'contacts' );
 check( 'an app-backed Setup page is now routable too',
 	pcm_crm_front_slug( 'pcm-crm-recycle-bin' ), 'recycle-bin' );
-// The plain CRM Settings screen itself is the one slug that genuinely has no
+// The plain PCM Settings screen itself is the one slug that genuinely has no
 // entry — it is handled as its own special case ('settings' === $pcm_screen,
 // public/staff-template.php), not through this map.
-check( 'CRM Settings itself answers empty rather than guessing — it is routed specially, not through this map',
+check( 'PCM Settings itself answers empty rather than guessing — it is routed specially, not through this map',
 	pcm_crm_front_slug( 'pcm-crm-settings' ), '' );
 check( 'the reverse map is exact — a word in a URL resolves to one admin slug',
 	pcm_crm_slug_for_front( 'contacts' ), 'pcm-crm-contacts' );
@@ -714,11 +714,11 @@ echo "\n--- translating a wp-admin page a locked-out staff member lands on ---\n
 
 check( 'a routable CRM screen redirects to its front-end equivalent',
 	pcm_crm_staff_redirect_target( 'pcm-crm-contacts' ), 'https://example.com/staff/contacts/' );
-// Every Setup page has a front-end route now — CRM Settings itself (Home,
+// Every Setup page has a front-end route now — PCM Settings itself (Home,
 // plus every plain tab) and, since, the four app-backed pages too.
-check( 'CRM Settings, no tab named, redirects to the front-end Home',
+check( 'PCM Settings, no tab named, redirects to the front-end Home',
 	pcm_crm_staff_redirect_target( 'pcm-crm-settings' ), 'https://example.com/staff/settings/' );
-check( 'CRM Settings with a real tab redirects to that tab, not just Home',
+check( 'PCM Settings with a real tab redirects to that tab, not just Home',
 	pcm_crm_staff_redirect_target( 'pcm-crm-settings', 'pipeline' ), 'https://example.com/staff/settings/pipeline/' );
 check( 'an unrecognised tab falls back to Home rather than a broken URL',
 	pcm_crm_staff_redirect_target( 'pcm-crm-settings', 'not-a-real-tab' ), 'https://example.com/staff/settings/' );
@@ -741,7 +741,7 @@ check( 'an ordinary admin.php?page= screen is unaffected — pagenow is admin.ph
 
 echo "\n--- which admin hook needs which assets — the enqueue regression ---\n";
 
-// CRM Settings became a top-level menu, which changed every one of these
+// PCM Settings became a top-level menu, which changed every one of these
 // hook suffixes: the app-backed Setup pages are now submenus of
 // pcm-crm-settings, so a hook-contains-that-string test (what this used to
 // be) would now also match them and wrongly skip loading crm.js. Exact
@@ -824,7 +824,7 @@ check( 'templates enqueues the app — crm.js has to mount it',
 $GLOBALS['pcm_test_is_admin'] = true;
 pcm_test_set_query_vars( array() );
 
-echo "\n--- CRM Settings on the front-end host ---\n";
+echo "\n--- PCM Settings on the front-end host ---\n";
 
 // pcm_crm_setup_url() is the single seam every Setup link already goes
 // through, so this is the one place the admin shape has to stay byte-for-byte
@@ -866,8 +866,8 @@ $pcm_settings_html = ob_get_clean();
 
 check( 'front, no Settings access: the shared deny screen, not a wp_die() halt',
 	false !== strpos( $pcm_settings_html, 'Not available' ), true );
-check( 'and specifically the CRM Settings message, not the generic one',
-	false !== strpos( $pcm_settings_html, 'CRM Settings' ), true );
+check( 'and specifically the PCM Settings message, not the generic one',
+	false !== strpos( $pcm_settings_html, 'PCM Settings' ), true );
 
 pcm_test_reset_caps();
 pcm_crm_flush_permissions();
@@ -935,8 +935,8 @@ ob_start();
 pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
 $pcm_bar_html = ob_get_clean();
 
-check( 'a Sales-only viewer sees no door to CRM Settings',
-	false !== strpos( $pcm_bar_html, 'CRM Settings' ), false );
+check( 'a Sales-only viewer sees no door to PCM Settings',
+	false !== strpos( $pcm_bar_html, 'PCM Settings' ), false );
 check( 'and no "Go to Projects" they cannot use',
 	false !== strpos( $pcm_bar_html, 'Go to' ), false );
 
@@ -949,8 +949,8 @@ $pcm_bar_html = ob_get_clean();
 
 check( 'granted both areas, the switcher appears',
 	false !== strpos( $pcm_bar_html, 'Go to Projects' ), true );
-check( 'but CRM Settings still does not, with no Settings grant',
-	false !== strpos( $pcm_bar_html, 'CRM Settings' ), false );
+check( 'but PCM Settings still does not, with no Settings grant',
+	false !== strpos( $pcm_bar_html, 'PCM Settings' ), false );
 
 update_option( PCM_CRM_SETS_OPTION, array( 'settings-editor' => array( 'label' => 'Settings', 'description' => '', 'grants' => array( 'settings' => array( 'edit' ) ) ) ) );
 pcm_crm_assign_permissions( 9, 'both-apps', array( 'settings-editor' ) );
@@ -960,7 +960,7 @@ pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
 $pcm_bar_html = ob_get_clean();
 
 check( 'granted Settings too, the door appears',
-	false !== strpos( $pcm_bar_html, 'CRM Settings' ), true );
+	false !== strpos( $pcm_bar_html, 'PCM Settings' ), true );
 
 // An administrator, unaffected throughout — this is the same gate
 // pcm_crm_can() already applies everywhere, and an administrator's answer
@@ -973,8 +973,8 @@ ob_start();
 pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
 $pcm_bar_html = ob_get_clean();
 
-check( 'an administrator still sees both the switcher and CRM Settings',
-	array( false !== strpos( $pcm_bar_html, 'Go to Projects' ), false !== strpos( $pcm_bar_html, 'CRM Settings' ) ),
+check( 'an administrator still sees both the switcher and PCM Settings',
+	array( false !== strpos( $pcm_bar_html, 'Go to Projects' ), false !== strpos( $pcm_bar_html, 'PCM Settings' ) ),
 	array( true, true )
 );
 
@@ -1166,7 +1166,7 @@ $GLOBALS['pcm_test_users']        = array();
 update_option( PCM_CRM_PROFILES_OPTION, array() );
 pcm_crm_flush_permissions();
 
-echo "\n--- the Media door in the app bar — front only, and gated the same way as CRM Settings ---\n";
+echo "\n--- the Media door in the app bar — front only, and gated the same way as PCM Settings ---\n";
 
 $GLOBALS['pcm_test_users'] = array( 21 => (object) array( 'ID' => 21, 'roles' => array( PCM_CRM_STAFF_ROLE ) ) );
 $GLOBALS['pcm_test_current_user'] = $GLOBALS['pcm_test_users'][21];

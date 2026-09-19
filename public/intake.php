@@ -176,5 +176,5 @@ function pcm_crm_record_intake_error( $pcm_submission_id, $pcm_message ) {
 		pcm_crm_submissions()->update( $pcm_submission_id, array( 'intake_error' => $pcm_message ) );
 	}
 
-	error_log( 'PCM CRM intake failed: ' . $pcm_message );
+	error_log( 'Pretty Client Management intake failed: ' . $pcm_message );
 }

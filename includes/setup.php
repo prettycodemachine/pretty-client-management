@@ -308,7 +308,7 @@ function pcm_crm_setup_open( $pcm_key ) {
 	$pcm_page   = 'home' === $pcm_key ? null : pcm_crm_setup_page( $pcm_key );
 	$pcm_groups = pcm_crm_setup_groups();
 	$pcm_group  = $pcm_page && isset( $pcm_groups[ $pcm_page['group'] ] ) ? $pcm_groups[ $pcm_page['group'] ] : null;
-	$pcm_title  = $pcm_page ? $pcm_page['label'] : __( 'CRM Settings', 'pcm-crm' );
+	$pcm_title  = $pcm_page ? $pcm_page['label'] : __( 'PCM Settings', 'pcm-crm' );
 	$pcm_host   = pcm_crm_is_front_request() ? 'front' : 'admin';
 	?>
 	<div class="<?php echo esc_attr( ( pcm_crm_wants_wrap( $pcm_host ) ? 'wrap ' : '' ) . 'pcm-crm pcm-setup' ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
@@ -316,7 +316,7 @@ function pcm_crm_setup_open( $pcm_key ) {
 			<span class="pcm-setup-mark dashicons dashicons-admin-generic" aria-hidden="true"></span>
 			<div class="pcm-setup-heading">
 				<p class="pcm-setup-crumbs">
-					<a href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"><?php esc_html_e( 'CRM Settings', 'pcm-crm' ); ?></a>
+					<a href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"><?php esc_html_e( 'PCM Settings', 'pcm-crm' ); ?></a>
 					<?php if ( $pcm_group ) : ?>
 						<span aria-hidden="true">›</span> <?php echo esc_html( $pcm_group['label'] ); ?>
 					<?php endif; ?>
@@ -336,9 +336,9 @@ function pcm_crm_setup_open( $pcm_key ) {
 		</header>
 
 		<div class="pcm-setup-layout">
-			<nav class="pcm-setup-nav" aria-label="<?php esc_attr_e( 'CRM Settings pages', 'pcm-crm' ); ?>">
+			<nav class="pcm-setup-nav" aria-label="<?php esc_attr_e( 'PCM Settings pages', 'pcm-crm' ); ?>">
 				<input type="search" class="pcm-setup-find" placeholder="<?php esc_attr_e( 'Quick find', 'pcm-crm' ); ?>"
-					aria-label="<?php esc_attr_e( 'Filter CRM Settings pages', 'pcm-crm' ); ?>">
+					aria-label="<?php esc_attr_e( 'Filter PCM Settings pages', 'pcm-crm' ); ?>">
 				<a class="pcm-setup-nav-home<?php echo 'home' === $pcm_key ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"
 					<?php echo 'home' === $pcm_key ? 'aria-current="page"' : ''; ?>><?php esc_html_e( 'Home', 'pcm-crm' ); ?></a>
@@ -396,7 +396,7 @@ function pcm_crm_setup_close() {
 }
 
 /**
- * The main CRM Settings screen: Home, or one registered page.
+ * The main PCM Settings screen: Home, or one registered page.
  */
 function pcm_crm_render_settings() {
 	if ( ! pcm_crm_can( 'settings', 'view' ) ) {
@@ -404,11 +404,11 @@ function pcm_crm_render_settings() {
 		// (public/staff-template.php) needs the same deny screen every other
 		// front-end area gate uses (pcm_crm_screen(), admin/menu.php).
 		if ( pcm_crm_is_front_request() ) {
-			pcm_crm_front_deny( __( 'You do not have access to CRM Settings.', 'pcm-crm' ) );
+			pcm_crm_front_deny( __( 'You do not have access to PCM Settings.', 'pcm-crm' ) );
 			return;
 		}
 
-		wp_die( esc_html__( 'You do not have access to CRM Settings.', 'pcm-crm' ) );
+		wp_die( esc_html__( 'You do not have access to PCM Settings.', 'pcm-crm' ) );
 	}
 
 	$pcm_key  = pcm_crm_current_setup_key();
@@ -428,7 +428,7 @@ function pcm_crm_render_settings() {
 }
 
 /**
- * CRM Settings Home: every group as a card, with its pages listed.
+ * PCM Settings Home: every group as a card, with its pages listed.
  */
 function pcm_crm_render_setup_home() {
 	$pcm_nav = pcm_crm_setup_nav();
@@ -470,7 +470,7 @@ function pcm_crm_render_setup_home() {
 }
 
 /**
- * Keep CRM Settings highlighted under WordPress's Settings menu on its
+ * Keep PCM Settings highlighted under WordPress's Settings menu on its
  * app-backed pages.
  *
  * Those pages keep their own slugs and no submenu entry of their own, so

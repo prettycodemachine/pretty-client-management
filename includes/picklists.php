@@ -4,7 +4,7 @@
  *
  * Defaults mirror Salesforce's shipped values so exported data lands in a real
  * org without a mapping step. Each list runs through a filter, and the stages
- * are also editable in CRM Settings, so how PCM actually sells can drift from
+ * are also editable in PCM Settings, so how PCM actually sells can drift from
  * Salesforce's defaults without a code change.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;

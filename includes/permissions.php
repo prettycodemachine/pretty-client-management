@@ -44,8 +44,8 @@ function pcm_crm_permission_areas() {
 			'module'      => 'pm',
 		),
 		'settings' => array(
-			'label'       => __( 'CRM Settings', 'pcm-crm' ),
-			'description' => __( 'Everything under CRM Settings — the pipeline, fields and layouts, templates, modules.', 'pcm-crm' ),
+			'label'       => __( 'PCM Settings', 'pcm-crm' ),
+			'description' => __( 'Everything under PCM Settings — the pipeline, fields and layouts, templates, modules.', 'pcm-crm' ),
 			'module'      => '',
 		),
 		'media'    => array(
@@ -172,7 +172,7 @@ function pcm_crm_default_profiles() {
 		),
 		'full'     => array(
 			'label'       => __( 'Sales and Delivery', 'pcm-crm' ),
-			'description' => __( 'Both apps, without CRM Settings.', 'pcm-crm' ),
+			'description' => __( 'Both apps, without PCM Settings.', 'pcm-crm' ),
 			'grants'      => array(
 				'crm'   => array( 'view', 'edit', 'delete', 'export' ),
 				'pm'    => array( 'view', 'edit', 'delete' ),

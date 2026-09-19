@@ -1,9 +1,9 @@
 <?php
 /**
- * CRM Settings › Projects: project types, time entry, picklists.
+ * PCM Settings › Projects: project types, time entry, picklists.
  *
  * Gated with the rest of the module's surface, so switching Projects off takes
- * this group out of CRM Settings. The types themselves, and the rules they carry, live
+ * this group out of PCM Settings. The types themselves, and the rules they carry, live
  * in pm-archetypes.php — this file only edits them.
  *
  * Types are edited one at a time through admin-post rather than options.php:

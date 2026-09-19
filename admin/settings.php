@@ -101,7 +101,7 @@ function pcm_crm_register_settings() {
 add_action( 'admin_init', 'pcm_crm_register_settings' );
 
 /**
- * The pages on the main CRM Settings screen, as ?tab= key => label.
+ * The pages on the main PCM Settings screen, as ?tab= key => label.
  *
  * Derived from the Setup registry (includes/setup.php) rather than listed here,
  * so a module's pages count without this file naming them.
@@ -211,7 +211,7 @@ add_action( 'admin_enqueue_scripts', 'pcm_crm_settings_assets' );
 /**
  * The front-end twin of pcm_crm_settings_assets() — the employee portal's
  * /staff/settings/ route needs the same media picker and settings.js that
- * every wp-admin CRM Settings tab already gets, gated on the query var the
+ * every wp-admin PCM Settings tab already gets, gated on the query var the
  * front-end router sets rather than a hook suffix that does not exist here.
  */
 function pcm_crm_settings_front_assets() {

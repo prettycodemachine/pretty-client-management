@@ -1621,7 +1621,7 @@
 	 * frontBase, screens) rather than a change at every place that links to it.
 	 *
 	 * cfg.screens maps an admin page slug to its front-end one; a slug absent
-	 * from that map has no front-end route yet (CRM Settings, until it is
+	 * from that map has no front-end route yet (PCM Settings, until it is
 	 * wired), and falls through to the admin shape rather than linking nowhere.
 	 */
 	function screenUrl(page, id, fragment) {
@@ -5143,7 +5143,7 @@
 			clear(root.querySelector('[data-role="body"]') || root, el('div.pcm-crm-error', {
 				text: 'The CRM could not start — its configuration did not load. If an asset optimiser is active, exclude this plugin’s scripts from combining.'
 			}));
-			window.console.error('PCM CRM: window.PCM_CRM is missing or carries no REST root.');
+			window.console.error('Pretty Client Management: window.PCM_CRM is missing or carries no REST root.');
 			return;
 		}
 

@@ -47,7 +47,7 @@ function pcm_crm_front_route( $pcm_screen, $pcm_id, $pcm_tab ) {
 	if ( in_array( $pcm_screen, array( 'settings', 'profile' ), true ) ) {
 		// submit_button(), settings_errors() and add_settings_error() live in
 		// wp-admin/includes/template.php, which WordPress only auto-loads for
-		// an actual wp-admin request — every CRM Settings tab, and the My
+		// an actual wp-admin request — every PCM Settings tab, and the My
 		// Profile form below, calls at least one of them, so this host needs
 		// the file pulled in by hand, the same well-worn technique any
 		// front-end use of these admin form helpers requires. Guarded because
