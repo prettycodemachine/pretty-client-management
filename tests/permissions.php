@@ -1197,3 +1197,78 @@ $GLOBALS['pcm_test_current_user'] = null;
 $GLOBALS['pcm_test_users']        = array();
 update_option( PCM_CRM_PROFILES_OPTION, array() );
 pcm_crm_flush_permissions();
+
+echo "\n--- provisioning CRM Access from WordPress's own User screens ---\n";
+
+// The same twin functions Staff Access's own handler calls
+// (pcm_crm_clean_user_access(), pcm_crm_assign_permissions()) — this is what
+// makes "assigned from user-new.php/user-edit.php" and "assigned from Staff
+// Access" the same write, not two implementations that could disagree.
+update_option( PCM_CRM_PROFILES_OPTION, array(
+	'sales' => array( 'label' => 'Sales', 'description' => '', 'grants' => array( 'crm' => array( 'view' ) ) ),
+) );
+update_option( PCM_CRM_SETS_OPTION, array(
+	'exporter' => array( 'label' => 'Exporter', 'description' => '', 'grants' => array( 'crm' => array( 'export' ) ) ),
+) );
+
+$GLOBALS['pcm_test_users'][30] = (object) array( 'ID' => 30, 'roles' => array( PCM_CRM_STAFF_ROLE ) );
+
+$_POST = array( 'role' => PCM_CRM_STAFF_ROLE, 'profile' => 'sales', 'sets' => array( 'exporter' ) );
+pcm_crm_save_user_access_from_native_screen( 30 );
+
+check( 'role=staff in $_POST assigns the posted profile',
+	pcm_crm_user_profile_key( 30 ), 'sales' );
+check( 'and the posted permission sets',
+	pcm_crm_user_set_keys( 30 ), array( 'exporter' ) );
+
+// edit_user_profile_update()/personal_options_update() fire *before*
+// wp-admin/user-edit.php actually writes the posted role to the database —
+// $_POST['role'] is read directly for exactly this reason (see the
+// function's own comment), so this proves the gate is not silently trusting
+// a role the database does not have yet.
+$GLOBALS['pcm_test_users'][31] = (object) array( 'ID' => 31, 'roles' => array( 'subscriber' ) );
+$_POST = array( 'role' => PCM_CRM_STAFF_ROLE, 'profile' => 'sales', 'sets' => array() );
+pcm_crm_save_user_access_from_native_screen( 31 );
+
+check( "a user whose *database* role is not staff yet still gets provisioned, from \$_POST['role'] alone",
+	pcm_crm_user_profile_key( 31 ), 'sales' );
+
+$_POST = array( 'role' => 'subscriber', 'profile' => 'sales', 'sets' => array() );
+pcm_crm_save_user_access_from_native_screen( 30 );
+
+check( 'a non-staff role posted alongside the fields is a no-op — nothing is assigned to a non-staff account',
+	pcm_crm_user_profile_key( 30 ), 'sales' );
+
+pcm_test_set_caps( array( 'manage_options' => true ) ); // promote_users absent
+$_POST = array( 'role' => PCM_CRM_STAFF_ROLE, 'profile' => '', 'sets' => array() );
+pcm_crm_save_user_access_from_native_screen( 30 );
+
+check( 'without promote_users, nothing is touched even if the fields are posted',
+	pcm_crm_user_profile_key( 30 ), 'sales' );
+
+pcm_test_reset_caps();
+
+// user-new.php re-renders in the *same* request on a failed submission (a
+// taken email, say) — real bug, found by actually failing that submission
+// in a browser: without reading $_POST back, the row stayed hidden despite
+// Role already showing Staff, and the Profile/Permission Sets selection
+// silently reset to "None" on redisplay.
+$_POST = array( 'role' => PCM_CRM_STAFF_ROLE, 'profile' => 'sales', 'sets' => array( 'exporter' ) );
+
+check( 'a failed Add New User submission is read back as Staff, not the hidden default',
+	pcm_crm_new_user_access_from_post(),
+	array( 'is_staff' => true, 'profile' => 'sales', 'sets' => array( 'exporter' ) )
+);
+
+$_POST = array( 'role' => 'subscriber', 'profile' => 'sales', 'sets' => array( 'exporter' ) );
+
+check( 'a role other than Staff is read back as nothing to show, whatever else was posted',
+	pcm_crm_new_user_access_from_post(),
+	array( 'is_staff' => false, 'profile' => '', 'sets' => array() )
+);
+
+$_POST = array();
+$GLOBALS['pcm_test_users'] = array();
+update_option( PCM_CRM_PROFILES_OPTION, array() );
+update_option( PCM_CRM_SETS_OPTION, array() );
+pcm_crm_flush_permissions();

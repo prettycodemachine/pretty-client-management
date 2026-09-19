@@ -806,6 +806,61 @@ function pcm_crm_render_access_users_page() {
 	<?php
 }
 
+/**
+ * The Profile radios and Permission Set checkboxes — the one place this
+ * markup exists, so the Staff Access screen and the native WordPress user
+ * screens (includes/user-access.php) can never drift apart from each other:
+ * both call this rather than each carrying their own copy, and both post
+ * the same field names (`profile`, `sets[]`) into the same
+ * pcm_crm_clean_user_access() this file already validates them with.
+ */
+function pcm_crm_render_access_fields( $pcm_profile_key, array $pcm_set_keys ) {
+	?>
+	<div class="pcm-crm-card">
+		<h2><?php esc_html_e( 'Profile', 'pcm-crm' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Exactly one — the baseline this person’s access starts from.', 'pcm-crm' ); ?></p>
+		<table class="form-table" role="presentation">
+			<tr>
+				<td>
+					<label>
+						<input type="radio" name="profile" value="" <?php checked( '', $pcm_profile_key ); ?>>
+						<?php esc_html_e( 'None — no CRM access', 'pcm-crm' ); ?>
+					</label><br>
+					<?php foreach ( pcm_crm_profiles() as $pcm_key => $pcm_profile ) : ?>
+						<label>
+							<input type="radio" name="profile" value="<?php echo esc_attr( $pcm_key ); ?>" <?php checked( $pcm_key, $pcm_profile_key ); ?>>
+							<strong><?php echo esc_html( $pcm_profile['label'] ); ?></strong>
+							<?php if ( $pcm_profile['description'] ) : ?> — <span class="description"><?php echo esc_html( $pcm_profile['description'] ); ?></span><?php endif; ?>
+						</label><br>
+					<?php endforeach; ?>
+				</td>
+			</tr>
+		</table>
+	</div>
+
+	<?php $pcm_sets = pcm_crm_permission_sets(); ?>
+	<?php if ( $pcm_sets ) : ?>
+		<div class="pcm-crm-card">
+			<h2><?php esc_html_e( 'Permission Sets', 'pcm-crm' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Any number, each adding to whatever the profile above already gives.', 'pcm-crm' ); ?></p>
+			<table class="form-table" role="presentation">
+				<tr>
+					<td>
+						<?php foreach ( $pcm_sets as $pcm_key => $pcm_set ) : ?>
+							<label>
+								<input type="checkbox" name="sets[]" value="<?php echo esc_attr( $pcm_key ); ?>" <?php checked( in_array( $pcm_key, $pcm_set_keys, true ) ); ?>>
+								<strong><?php echo esc_html( $pcm_set['label'] ); ?></strong>
+								<?php if ( $pcm_set['description'] ) : ?> — <span class="description"><?php echo esc_html( $pcm_set['description'] ); ?></span><?php endif; ?>
+							</label><br>
+						<?php endforeach; ?>
+					</td>
+				</tr>
+			</table>
+		</div>
+	<?php endif; ?>
+	<?php
+}
+
 function pcm_crm_render_access_user_form( $pcm_user_id ) {
 	$pcm_user = get_userdata( $pcm_user_id );
 
@@ -829,48 +884,7 @@ function pcm_crm_render_access_user_form( $pcm_user_id ) {
 			<p class="description"><?php echo esc_html( $pcm_user->user_email ); ?></p>
 		</div>
 
-		<div class="pcm-crm-card">
-			<h2><?php esc_html_e( 'Profile', 'pcm-crm' ); ?></h2>
-			<p class="description"><?php esc_html_e( 'Exactly one — the baseline this person’s access starts from.', 'pcm-crm' ); ?></p>
-			<table class="form-table" role="presentation">
-				<tr>
-					<td>
-						<label>
-							<input type="radio" name="profile" value="" <?php checked( '', $pcm_profile_key ); ?>>
-							<?php esc_html_e( 'None — no CRM access', 'pcm-crm' ); ?>
-						</label><br>
-						<?php foreach ( pcm_crm_profiles() as $pcm_key => $pcm_profile ) : ?>
-							<label>
-								<input type="radio" name="profile" value="<?php echo esc_attr( $pcm_key ); ?>" <?php checked( $pcm_key, $pcm_profile_key ); ?>>
-								<strong><?php echo esc_html( $pcm_profile['label'] ); ?></strong>
-								<?php if ( $pcm_profile['description'] ) : ?> — <span class="description"><?php echo esc_html( $pcm_profile['description'] ); ?></span><?php endif; ?>
-							</label><br>
-						<?php endforeach; ?>
-					</td>
-				</tr>
-			</table>
-		</div>
-
-		<?php $pcm_sets = pcm_crm_permission_sets(); ?>
-		<?php if ( $pcm_sets ) : ?>
-			<div class="pcm-crm-card">
-				<h2><?php esc_html_e( 'Permission Sets', 'pcm-crm' ); ?></h2>
-				<p class="description"><?php esc_html_e( 'Any number, each adding to whatever the profile above already gives.', 'pcm-crm' ); ?></p>
-				<table class="form-table" role="presentation">
-					<tr>
-						<td>
-							<?php foreach ( $pcm_sets as $pcm_key => $pcm_set ) : ?>
-								<label>
-									<input type="checkbox" name="sets[]" value="<?php echo esc_attr( $pcm_key ); ?>" <?php checked( in_array( $pcm_key, $pcm_set_keys, true ) ); ?>>
-									<strong><?php echo esc_html( $pcm_set['label'] ); ?></strong>
-									<?php if ( $pcm_set['description'] ) : ?> — <span class="description"><?php echo esc_html( $pcm_set['description'] ); ?></span><?php endif; ?>
-								</label><br>
-							<?php endforeach; ?>
-						</td>
-					</tr>
-				</table>
-			</div>
-		<?php endif; ?>
+		<?php pcm_crm_render_access_fields( $pcm_profile_key, $pcm_set_keys ); ?>
 
 		<?php submit_button( __( 'Save Access', 'pcm-crm' ) ); ?>
 	</form>

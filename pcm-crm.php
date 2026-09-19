@@ -3,8 +3,8 @@
  * Plugin Name: Pretty Client Management
  * Plugin URI:  https://prettycodemachine.com
  * Description: Accounts, Contacts, Opportunities and Activities — modelled on Salesforce's standard objects so the data can be migrated into a real org later. Also owns the site's contact form.
- * Version:     0.1.0
- * Author:      Jason Jensen
+ * Version:     1.0.0
+ * Author:      Pretty Code Machine
  * Author URI:  https://prettycodemachine.com
  * License:     GPL-2.0-or-later
  * Text Domain: pcm-crm
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'PCM_CRM_VERSION', '0.1.0' );
+define( 'PCM_CRM_VERSION', '1.0.0' );
 define( 'PCM_CRM_FILE', __FILE__ );
 define( 'PCM_CRM_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PCM_CRM_URL', plugin_dir_url( __FILE__ ) );
@@ -75,6 +75,10 @@ require_once PCM_CRM_DIR . 'includes/permissions.php';
 // The PCM Settings pages over that model. After setup.php (register function),
 // permissions.php (the model) and capabilities.php (the staff role constant).
 require_once PCM_CRM_DIR . 'includes/access-settings.php';
+// CRM Access on WordPress's own Add New User / Edit User screens — after
+// access-settings.php, whose pcm_crm_render_access_fields() and
+// pcm_crm_clean_user_access() this reuses rather than duplicates.
+require_once PCM_CRM_DIR . 'includes/user-access.php';
 // Where a screen lives in each host, and the Employee Portal address setting.
 require_once PCM_CRM_DIR . 'includes/urls.php';
 // The staff role's wp-admin lockout. After urls.php, which it redirects through.
