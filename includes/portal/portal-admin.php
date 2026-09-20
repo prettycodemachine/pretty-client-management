@@ -218,11 +218,13 @@ add_filter( 'pcm_crm_setup_groups', 'pcm_crm_portal_setup_group' );
 
 pcm_crm_register_setup_page( 'portal-page', array(
 	'group'       => 'portal',
-	'label'       => __( 'Portal Page', 'pcm-crm' ),
-	'description' => __( 'The page carrying [pcm_client_portal]. A client is sent here after setting their password, and every Invite link points at it.', 'pcm-crm' ),
+	'label'       => __( 'Client Portal Settings', 'pcm-crm' ),
+	'description' => __( 'The page carrying [pcm_client_portal], and the logo shown in its header.', 'pcm-crm' ),
 	'render'      => 'pcm_crm_portal_render_setup_page',
 	'order'       => 10,
 ) );
+
+const PCM_CRM_PORTAL_LOGO_OPTION = 'pcm_crm_portal_logo';
 
 function pcm_crm_portal_register_settings() {
 	pcm_crm_register_setting( 'pcm_crm_portal_settings', 'pcm_crm_portal_page_id', array(
@@ -230,8 +232,29 @@ function pcm_crm_portal_register_settings() {
 		'sanitize_callback' => 'absint',
 		'default'           => 0,
 	) );
+	pcm_crm_register_setting( 'pcm_crm_portal_settings', PCM_CRM_PORTAL_LOGO_OPTION, array(
+		'type'              => 'integer',
+		'sanitize_callback' => 'absint',
+		'default'           => 0,
+	) );
 }
 add_action( 'admin_init', 'pcm_crm_portal_register_settings' );
+
+function pcm_crm_portal_logo_id() {
+	return absint( get_option( PCM_CRM_PORTAL_LOGO_OPTION, 0 ) );
+}
+
+/**
+ * The Client Portal header's logo — the one chosen here when there is one
+ * and it still resolves to a file, or '' when there is not, so the theme
+ * (header.php) falls back to the site's own WordPress logo exactly as it
+ * did before this setting existed.
+ */
+function pcm_crm_portal_logo_url() {
+	$pcm_id = pcm_crm_portal_logo_id();
+
+	return $pcm_id ? (string) wp_get_attachment_image_url( $pcm_id, 'medium' ) : '';
+}
 
 /**
  * The portal page's URL, or '' if none is chosen yet — everything that needs
@@ -248,6 +271,7 @@ function pcm_crm_portal_url() {
 function pcm_crm_portal_render_setup_page() {
 	$pcm_page_id = (int) get_option( 'pcm_crm_portal_page_id', 0 );
 	$pcm_pages   = get_pages( array( 'sort_column' => 'post_title' ) );
+	$pcm_logo_id = pcm_crm_portal_logo_id();
 	?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_portal_settings' ); ?>
@@ -271,6 +295,33 @@ function pcm_crm_portal_render_setup_page() {
 							<strong><?php esc_html_e( 'No portal page is set yet — invitations cannot be sent until one is.', 'pcm-crm' ); ?></strong>
 						</p>
 					<?php endif; ?>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Logo', 'pcm-crm' ); ?></th>
+				<td>
+					<div class="pcm-crm-logo" data-role="client-portal-logo">
+						<div class="pcm-crm-logo-preview" data-role="client-portal-logo-preview">
+							<?php if ( $pcm_logo_id ) : ?>
+								<?php echo wp_get_attachment_image( $pcm_logo_id, 'medium' ); ?>
+							<?php else : ?>
+								<span class="description"><?php esc_html_e( 'No logo chosen — your site’s own logo is used.', 'pcm-crm' ); ?></span>
+							<?php endif; ?>
+						</div>
+						<input type="hidden" name="<?php echo esc_attr( PCM_CRM_PORTAL_LOGO_OPTION ); ?>"
+							data-role="client-portal-logo-id" value="<?php echo esc_attr( $pcm_logo_id ); ?>">
+						<p>
+							<button type="button" class="button" data-role="client-portal-logo-choose">
+								<?php esc_html_e( 'Choose logo', 'pcm-crm' ); ?>
+							</button>
+							<button type="button" class="button-link" data-role="client-portal-logo-remove"<?php echo $pcm_logo_id ? '' : ' hidden'; ?>>
+								<?php esc_html_e( 'Remove', 'pcm-crm' ); ?>
+							</button>
+						</p>
+					</div>
+					<p class="description">
+						<?php esc_html_e( 'Shown in the Client Portal’s header, never clickable. Left unset, your site’s own logo is used.', 'pcm-crm' ); ?>
+					</p>
 				</td>
 			</tr>
 		</table>

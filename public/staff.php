@@ -156,22 +156,12 @@ function pcm_crm_front_assets() {
 
 	pcm_crm_enqueue_app( 'front', array(
 		'setup_frame' => pcm_crm_front_screen_wants_setup_frame( $pcm_screen ),
-		// My Profile and Media (public/staff-profile.php, public/staff-media.php)
-		// are both plain pages like Settings, but neither draws inside the
-		// Setup frame — see those files for why — so they take 'no_app'
-		// without 'setup_frame'.
-		'no_app'      => in_array( $pcm_screen, array( 'settings', 'profile', 'media' ), true ),
+		// My Profile (public/staff-profile.php) is a plain page like Settings,
+		// but it never draws inside the Setup frame — see that file for why —
+		// so it takes 'no_app' without 'setup_frame'.
+		'no_app'      => in_array( $pcm_screen, array( 'settings', 'profile' ), true ),
 		'record_id'   => get_query_var( 'pcm_crm_id', 0 ),
 	) );
-
-	if ( 'media' === $pcm_screen ) {
-		// Same reasoning as pcm_crm_pm_front_assets() (includes/pm/pm-menu.php):
-		// 'buttons' is registered explicitly rather than trusted to ride along
-		// as a dependency of 'media-views'.
-		wp_enqueue_style( 'buttons' );
-		wp_enqueue_media();
-		wp_enqueue_script( 'pcm-crm-media-library', pcm_crm_asset( 'media-library.js' ), array(), null, true );
-	}
 }
 add_action( 'wp_enqueue_scripts', 'pcm_crm_front_assets' );
 
@@ -228,6 +218,22 @@ function pcm_crm_front_dequeue_theme() {
 add_action( 'wp_enqueue_scripts', 'pcm_crm_front_dequeue_theme', 20 );
 
 /**
+ * No wp-admin bar on a CRM screen. pcm_crm_prune_admin_bar() (includes/roles.php)
+ * still trims it everywhere else a staff member goes on the site — its own
+ * account menu is the logout affordance there — but pcm_crm_front_nav() (below)
+ * already carries My Profile and Log out on every screen this reaches, which
+ * makes the bar pure duplication here, not a second way out.
+ */
+function pcm_crm_front_hide_admin_bar( $pcm_show ) {
+	if ( '' !== get_query_var( 'pcm_crm_screen', '' ) ) {
+		return false;
+	}
+
+	return $pcm_show;
+}
+add_filter( 'show_admin_bar', 'pcm_crm_front_hide_admin_bar' );
+
+/**
  * "Not available", for a request the front-end host cannot answer — a
  * screen area this visitor lacks (pcm_crm_screen(), admin/menu.php) or a
  * route naming no screen at all (public/staff-template.php).
@@ -259,9 +265,23 @@ function pcm_crm_front_nav() {
 	?>
 	<header class="pcm-crm-front-nav">
 		<div class="pcm-crm-front-nav-inner">
-			<a class="pcm-crm-front-brand" href="<?php echo esc_url( pcm_crm_front_base_url() ); ?>">
-				<?php echo esc_html( get_bloginfo( 'name' ) ); ?>
-			</a>
+			<span class="pcm-crm-front-brand">
+				<?php // pcm_crm_front_logo_url() (includes/urls.php, PCM Settings › Platform
+				// › Employee Portal Settings) is the admin's own choice for this nav;
+				// unset, it falls back to the site's own logo the same way the Client
+				// Portal header does (theme header.php) — never wrapped in a link,
+				// since staff are already home and a click here has nowhere to go. ?>
+				<?php $pcm_front_logo = function_exists( 'pcm_crm_front_logo_url' ) ? pcm_crm_front_logo_url() : ''; ?>
+				<?php if ( $pcm_front_logo ) : ?>
+					<img class="pcm-crm-front-brand-img" src="<?php echo esc_url( $pcm_front_logo ); ?>" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
+				<?php elseif ( function_exists( 'has_custom_logo' ) && has_custom_logo() ) : ?>
+					<?php echo wp_get_attachment_image( get_theme_mod( 'custom_logo' ), 'full', false, array( 'class' => 'pcm-crm-front-brand-img' ) ); ?>
+				<?php elseif ( function_exists( 'pcm_asset' ) ) : ?>
+					<img class="pcm-crm-front-brand-img" src="<?php echo esc_url( pcm_asset( 'images/logo.png' ) ); ?>" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
+				<?php else : ?>
+					<?php echo esc_html( get_bloginfo( 'name' ) ); ?>
+				<?php endif; ?>
+			</span>
 			<div class="pcm-crm-front-account">
 				<a class="pcm-crm-front-account-name" href="<?php echo esc_url( pcm_crm_front_base_url() . 'profile/' ); ?>">
 					<?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?>

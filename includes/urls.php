@@ -86,11 +86,13 @@ function pcm_crm_sanitize_front_base( $pcm_value ) {
 
 pcm_crm_register_setup_page( 'employee-portal', array(
 	'group'       => 'platform',
-	'label'       => __( 'Employee Portal', 'pcm-crm' ),
-	'description' => __( 'The front-end address staff work under.', 'pcm-crm' ),
+	'label'       => __( 'Employee Portal Settings', 'pcm-crm' ),
+	'description' => __( 'The front-end address staff work under, and the logo shown in its nav.', 'pcm-crm' ),
 	'render'      => 'pcm_crm_render_employee_portal_tab',
 	'order'       => 60,
 ) );
+
+const PCM_CRM_FRONT_LOGO_OPTION = 'pcm_crm_front_logo';
 
 function pcm_crm_register_front_settings() {
 	pcm_crm_register_setting( 'pcm_crm_front_settings', PCM_CRM_FRONT_BASE_OPTION, array(
@@ -98,10 +100,33 @@ function pcm_crm_register_front_settings() {
 		'sanitize_callback' => 'pcm_crm_sanitize_front_base',
 		'default'           => 'staff',
 	) );
+	pcm_crm_register_setting( 'pcm_crm_front_settings', PCM_CRM_FRONT_LOGO_OPTION, array(
+		'type'              => 'integer',
+		'sanitize_callback' => 'absint',
+		'default'           => 0,
+	) );
 }
 add_action( 'admin_init', 'pcm_crm_register_front_settings' );
 
+function pcm_crm_front_logo_id() {
+	return absint( get_option( PCM_CRM_FRONT_LOGO_OPTION, 0 ) );
+}
+
+/**
+ * The Employee Portal nav's logo — the one chosen here when there is one and
+ * it still resolves to a file, or '' when there is not, so the caller
+ * (pcm_crm_front_nav(), public/staff.php) falls back to its own default
+ * (the site's own WordPress logo) exactly as it did before this setting
+ * existed.
+ */
+function pcm_crm_front_logo_url() {
+	$pcm_id = pcm_crm_front_logo_id();
+
+	return $pcm_id ? (string) wp_get_attachment_image_url( $pcm_id, 'medium' ) : '';
+}
+
 function pcm_crm_render_employee_portal_tab() {
+	$pcm_logo_id = pcm_crm_front_logo_id();
 	?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_front_settings' ); ?>
@@ -116,6 +141,33 @@ function pcm_crm_render_employee_portal_tab() {
 					<input type="text" id="pcm-crm-front-base" name="<?php echo esc_attr( PCM_CRM_FRONT_BASE_OPTION ); ?>"
 						value="<?php echo esc_attr( pcm_crm_front_base() ); ?>" class="regular-text" style="width:120px">
 					<code>/</code>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Logo', 'pcm-crm' ); ?></th>
+				<td>
+					<div class="pcm-crm-logo" data-role="employee-portal-logo">
+						<div class="pcm-crm-logo-preview" data-role="employee-portal-logo-preview">
+							<?php if ( $pcm_logo_id ) : ?>
+								<?php echo wp_get_attachment_image( $pcm_logo_id, 'medium' ); ?>
+							<?php else : ?>
+								<span class="description"><?php esc_html_e( 'No logo chosen — your site’s own logo is used.', 'pcm-crm' ); ?></span>
+							<?php endif; ?>
+						</div>
+						<input type="hidden" name="<?php echo esc_attr( PCM_CRM_FRONT_LOGO_OPTION ); ?>"
+							data-role="employee-portal-logo-id" value="<?php echo esc_attr( $pcm_logo_id ); ?>">
+						<p>
+							<button type="button" class="button" data-role="employee-portal-logo-choose">
+								<?php esc_html_e( 'Choose logo', 'pcm-crm' ); ?>
+							</button>
+							<button type="button" class="button-link" data-role="employee-portal-logo-remove"<?php echo $pcm_logo_id ? '' : ' hidden'; ?>>
+								<?php esc_html_e( 'Remove', 'pcm-crm' ); ?>
+							</button>
+						</p>
+					</div>
+					<p class="description">
+						<?php esc_html_e( 'Shown in the Employee Portal’s nav bar, never clickable. Left unset, your site’s own logo is used.', 'pcm-crm' ); ?>
+					</p>
 				</td>
 			</tr>
 		</table>

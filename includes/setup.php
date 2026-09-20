@@ -313,10 +313,17 @@ function pcm_crm_setup_open( $pcm_key ) {
 	?>
 	<div class="<?php echo esc_attr( ( pcm_crm_wants_wrap( $pcm_host ) ? 'wrap ' : '' ) . 'pcm-crm pcm-setup' ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
 		<header class="pcm-setup-band">
-			<span class="pcm-setup-mark dashicons dashicons-admin-generic" aria-hidden="true"></span>
+			<div class="pcm-setup-brand">
+				<span class="pcm-setup-mark">
+					<img src="<?php echo esc_url( pcm_crm_asset( 'images/logo.png' ) ); ?>" alt="<?php esc_attr_e( 'Pretty Client Management', 'pcm-crm' ); ?>">
+				</span>
+				<a class="pcm-setup-credit" href="https://prettycodemachine.com" target="_blank" rel="noopener">
+					<?php esc_html_e( 'Created by Pretty Code Machine', 'pcm-crm' ); ?>
+				</a>
+			</div>
 			<div class="pcm-setup-heading">
 				<p class="pcm-setup-crumbs">
-					<a href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"><?php esc_html_e( 'PCM Settings', 'pcm-crm' ); ?></a>
+					<a href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"><?php esc_html_e( 'Pretty Client Management', 'pcm-crm' ); ?></a>
 					<?php if ( $pcm_group ) : ?>
 						<span aria-hidden="true">›</span> <?php echo esc_html( $pcm_group['label'] ); ?>
 					<?php endif; ?>
