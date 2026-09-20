@@ -272,21 +272,28 @@
 	app.registerChildTypes('projects', function (record) {
 		return [{
 			id: 'tickets', label: 'Help Tickets', object: 'help_tickets', newLabel: 'New Ticket',
-			prefill: { project_id: record.id, status: 'To Do' }
+			prefill: { project_id: record.id, _project_id_name: record.name, status: 'To Do' }
 		}];
 	});
 
 	app.registerChildTypes('accounts', function (record) {
 		return [{
 			id: 'tickets', label: 'Help Tickets', object: 'help_tickets', newLabel: 'New Ticket',
-			prefill: { account_id: record.id, status: 'To Do' }
+			prefill: { account_id: record.id, _account_id_name: record.name, status: 'To Do' }
 		}];
 	});
 
 	app.registerChildTypes('contacts', function (record) {
+		var contactName = ((record.first_name || '') + ' ' + (record.last_name || '')).trim() || record.email || '';
 		return [{
 			id: 'tickets', label: 'Help Tickets', object: 'help_tickets', newLabel: 'New Ticket',
-			prefill: { contact_id: record.id, account_id: record.account_id, status: 'To Do' }
+			prefill: {
+				contact_id: record.id,
+				_contact_id_name: contactName,
+				account_id: record.account_id,
+				_account_id_name: record._account_id_name || record._account_name,
+				status: 'To Do'
+			}
 		}];
 	});
 

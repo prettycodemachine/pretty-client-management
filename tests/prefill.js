@@ -56,16 +56,25 @@ const account = childTypes('accounts', { id: 42, name: 'Acme' });
 check('an account offers all three child lists', account.map(c => c.id), ['contacts', 'opportunities', 'activities']);
 check('a contact created from an account is linked to it', byId(account, 'contacts').prefill.account_id, 42);
 check('an opportunity created from an account is linked to it', byId(account, 'opportunities').prefill.account_id, 42);
+// The lookup pill needs the name up front too — without it the field shows
+// "#42" until something else happens to have warmed the lookup cache.
+check('the new contact form already knows the account\'s name, not just its id',
+	byId(account, 'contacts').prefill._account_id_name, 'Acme');
+check('so does the new opportunity form',
+	byId(account, 'opportunities').prefill._account_id_name, 'Acme');
 check('it opens in the first open stage', byId(account, 'opportunities').prefill.stage_name, 'Qualification');
 check('never in a closed stage', byId(account, 'opportunities').prefill.stage_name === 'Closed Won', false);
 check('an activity created from an account points at it',
 	[byId(account, 'activities').prefill.what_type, byId(account, 'activities').prefill.what_id], ['account', 42]);
 
 // --- Contact -------------------------------------------------------------
-const contact = childTypes('contacts', { id: 7, account_id: 42 });
+const contact = childTypes('contacts', { id: 7, account_id: 42, first_name: 'Jamie', last_name: 'Rivera', _account_id_name: 'Acme' });
 check('a contact offers opportunities and activities', contact.map(c => c.id), ['opportunities', 'activities']);
 check('a deal created from a contact carries both the person and their account',
 	[byId(contact, 'opportunities').prefill.primary_contact_id, byId(contact, 'opportunities').prefill.account_id], [7, 42]);
+check('and the deal form already knows both their names, not just their ids',
+	[byId(contact, 'opportunities').prefill._primary_contact_id_name, byId(contact, 'opportunities').prefill._account_id_name],
+	['Jamie Rivera', 'Acme']);
 
 // What they asked about on the contact form travels onto the deal.
 const interested = childTypes('contacts', { id: 7, account_id: 42, service_interest: 'AI Enablement' });

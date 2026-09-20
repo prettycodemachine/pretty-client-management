@@ -234,6 +234,13 @@ function pcm_crm_pm_layout( $pcm_layout, $pcm_object ) {
 			array( 'title' => '', 'fields' => array( 'project_id', 'user_id', 'week_start', 'planned_hours', 'role' ) ),
 			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
 		),
+		// account_id is left out on purpose: it always follows project_id
+		// (pcm_crm_pm_apply_ticket()) and is readonly, so there is nothing for
+		// a form to show that project_id doesn't already say.
+		'help_tickets' => array(
+			array( 'title' => '', 'fields' => array( 'project_id', 'contact_id', 'subject', 'status' ) ),
+			array( 'title' => 'Details', 'fields' => array( 'description' ) ),
+		),
 	);
 
 	return isset( $pcm_layouts[ $pcm_object ] ) ? $pcm_layouts[ $pcm_object ] : $pcm_layout;

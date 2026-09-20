@@ -798,31 +798,31 @@
 				id: 'tasks',
 				label: 'Task',
 				object: 'project_tasks',
-				prefill: { project_id: record.id, status: 'Not Started' }
+				prefill: { project_id: record.id, _project_id_name: record.name, status: 'Not Started' }
 			},
 			{
 				id: 'raid',
 				label: 'RAID Entry',
 				object: 'project_raid',
-				prefill: { project_id: record.id, raid_type: 'Risk', status: 'Open', probability: 'Medium', impact: 'Medium' }
+				prefill: { project_id: record.id, _project_id_name: record.name, raid_type: 'Risk', status: 'Open', probability: 'Medium', impact: 'Medium' }
 			},
 			{
 				id: 'milestones',
 				label: 'Milestone',
 				object: 'project_milestones',
-				prefill: { project_id: record.id, status: 'Planned' }
+				prefill: { project_id: record.id, _project_id_name: record.name, status: 'Planned' }
 			},
 			{
 				id: 'roles',
 				label: 'Project Role',
 				object: 'project_roles',
-				prefill: { project_id: record.id, party_type: 'internal' }
+				prefill: { project_id: record.id, _project_id_name: record.name, party_type: 'internal' }
 			},
 			{
 				id: 'time',
 				label: 'Time Entry',
 				object: 'time_entries',
-				prefill: { project_id: record.id, is_billable: 1, entry_date: app.helpers.today() }
+				prefill: { project_id: record.id, _project_id_name: record.name, is_billable: 1, entry_date: app.helpers.today() }
 			},
 			{
 				id: 'activities',

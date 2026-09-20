@@ -3719,15 +3719,17 @@
 		if (object === 'accounts') {
 			return withProviders([
 				{ id: 'contacts', label: 'Contacts', object: 'contacts', newLabel: 'New Contact',
-					prefill: { account_id: record.id } },
+					prefill: { account_id: record.id, _account_id_name: record.name } },
 				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New Opportunity',
-					prefill: { account_id: record.id, stage_name: firstStage, close_date: closeDate } },
+					prefill: { account_id: record.id, _account_id_name: record.name, stage_name: firstStage, close_date: closeDate } },
 				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ what_type: 'account', what_id: record.id }) }
 			]);
 		}
 
 		if (object === 'contacts') {
+			var contactName = ((record.first_name || '') + ' ' + (record.last_name || '')).trim() || record.email || '';
+
 			return withProviders([
 				// The account comes from the contact, so a deal created here
 				// is attached to both the person and their organization.
@@ -3735,7 +3737,8 @@
 				// asked about on the contact form, and a deal opened for them
 				// is almost always about that.
 				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New Opportunity',
-					prefill: { account_id: record.account_id || 0, primary_contact_id: record.id,
+					prefill: { account_id: record.account_id || 0, _account_id_name: record._account_id_name || record._account_name,
+						primary_contact_id: record.id, _primary_contact_id_name: contactName,
 						service_interest: record.service_interest || '',
 						stage_name: firstStage, close_date: closeDate } },
 				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
