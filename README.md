@@ -1,6 +1,6 @@
 # Pretty Client Management
 
-A WordPress plugin providing a lightweight CRM (Accounts, Contacts, Opportunities, Activities) and an optional Projects module, modelled on Salesforce's standard objects so the data can be migrated into a real org later. Also owns the site's contact form.
+A WordPress plugin providing a lightweight CRM (Accounts, Contacts, Opportunities, Activities) and a robust Projects module. Pretty Client Management includes both an employee interface and a client portal for project management. This plugin can be used from lead intake, to tracking the sales pipeline, all the way through project management and time tracking. The system includes a contact form builder, a full admin experience, the capability to export all data, and much more. 
 
 ## Requirements
 
