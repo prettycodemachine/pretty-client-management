@@ -139,11 +139,13 @@ add_action( 'admin_init', 'pcm_crm_redirect_staff_from_admin' );
 /**
  * Trim the admin bar for anyone who is not an administrator.
  *
- * The bar stays — it carries the account menu's own logout link, and it is
- * where dashicons already load from, which is why the front end enqueues them
- * separately rather than depending on this. A staff member has no use for New
- * Post or the comment count, and each one is also a live link back into a
- * part of wp-admin they are otherwise being kept out of.
+ * Only reached outside a front-end CRM screen — pcm_crm_front_hide_admin_bar()
+ * (public/staff.php) removes the bar entirely there, since pcm_crm_front_nav()
+ * already carries its own My Profile and Log out links. Elsewhere on the site
+ * (a staff member browsing the marketing pages while logged in, say) the bar
+ * stays, trimmed: a staff member has no use for New Post or the comment
+ * count, and each one is also a live link back into a part of wp-admin they
+ * are otherwise being kept out of.
  */
 function pcm_crm_prune_admin_bar( $pcm_bar ) {
 	if ( current_user_can( 'manage_options' ) || ! current_user_can( PCM_CRM_CAP ) ) {

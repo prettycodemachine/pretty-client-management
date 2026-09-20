@@ -2,9 +2,10 @@
 /**
  * My Profile — the front-end host's answer to /wp-admin/profile.php, which
  * staff can never reach (the lockout deliberately does not exempt it, see
- * includes/roles.php). Their own name and password have to be editable from
- * somewhere, or pcm_crm_user_label() falls back to their login — the email
- * address — on every record they touch.
+ * includes/roles.php). Their password has to be changeable from somewhere.
+ * Name and email are shown but not editable — both are read-only display
+ * fields, changed only by an administrator from the User screen — so this
+ * page is really just "reset my own password" plus a way back out.
  *
  * Deliberately NOT a registered Setup page (pcm_crm_register_setup_page()):
  * every one of those is gated on pcm_crm_can( 'settings', 'view' ) and draws
@@ -31,8 +32,6 @@ function pcm_crm_render_my_profile() {
 
 	$pcm_messages = array(
 		'saved'              => array( 'success', __( 'Your profile was updated.', 'pcm-crm' ) ),
-		'email-invalid'      => array( 'error', __( 'Enter a valid email address.', 'pcm-crm' ) ),
-		'email-taken'        => array( 'error', __( 'That email address already belongs to another account.', 'pcm-crm' ) ),
 		'password-mismatch'  => array( 'error', __( 'The two passwords did not match. Nothing was changed.', 'pcm-crm' ) ),
 		'password-short'     => array( 'error', __( 'Choose a password at least 12 characters long.', 'pcm-crm' ) ),
 	);
@@ -53,18 +52,15 @@ function pcm_crm_render_my_profile() {
 			<?php wp_nonce_field( 'pcm_crm_my_profile', 'pcm_crm_my_profile_nonce' ); ?>
 
 			<h2><?php esc_html_e( 'Name and email', 'pcm-crm' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Contact an administrator to change your name or email address.', 'pcm-crm' ); ?></p>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><label for="pcm-crm-profile-first"><?php esc_html_e( 'First name', 'pcm-crm' ); ?></label></th>
-					<td><input type="text" class="regular-text" id="pcm-crm-profile-first" name="first_name" value="<?php echo esc_attr( $pcm_user->first_name ); ?>"></td>
+					<th scope="row"><?php esc_html_e( 'Name', 'pcm-crm' ); ?></th>
+					<td><?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="pcm-crm-profile-last"><?php esc_html_e( 'Last name', 'pcm-crm' ); ?></label></th>
-					<td><input type="text" class="regular-text" id="pcm-crm-profile-last" name="last_name" value="<?php echo esc_attr( $pcm_user->last_name ); ?>"></td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="pcm-crm-profile-email"><?php esc_html_e( 'Email', 'pcm-crm' ); ?></label></th>
-					<td><input type="email" class="regular-text" id="pcm-crm-profile-email" name="email" value="<?php echo esc_attr( $pcm_user->user_email ); ?>" required></td>
+					<th scope="row"><?php esc_html_e( 'Email', 'pcm-crm' ); ?></th>
+					<td><?php echo esc_html( $pcm_user->user_email ); ?></td>
 				</tr>
 			</table>
 
@@ -81,35 +77,32 @@ function pcm_crm_render_my_profile() {
 				</tr>
 			</table>
 
-			<?php submit_button( __( 'Save Changes', 'pcm-crm' ) ); ?>
+			<p class="submit">
+				<?php submit_button( __( 'Save Changes', 'pcm-crm' ), 'primary', 'submit', false ); ?>
+				<a class="button" href="<?php echo esc_url( pcm_crm_front_base_url() ); ?>"><?php esc_html_e( 'Cancel', 'pcm-crm' ); ?></a>
+			</p>
 		</form>
 	</div>
 	<?php
 }
 
 /**
- * What is wrong with a submitted change, if anything — a plain function
- * separate from the handler so it is checkable without going through
- * wp_safe_redirect()'s exit, the same shape pcm_crm_clean_user_access()
+ * What is wrong with a submitted password change, if anything — a plain
+ * function separate from the handler so it is checkable without going
+ * through wp_safe_redirect()'s exit, the same shape pcm_crm_clean_user_access()
  * (includes/access-settings.php) and pcm_crm_staff_redirect_target()
  * (includes/roles.php) already use.
+ *
+ * Name and email are not this function's concern — this screen no longer
+ * lets staff change either (an administrator does that from the User
+ * screen), so there is nothing here to validate about them.
  *
  * No password-strength meter here — that is wp-admin's own user-profile.js,
  * which brings a chain of admin-only dependencies (nonce-based AJAX
  * strength scoring, wp.updates) for a single field. A plain minimum length
  * is the honest trade against that weight, not an oversight.
  */
-function pcm_crm_my_profile_validation_error( $pcm_user_id, $pcm_email, $pcm_pass1, $pcm_pass2 ) {
-	if ( ! is_email( $pcm_email ) ) {
-		return 'email-invalid';
-	}
-
-	$pcm_existing = get_user_by( 'email', $pcm_email );
-
-	if ( $pcm_existing && (int) $pcm_existing->ID !== (int) $pcm_user_id ) {
-		return 'email-taken';
-	}
-
+function pcm_crm_my_profile_validation_error( $pcm_pass1, $pcm_pass2 ) {
 	if ( '' !== $pcm_pass1 || '' !== $pcm_pass2 ) {
 		if ( $pcm_pass1 !== $pcm_pass2 ) {
 			return 'password-mismatch';
@@ -137,35 +130,26 @@ function pcm_crm_handle_save_my_profile() {
 
 	// The account being edited is always the one logged in — never a posted
 	// id, or one staff member could edit another's by changing a hidden
-	// field. There is no "whose profile" question here at all.
+	// field. There is no "whose profile" question here at all. Name and
+	// email are not read from $_POST at all — the form no longer offers
+	// them as editable fields, and a request forged to include them anyway
+	// must not be able to change what the UI does not let a person change.
 	$pcm_user_id = get_current_user_id();
 	$pcm_back    = pcm_crm_front_base_url() . 'profile/';
 
-	$pcm_first = isset( $_POST['first_name'] ) ? sanitize_text_field( wp_unslash( $_POST['first_name'] ) ) : '';
-	$pcm_last  = isset( $_POST['last_name'] ) ? sanitize_text_field( wp_unslash( $_POST['last_name'] ) ) : '';
-	$pcm_email = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
 	$pcm_pass1 = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
 	$pcm_pass2 = isset( $_POST['password_confirm'] ) ? (string) wp_unslash( $_POST['password_confirm'] ) : '';
 
-	$pcm_error = pcm_crm_my_profile_validation_error( $pcm_user_id, $pcm_email, $pcm_pass1, $pcm_pass2 );
+	$pcm_error = pcm_crm_my_profile_validation_error( $pcm_pass1, $pcm_pass2 );
 
 	if ( $pcm_error ) {
 		wp_safe_redirect( add_query_arg( 'pcm_crm_profile', $pcm_error, $pcm_back ) );
 		exit;
 	}
 
-	$pcm_update = array(
-		'ID'         => $pcm_user_id,
-		'first_name' => $pcm_first,
-		'last_name'  => $pcm_last,
-		'user_email' => $pcm_email,
-	);
-
 	if ( '' !== $pcm_pass1 ) {
-		$pcm_update['user_pass'] = $pcm_pass1;
+		wp_update_user( array( 'ID' => $pcm_user_id, 'user_pass' => $pcm_pass1 ) );
 	}
-
-	wp_update_user( $pcm_update );
 
 	wp_safe_redirect( add_query_arg( 'pcm_crm_profile', 'saved', $pcm_back ) );
 	exit;
