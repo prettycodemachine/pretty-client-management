@@ -27,23 +27,34 @@ check( 'carries the honeypot', false !== strpos( $form, 'name="pcm_hp"' ), true 
 check( 'keeps the original input names',
 	false !== strpos( $form, 'name="pcm_first_name"' ) && false !== strpos( $form, 'name="pcm_org"' ), true );
 check( 'renders a textarea for a paragraph field', false !== strpos( $form, '<textarea id="pcm_message"' ), true );
-check( 'renders a select for a dropdown', false !== strpos( $form, '<select id="pcm_interest"' ), true );
 check( 'pairs the two half-width fields into a row', substr_count( $form, 'class="field-row"' ), 1 );
 // An unclosed div would swallow the rest of the page layout.
 check( 'every div is closed', substr_count( $form, '<div' ), substr_count( $form, '</div>' ) );
-check( 'required survives to the markup', substr_count( $form, ' required' ) >= 6, true );
+check( 'required survives to the markup', substr_count( $form, ' required' ) >= 5, true );
+
+// The shipped default has no Dropdown-type field any more (Interested In was
+// removed), so a dropdown is exercised directly rather than through it.
+ob_start();
+pcm_crm_render_form_field( array( 'key' => 'flavor', 'label' => 'Flavor', 'type' => 'select', 'options' => array( 'Vanilla', 'Chocolate' ) ) );
+$select_field = ob_get_clean();
+check( 'renders a select for a dropdown', false !== strpos( $select_field, '<select id="pcm_flavor"' ), true );
+check( 'and lists its own choices', substr_count( $select_field, '<option value=' ), 3 );
 
 echo "\n--- email tokens ---\n";
 // Values are keyed by the builder's field keys now, not by fixed names.
-$fields = array( 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'org' => 'Analytical & Co', 'email' => 'a@b.c', 'interest' => 'AI Enablement' );
+$fields = array( 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'org' => 'Analytical & Co', 'email' => 'a@b.c' );
 check( 'fills a field token', pcm_crm_fill_tokens( 'Hi {{FIRST NAME}}', $fields ), 'Hi Ada' );
 check( 'composes full name from two fields', pcm_crm_fill_tokens( 'Hi {{FULL NAME}}', $fields ), 'Hi Ada Lovelace' );
 check( 'underscored spelling works', pcm_crm_fill_tokens( '{{FIRST_NAME}}', $fields ), 'Ada' );
 // A template saved before the form was configurable must keep working.
 check( 'the legacy organization token still resolves',
 	pcm_crm_fill_tokens( '{{ORGANIZATION}}', $fields ), 'Analytical &amp; Co' );
-check( 'so does the legacy interest token',
-	pcm_crm_fill_tokens( '{{INTEREST}}', $fields ), 'AI Enablement' );
+// Interested In is no longer a shipped field — nothing maps to
+// contact.service_interest by default any more — so {{INTEREST}} in an old
+// template now resolves to nothing rather than to a stray value, the same
+// graceful-empty rule every unmapped token already follows.
+check( 'the legacy interest token resolves to nothing now that no field maps to it',
+	pcm_crm_fill_tokens( '{{INTEREST}}', $fields ), '' );
 check( 'escapes injected markup',
 	pcm_crm_fill_tokens( '{{ORGANIZATION}}', array( 'org' => '<script>x</script>' ) ),
 	'&lt;script&gt;x&lt;/script&gt;' );
@@ -57,6 +68,28 @@ check( 'tokens are derived from field keys',
 	pcm_crm_field_token( array( 'key' => 'first_name' ) ), '{{FIRST NAME}}' );
 check( 'every field offers a token',
 	count( pcm_crm_tokens() ) >= count( pcm_crm_default_form_fields() ), true );
+
+// The "Add field" picker (PCM Settings › CRM › Contact Form) can only add a
+// field that already exists — pcm_crm_form_field_target_defaults() is what
+// it reads to prefill a new row, and it must cover every target the picker
+// can actually offer, or choosing one would add a blank, useless row.
+$target_defaults = pcm_crm_form_field_target_defaults();
+foreach ( pcm_crm_form_field_targets() as $pcm_target => $pcm_label ) {
+	if ( '' === $pcm_target ) { continue; }
+	check( "every real target has a picker default ($pcm_target)", isset( $target_defaults[ $pcm_target ] ), true );
+}
+check( 'a built-in email target defaults to the email question type',
+	$target_defaults['contact.email']['type'], 'email' );
+
+update_option( 'pcm_crm_custom_fields', array( 'contacts' => array(
+	array( 'key' => 'flavor', 'label' => 'Flavor', 'type' => 'picklist', 'options' => array( 'Vanilla', 'Chocolate' ) ),
+) ) );
+$with_custom_target = pcm_crm_form_field_target_defaults();
+check( 'a custom picklist field defaults to a Dropdown question',
+	$with_custom_target['contact.cf_flavor']['type'], 'select' );
+check( 'carrying its own choices along',
+	$with_custom_target['contact.cf_flavor']['options'], array( 'Vanilla', 'Chocolate' ) );
+delete_option( 'pcm_crm_custom_fields' );
 
 $saved = pcm_crm_sanitize_form_fields( array(
 	array( 'label' => 'Your name', 'type' => 'text', 'required' => 1, 'map' => 'contact.first_name' ),
@@ -79,9 +112,6 @@ check( 'duplicate keys are made unique', $dupes[0]['key'] === $dupes[1]['key'], 
 check( 'saving an empty form falls back to the shipped one',
 	count( pcm_crm_sanitize_form_fields( array() ) ), count( pcm_crm_default_form_fields() ) );
 
-$interest_field = array( 'key' => 'interest', 'type' => 'select', 'source' => 'interests' );
-check( 'a sourced dropdown draws from the offerings',
-	pcm_crm_field_options( $interest_field ), array_values( pcm_crm_interest_options() ) );
 check( 'a hand-written dropdown splits on newlines',
 	pcm_crm_field_options( array( 'type' => 'select', 'options' => "One\nTwo\n" ) ), array( 'One', 'Two' ) );
 
@@ -923,6 +953,32 @@ $partial = pcm_crm_sanitize_custom_fields( array( 'contacts' => array( array( 'l
 check( 'saving one object leaves the others alone', isset( $partial['accounts'] ), true );
 check( 'while replacing the one that was submitted', count( $partial['contacts'] ), 1 );
 
+echo "\n--- pcm_crm_clean_custom_field(): the single-field save path ---\n";
+
+// A real regression: something upstream of this function once handed it an
+// array where a textarea's plain string was expected, and (string)-casting
+// that array stored the literal word "Array" as the picklist's one and only
+// choice — silently, with no error, and no way for a re-save to fix it since
+// every subsequent edit went through the same cast. Whatever the upstream
+// cause, this function must never do that again.
+$from_array = pcm_crm_clean_custom_field( array( 'label' => 'Tier', 'type' => 'picklist', 'options' => array( 'Gold', 'Silver' ) ) );
+check( 'a malformed (array) options value is treated as empty, not stringified',
+	$from_array['options'], array() );
+check( 'and specifically never becomes the literal word "Array"',
+	in_array( 'Array', $from_array['options'], true ), false );
+
+$from_string = pcm_crm_clean_custom_field( array( 'label' => 'Tier', 'type' => 'picklist', 'options' => "Gold\nSilver" ) );
+check( 'a normal multi-line string still works', $from_string['options'], array( 'Gold', 'Silver' ) );
+
+check( 'a blank label has nothing to save', pcm_crm_clean_custom_field( array( 'label' => '', 'type' => 'text' ) ), false );
+
+// The single-field save handler passes the stored key explicitly rather than
+// trusting whatever the request posted — pcm_crm_clean_custom_field() must
+// prefer it over a posted 'key' of anything else.
+$existing = pcm_crm_clean_custom_field( array( 'label' => 'Renamed', 'type' => 'text', 'key' => 'attacker_supplied' ), 'renewal_date' );
+check( 'an explicit existing key wins over whatever the request posted',
+	$existing['key'], 'renewal_date' );
+
 echo "\n--- page layouts ---\n";
 delete_option( 'pcm_crm_custom_fields' );
 
@@ -940,6 +996,25 @@ $last = end( $with_custom );
 check( 'an unplaced custom field is appended rather than lost',
 	in_array( 'cf_tier', $last['fields'], true ), true );
 
+// pcm_crm_layout() (the live record form) still auto-appends a synthetic
+// "Custom fields" section; the editor's own section list — what the Fields
+// & Layouts screen actually draws its section cards from — must not, since
+// that field is meant to show up in Available Fields once, not duplicated
+// into a section nobody created.
+check( 'the editor\'s own section list has no synthetic "Custom fields" section',
+	count( pcm_crm_layout_sections( 'contacts' ) ), count( pcm_crm_default_layouts()['contacts'] ) );
+
+// is_test is deliberately excluded from the drag palette (it is not
+// something anyone should hand-place on a form) but must stay filterable —
+// 'no_layout' is what keeps those two answers different.
+check( 'Test Data (is_test) is kept off the layout editor\'s drag palette',
+	in_array( 'is_test', pcm_crm_layout_available_fields( 'contacts' ), true ), false );
+$contact_fields = PCM_CRM_REST::model( 'contacts' )->fields();
+check( 'but it still carries a label, so it stays filterable',
+	$contact_fields['is_test']['label'], 'Test Data' );
+check( 'and is not marked internal, which would also hide it from the filter builder',
+	empty( $contact_fields['is_test']['internal'] ), true );
+
 $saved = pcm_crm_sanitize_layouts( array( 'contacts' => array(
 	array( 'title' => 'Basics', 'fields' => array( 'first_name', 'last_name', 'first_name', 'not_a_column' ) ),
 ) ) );
@@ -951,6 +1026,19 @@ check( 'a name that is not a column is dropped',
 $emptied = pcm_crm_sanitize_layouts( array( 'contacts' => array() ) );
 check( 'an empty layout falls back to the shipped one rather than leaving no form',
 	count( $emptied['contacts'] ) >= 4, true );
+
+// A real regression: the old synthetic "Custom fields" catch-all rendered as
+// ordinary, editable section markup, so hitting Save while it happened to be
+// showing baked it into the stored layout as a real section — one that
+// stayed there, empty, forever after its one field was moved or deleted.
+$with_empty = pcm_crm_sanitize_layouts( array( 'contacts' => array(
+	array( 'title' => 'Basics', 'fields' => array( 'first_name' ) ),
+	array( 'title' => 'Custom fields', 'fields' => array() ),
+) ) );
+check( 'a section with no fields is dropped rather than saved empty',
+	count( $with_empty['contacts'] ), 1 );
+check( 'leaving the section that actually has fields in place',
+	$with_empty['contacts'][0]['title'], 'Basics' );
 
 check( 'available fields exclude the ones already placed',
 	in_array( 'first_name', pcm_crm_layout_available_fields( 'contacts' ), true ), false );

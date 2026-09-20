@@ -13,69 +13,113 @@
 
 	function init() {
 		attachments();
-		logoPicker();
+		logoPicker('logo', 'Choose an email logo', 'Use this logo');
+		logoPicker('employee-portal-logo', 'Choose a logo', 'Use this logo');
+		logoPicker('client-portal-logo', 'Choose a logo', 'Use this logo');
 		fieldBuilder();
 		mergeFields();
 		copyShortcode();
-		customFields();
+		customFieldDialog();
 		layoutEditor();
 	}
 
 	/* -------------------------------------------------------------------
-	   Custom fields
+	   Custom fields — the Add/Edit dialog on the Fields & Layouts tab.
+
+	   Each save (and each delete) is its own ordinary form submission to
+	   admin-post.php (pcm_crm_handle_save_custom_field() /
+	   _delete_custom_field(), includes/custom-fields.php) — a real page
+	   navigation, not fetch/AJAX — which is what lets one field's own
+	   dialog carry its own Save button instead of the big layout form's,
+	   all the way at the bottom of the page.
 	   ------------------------------------------------------------------- */
 
-	function customFields() {
-		var list = document.querySelector('[data-role="custom-fields"]');
-		if (!list) { return; }
+	function customFieldDialog() {
+		var dialog = document.getElementById('pcm-crm-custom-field-dialog');
+		if (!dialog) { return; }
 
-		var template = document.getElementById('tmpl-pcm-crm-custom-field');
+		var title = dialog.querySelector('[data-role="custom-field-dialog-title"]');
+		var existingKeyInput = dialog.querySelector('[data-role="custom-field-existing-key"]');
+		var labelInput = dialog.querySelector('[data-role="custom-field-label"]');
+		var typeSelect = dialog.querySelector('[data-role="custom-field-type"]');
+		var keyDisplay = dialog.querySelector('[data-role="custom-field-key-display"]');
+		var optionsRow = dialog.querySelector('[data-role="custom-field-options-row"]');
+		var optionsInput = dialog.querySelector('[data-role="custom-field-options"]');
+		var relatedRow = dialog.querySelector('[data-role="custom-field-related-row"]');
+		var relatedSelect = dialog.querySelector('[data-role="custom-field-related"]');
+		var cancelButton = dialog.querySelector('[data-role="custom-field-cancel"]');
+		var deleteForm = document.getElementById('pcm-crm-delete-custom-field-form');
+
+		function syncRows() {
+			optionsRow.hidden = typeSelect.value !== 'picklist';
+			relatedRow.hidden = typeSelect.value !== 'relationship';
+		}
+
+		function openDialog(custom) {
+			dialog.querySelector('form').reset();
+
+			if (custom) {
+				title.textContent = 'Edit custom field';
+				existingKeyInput.value = custom.key;
+				labelInput.value = custom.label;
+				typeSelect.value = custom.type;
+				// Fixed once created — the column's SQL type already matches
+				// the original, and the server ignores a posted type here
+				// regardless, but disabling it is what tells a person that.
+				typeSelect.disabled = true;
+				keyDisplay.hidden = false;
+				keyDisplay.textContent = 'cf_' + custom.key;
+				optionsInput.value = (custom.options || []).join('\n');
+				if (custom.related) { relatedSelect.value = custom.related; }
+			} else {
+				title.textContent = 'Add custom field';
+				existingKeyInput.value = '';
+				typeSelect.disabled = false;
+				keyDisplay.hidden = true;
+			}
+
+			syncRows();
+			dialog.showModal();
+			labelInput.focus();
+		}
+
+		typeSelect.addEventListener('change', syncRows);
+
 		var addButton = document.querySelector('[data-role="add-custom-field"]');
-
-		function renumber() {
-			Array.prototype.forEach.call(list.querySelectorAll('[data-role="custom-field-row"]'), function (row, index) {
-				Array.prototype.forEach.call(row.querySelectorAll('[name]'), function (input) {
-					input.name = input.name.replace(/\[(?:\d+|__index__)\]/, '[' + index + ']');
-				});
-			});
+		if (addButton) {
+			addButton.addEventListener('click', function () { openDialog(null); });
 		}
 
-		if (addButton && template) {
-			addButton.addEventListener('click', function () {
-				var wrapper = document.createElement('div');
-				wrapper.innerHTML = template.innerHTML;
+		document.addEventListener('click', function (event) {
+			var editButton = event.target.closest('[data-role="edit-custom-field"]');
+			if (editButton) {
+				var chip = editButton.closest('[data-role="chip"]');
+				var custom = chip && chip.dataset.custom ? JSON.parse(chip.dataset.custom) : null;
+				if (custom) { openDialog(custom); }
+				return;
+			}
 
-				var row = wrapper.querySelector('[data-role="custom-field-row"]');
-				list.appendChild(row);
-				renumber();
-				row.querySelector('.pcm-crm-field-label').focus();
-			});
-		}
+			var deleteButton = event.target.closest('[data-role="delete-custom-field"]');
+			if (deleteButton && deleteForm) {
+				var deleteChip = deleteButton.closest('[data-role="chip"]');
+				var deleteCustom = deleteChip && deleteChip.dataset.custom ? JSON.parse(deleteChip.dataset.custom) : null;
+				if (!deleteCustom) { return; }
 
-		list.addEventListener('click', function (event) {
-			if (!event.target.closest('[data-role="remove-custom-field"]')) { return; }
+				// Removing a definition hides the field; the column and its
+				// data stay, but it disappears from every layout and the
+				// filter builder until re-added.
+				if (!window.confirm('Delete this field? Its column and data are kept, but it disappears from every layout and filter until re-added.')) { return; }
 
-			event.preventDefault();
-
-			// Removing a definition hides the field; the column and its data
-			// stay, so this is not the destructive act it looks like.
-			if (!window.confirm('Remove this field from the CRM? Its column and data are kept.')) { return; }
-
-			event.target.closest('[data-role="custom-field-row"]').remove();
-			renumber();
+				deleteForm.querySelector('[data-role="delete-custom-field-key"]').value = deleteCustom.key;
+				deleteForm.submit();
+			}
 		});
 
-		// Only a picklist needs values, and only a relationship needs a target.
-		list.addEventListener('change', function (event) {
-			var select = event.target.closest('[data-role="custom-type"]');
-			if (!select) { return; }
+		cancelButton.addEventListener('click', function () { dialog.close(); });
 
-			var row = select.closest('[data-role="custom-field-row"]');
-			var options = row.querySelector('[data-role="custom-options"]');
-			var related = row.querySelector('[data-role="custom-related"]');
-
-			if (options) { options.hidden = select.value !== 'picklist'; }
-			if (related) { related.hidden = select.value !== 'relationship'; }
+		// Native <dialog> does not close on a backdrop click by itself.
+		dialog.addEventListener('click', function (event) {
+			if (event.target === dialog) { dialog.close(); }
 		});
 	}
 
@@ -151,6 +195,13 @@
 		}
 
 		editor.addEventListener('dragstart', function (event) {
+			// A chip's own Edit/Delete buttons must behave like buttons, not
+			// like the start of a drag on the chip they happen to sit inside.
+			if (event.target.closest('[data-role="edit-custom-field"], [data-role="delete-custom-field"]')) {
+				event.preventDefault();
+				return;
+			}
+
 			var chip = event.target.closest('[data-role="chip"]');
 			if (!chip) { return; }
 
@@ -343,23 +394,26 @@
 	}
 
 	/* -------------------------------------------------------------------
-	   Email logo
+	   Logo pickers — the email logo (Contact Form tab) and the PCM
+	   Settings band logo (Branding tab) are the same control against two
+	   different data-role prefixes, so one function serves both rather
+	   than two near-identical copies drifting apart.
 	   ------------------------------------------------------------------- */
 
-	function logoPicker() {
-		var root = document.querySelector('[data-role="logo"]');
+	function logoPicker(role, title, buttonText) {
+		var root = document.querySelector('[data-role="' + role + '"]');
 		if (!root || !window.wp || !window.wp.media) { return; }
 
-		var preview = root.querySelector('[data-role="logo-preview"]');
-		var field = root.querySelector('[data-role="logo-id"]');
-		var remove = root.querySelector('[data-role="logo-remove"]');
+		var preview = root.querySelector('[data-role="' + role + '-preview"]');
+		var field = root.querySelector('[data-role="' + role + '-id"]');
+		var remove = root.querySelector('[data-role="' + role + '-remove"]');
 		var frame = null;
 
-		root.querySelector('[data-role="logo-choose"]').addEventListener('click', function () {
+		root.querySelector('[data-role="' + role + '-choose"]').addEventListener('click', function () {
 			if (!frame) {
 				frame = window.wp.media({
-					title: 'Choose an email logo',
-					button: { text: 'Use this logo' },
+					title: title,
+					button: { text: buttonText },
 					library: { type: 'image' },
 					multiple: false
 				});
@@ -385,7 +439,8 @@
 
 		remove.addEventListener('click', function () {
 			// Cleared rather than deleted: the file stays in the media library,
-			// and the email falls back to the theme's own logo.
+			// and whichever default this picker's field falls back to takes
+			// over once the page is saved and reloaded.
 			field.value = '0';
 			preview.replaceChildren();
 			remove.hidden = true;
@@ -402,6 +457,9 @@
 
 		var template = document.getElementById('tmpl-pcm-crm-field-row');
 		var addButton = document.querySelector('[data-role="add-field"]');
+		var targetSelect = document.querySelector('[data-role="add-field-target"]');
+		var defaultsScript = document.getElementById('pcm-crm-field-target-defaults');
+		var defaults = defaultsScript ? JSON.parse(defaultsScript.textContent || '{}') : {};
 
 		/**
 		 * Renumber every row's input names.
@@ -418,14 +476,45 @@
 			});
 		}
 
-		if (addButton && template) {
+		// A question can only be added by picking a field that already exists
+		// (built-in or a custom field created beforehand under Fields &
+		// Layouts) — the picker prefills the new row from that field's own
+		// shape, rather than starting from a blank, inventable one. Everything
+		// on the row, including the label, stays freely editable afterwards.
+		if (addButton && template && targetSelect) {
 			addButton.addEventListener('click', function () {
+				var target = targetSelect.value;
+				if (!target) { targetSelect.focus(); return; }
+
 				var wrapper = document.createElement('div');
 				wrapper.innerHTML = template.innerHTML;
-
 				var row = wrapper.querySelector('[data-role="field-row"]');
+
+				var preset = defaults[target] || { label: '', type: 'text', options: [] };
+
+				row.querySelector('.pcm-crm-field-label').value = preset.label || '';
+
+				var typeSelect = row.querySelector('[data-role="field-type"]');
+				typeSelect.value = preset.type || 'text';
+
+				var mapSelect = row.querySelector('select[name$="[map]"]');
+				if (mapSelect) { mapSelect.value = target; }
+
+				var optionsRow = row.querySelector('[data-role="field-options"]');
+				var optionsInput = row.querySelector('textarea[name$="[options]"]');
+				var isSelect = 'select' === (preset.type || 'text');
+				if (optionsRow) { optionsRow.hidden = !isSelect; }
+				if (optionsInput && isSelect) { optionsInput.value = (preset.options || []).join('\n'); }
+
 				list.appendChild(row);
 				renumber();
+
+				// Taken once — the same field cannot be added as a second,
+				// separate question.
+				var chosenOption = targetSelect.querySelector('option[value="' + CSS.escape(target) + '"]');
+				if (chosenOption) { chosenOption.remove(); }
+				targetSelect.value = '';
+
 				row.querySelector('.pcm-crm-field-label').focus();
 			});
 		}

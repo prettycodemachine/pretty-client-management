@@ -22,7 +22,6 @@ function pcm_crm_default_form_fields() {
 		array( 'key' => 'first_name', 'label' => 'First name', 'type' => 'text', 'required' => 1, 'map' => 'contact.first_name', 'autocomplete' => 'given-name', 'half' => 1 ),
 		array( 'key' => 'last_name', 'label' => 'Last name', 'type' => 'text', 'required' => 1, 'map' => 'contact.last_name', 'autocomplete' => 'family-name', 'half' => 1 ),
 		array( 'key' => 'org', 'label' => 'Organization', 'type' => 'text', 'required' => 1, 'map' => 'account.name', 'autocomplete' => 'organization' ),
-		array( 'key' => 'interest', 'label' => 'What are you interested in?', 'type' => 'select', 'required' => 1, 'map' => 'contact.service_interest', 'source' => 'interests' ),
 		array( 'key' => 'email', 'label' => 'Email', 'type' => 'email', 'required' => 1, 'map' => 'contact.email', 'autocomplete' => 'email' ),
 		array( 'key' => 'message', 'label' => 'What are you looking for help with?', 'type' => 'textarea', 'required' => 1, 'map' => 'activity.description' ),
 	);
@@ -100,6 +99,57 @@ function pcm_crm_form_field_targets() {
 }
 
 /**
+ * A sensible starting label, question type and (for a picklist) choices for
+ * each target pcm_crm_form_field_targets() offers, keyed the same way.
+ *
+ * What the "Add field" picker (PCM Settings › CRM › Contact Form) reads to
+ * prefill a new row — the point of the picker is that a question can only be
+ * added by choosing a field that already exists, never invented from a blank
+ * row, so it needs to know what a sensible starting shape looks like for
+ * whichever one gets chosen. The admin is still free to change the label (or
+ * anything else about the row) afterwards.
+ */
+function pcm_crm_form_field_target_defaults() {
+	$pcm_defaults = array(
+		'contact.first_name'       => array( 'label' => __( 'First name', 'pcm-crm' ), 'type' => 'text' ),
+		'contact.last_name'        => array( 'label' => __( 'Last name', 'pcm-crm' ), 'type' => 'text' ),
+		'contact.email'            => array( 'label' => __( 'Email', 'pcm-crm' ), 'type' => 'email' ),
+		'contact.phone'            => array( 'label' => __( 'Phone', 'pcm-crm' ), 'type' => 'tel' ),
+		'contact.title'            => array( 'label' => __( 'Job title', 'pcm-crm' ), 'type' => 'text' ),
+		'contact.service_interest' => array( 'label' => __( 'Interested in', 'pcm-crm' ), 'type' => 'text' ),
+		'contact.description'      => array( 'label' => __( 'Notes', 'pcm-crm' ), 'type' => 'textarea' ),
+		'account.name'             => array( 'label' => __( 'Organization', 'pcm-crm' ), 'type' => 'text' ),
+		'account.website'          => array( 'label' => __( 'Website', 'pcm-crm' ), 'type' => 'text' ),
+		'account.phone'            => array( 'label' => __( 'Phone', 'pcm-crm' ), 'type' => 'tel' ),
+		'activity.description'     => array( 'label' => __( 'Message', 'pcm-crm' ), 'type' => 'textarea' ),
+	);
+
+	// A custom field's own type decides the question type it starts as — a
+	// picklist arrives as a Dropdown with its own choices carried over, a
+	// long-text field as a Paragraph, everything else as a single line.
+	$pcm_type_map = array( 'textarea' => 'textarea', 'picklist' => 'select' );
+
+	foreach ( array( 'contacts' => 'contact', 'accounts' => 'account', 'activities' => 'activity' ) as $pcm_object => $pcm_prefix ) {
+		foreach ( pcm_crm_custom_fields( $pcm_object ) as $pcm_field ) {
+			if ( 'relationship' === $pcm_field['type'] ) {
+				continue;
+			}
+
+			$pcm_target = $pcm_prefix . '.' . pcm_crm_custom_column( $pcm_field['key'] );
+			$pcm_type   = isset( $pcm_type_map[ $pcm_field['type'] ] ) ? $pcm_type_map[ $pcm_field['type'] ] : 'text';
+
+			$pcm_defaults[ $pcm_target ] = array(
+				'label'   => $pcm_field['label'],
+				'type'    => $pcm_type,
+				'options' => 'select' === $pcm_type ? (array) $pcm_field['options'] : array(),
+			);
+		}
+	}
+
+	return $pcm_defaults;
+}
+
+/**
  * The posted input name for a field.
  *
  * Prefixed because these land in $_POST beside WordPress's own parameters, and
@@ -158,16 +208,8 @@ function pcm_crm_field_with_map( $pcm_target ) {
 
 /**
  * A dropdown's choices.
- *
- * A field can either carry its own list or draw one from the site — the
- * interest list belongs to the theme's offerings, and duplicating it into the
- * form builder would let the two disagree about what is on sale.
  */
 function pcm_crm_field_options( array $pcm_field ) {
-	if ( ! empty( $pcm_field['source'] ) && 'interests' === $pcm_field['source'] ) {
-		return array_values( pcm_crm_interest_options() );
-	}
-
 	if ( empty( $pcm_field['options'] ) ) {
 		return array();
 	}
@@ -228,14 +270,10 @@ function pcm_crm_sanitize_form_fields( $pcm_value ) {
 		}
 
 		if ( 'select' === $pcm_type ) {
-			if ( ! empty( $pcm_field['source'] ) && 'interests' === $pcm_field['source'] ) {
-				$pcm_clean['source'] = 'interests';
-			} else {
-				$pcm_clean['options'] = array_values( array_filter( array_map(
-					'sanitize_text_field',
-					array_map( 'trim', explode( "\n", (string) ( isset( $pcm_field['options'] ) ? $pcm_field['options'] : '' ) ) )
-				) ) );
-			}
+			$pcm_clean['options'] = array_values( array_filter( array_map(
+				'sanitize_text_field',
+				array_map( 'trim', explode( "\n", (string) ( isset( $pcm_field['options'] ) ? $pcm_field['options'] : '' ) ) )
+			) ) );
 		}
 
 		$pcm_out[] = $pcm_clean;

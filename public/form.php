@@ -24,10 +24,6 @@ function pcm_crm_form_assets() {
 function pcm_crm_contact_form_shortcode( $pcm_atts = array() ) {
 	pcm_crm_form_assets();
 
-	// A service card's CTA arrives as ?interest=<slug>; anything unrecognised
-	// falls through to the empty default rather than preselecting nonsense.
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only preselect
-	$pcm_interest = isset( $_GET['interest'] ) ? sanitize_key( wp_unslash( $_GET['interest'] ) ) : '';
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only status message
 	$pcm_status = isset( $_GET['pcm_status'] ) ? sanitize_text_field( wp_unslash( $_GET['pcm_status'] ) ) : '';
 
@@ -62,7 +58,7 @@ function pcm_crm_contact_form_shortcode( $pcm_atts = array() ) {
 					$pcm_open_row = true;
 				}
 
-				pcm_crm_render_form_field( $pcm_field, $pcm_interest );
+				pcm_crm_render_form_field( $pcm_field );
 
 				if ( $pcm_open_row && ( ! $pcm_half || ! $pcm_next || empty( $pcm_next['half'] ) ) ) {
 					echo '</div>';
@@ -96,7 +92,7 @@ function pcm_crm_contact_form_shortcode( $pcm_atts = array() ) {
  * The class names are the theme's existing ones, so a form built here inherits
  * the site's styling without the theme knowing anything about the builder.
  */
-function pcm_crm_render_form_field( array $pcm_field, $pcm_interest ) {
+function pcm_crm_render_form_field( array $pcm_field ) {
 	$pcm_name     = pcm_crm_field_input_name( $pcm_field );
 	$pcm_required = ! empty( $pcm_field['required'] ) ? ' required' : '';
 	$pcm_auto     = ! empty( $pcm_field['autocomplete'] ) ? ' autocomplete="' . esc_attr( $pcm_field['autocomplete'] ) . '"' : '';
@@ -108,22 +104,8 @@ function pcm_crm_render_form_field( array $pcm_field, $pcm_interest ) {
 		printf( '<select id="%s" name="%s"%s>', esc_attr( $pcm_name ), esc_attr( $pcm_name ), $pcm_required ); // phpcs:ignore WordPress.Security.EscapeOutput -- literal
 		echo '<option value="">' . esc_html__( 'Choose one…', 'pcm-crm' ) . '</option>';
 
-		// The interest list is keyed by slug so a service card's ?interest=
-		// link can preselect its own option; a hand-written list has no slugs
-		// and simply never preselects.
-		$pcm_slugs = ( ! empty( $pcm_field['source'] ) && 'interests' === $pcm_field['source'] )
-			? pcm_crm_interest_options()
-			: array();
-
 		foreach ( pcm_crm_field_options( $pcm_field ) as $pcm_option ) {
-			$pcm_slug = array_search( $pcm_option, $pcm_slugs, true );
-
-			printf(
-				'<option value="%s"%s>%s</option>',
-				esc_attr( $pcm_option ),
-				( $pcm_slug && $pcm_slug === $pcm_interest ) ? ' selected' : '',
-				esc_html( $pcm_option )
-			);
+			printf( '<option value="%s">%s</option>', esc_attr( $pcm_option ), esc_html( $pcm_option ) );
 		}
 
 		echo '</select>';

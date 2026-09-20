@@ -45,14 +45,16 @@ function pcm_crm_default_layouts() {
 }
 
 /**
- * One object's layout, with any custom field not yet placed appended.
+ * One object's own saved (or default) sections, pruned of fields the object
+ * no longer has — no synthetic "Custom fields" catch-all appended.
  *
- * A field created after a layout was saved would otherwise be invisible — it
- * would exist, be filterable, be exported, and have nowhere to be typed into.
- * Appending it to a "Custom fields" section is the least surprising answer,
- * and it can be dragged anywhere afterwards.
+ * This is the shape the Fields & Layouts editor's own section list wants:
+ * an unplaced custom field belongs in Available Fields, once, not also
+ * duplicated into a section nobody actually created. pcm_crm_layout() below
+ * is the one that appends the catch-all, for the live record form, which
+ * has no "Available" list of its own to fall back to.
  */
-function pcm_crm_layout( $pcm_object ) {
+function pcm_crm_layout_sections( $pcm_object ) {
 	$pcm_saved   = get_option( PCM_CRM_LAYOUTS_OPTION, array() );
 	$pcm_layouts = pcm_crm_default_layouts();
 
@@ -60,7 +62,21 @@ function pcm_crm_layout( $pcm_object ) {
 		? $pcm_saved[ $pcm_object ]
 		: ( isset( $pcm_layouts[ $pcm_object ] ) ? $pcm_layouts[ $pcm_object ] : array() );
 
-	$pcm_layout = pcm_crm_prune_layout( $pcm_object, $pcm_layout );
+	return pcm_crm_prune_layout( $pcm_object, $pcm_layout );
+}
+
+/**
+ * One object's layout, with any custom field not yet placed appended.
+ *
+ * A field created after a layout was saved would otherwise be invisible on
+ * an actual record — it would exist, be filterable, be exported, and have
+ * nowhere to be typed into, with no "Available Fields" palette on the record
+ * form the way the admin editor has one. Appending it to a "Custom fields"
+ * section is the least surprising answer there, and it can be dragged
+ * anywhere afterwards from the editor.
+ */
+function pcm_crm_layout( $pcm_object ) {
+	$pcm_layout = pcm_crm_layout_sections( $pcm_object );
 
 	return apply_filters( 'pcm_crm_layout', pcm_crm_append_unplaced( $pcm_object, $pcm_layout ), $pcm_object );
 }
@@ -114,7 +130,11 @@ function pcm_crm_append_unplaced( $pcm_object, array $pcm_layout ) {
 /**
  * Every field that could be put on a layout but is not on this one.
  *
- * The palette the layout editor drags from.
+ * The palette the layout editor drags from. Placement is read off
+ * pcm_crm_layout_sections() rather than pcm_crm_layout() — the real, saved
+ * sections only, never the synthetic "Custom fields" catch-all — so an
+ * unplaced custom field shows up here, once, instead of also being folded
+ * into a section the editor never asked for.
  */
 function pcm_crm_layout_available_fields( $pcm_object ) {
 	$pcm_model = PCM_CRM_REST::model( $pcm_object );
@@ -125,7 +145,7 @@ function pcm_crm_layout_available_fields( $pcm_object ) {
 
 	$pcm_placed = array();
 
-	foreach ( pcm_crm_layout( $pcm_object ) as $pcm_section ) {
+	foreach ( pcm_crm_layout_sections( $pcm_object ) as $pcm_section ) {
 		$pcm_placed = array_merge( $pcm_placed, (array) $pcm_section['fields'] );
 	}
 
@@ -133,8 +153,11 @@ function pcm_crm_layout_available_fields( $pcm_object ) {
 
 	foreach ( $pcm_model->fields() as $pcm_name => $pcm_def ) {
 		// Audit stamps have their own panel on the record, and the internal
-		// columns are not fields anyone should be typing into.
-		if ( ! empty( $pcm_def['internal'] ) || ! empty( $pcm_def['readonly'] ) || empty( $pcm_def['label'] ) ) {
+		// columns are not fields anyone should be typing into. 'no_layout' is
+		// the narrower case: a field that is deliberately filterable (so it
+		// keeps its label and stays off 'internal') but still has no business
+		// being dragged onto a form by hand — is_test is the one example.
+		if ( ! empty( $pcm_def['internal'] ) || ! empty( $pcm_def['readonly'] ) || ! empty( $pcm_def['no_layout'] ) || empty( $pcm_def['label'] ) ) {
 			continue;
 		}
 
@@ -184,10 +207,18 @@ function pcm_crm_sanitize_layouts( $pcm_value ) {
 				$pcm_fields[]           = $pcm_field;
 			}
 
-			$pcm_clean[] = array(
-				'title'  => sanitize_text_field( isset( $pcm_section['title'] ) ? $pcm_section['title'] : '' ),
-				'fields' => $pcm_fields,
-			);
+			// An empty section is exactly how the old synthetic "Custom fields"
+			// catch-all used to get permanently baked into a real, saved layout
+			// the first time anyone hit Save while it happened to be showing —
+			// still there, and still empty, long after the field it once held
+			// had been moved or deleted. Dropping it here means a section with
+			// nothing left in it disappears rather than lingering as clutter.
+			if ( $pcm_fields ) {
+				$pcm_clean[] = array(
+					'title'  => sanitize_text_field( isset( $pcm_section['title'] ) ? $pcm_section['title'] : '' ),
+					'fields' => $pcm_fields,
+				);
+			}
 		}
 
 		// An empty layout would leave a record with no form at all, so the

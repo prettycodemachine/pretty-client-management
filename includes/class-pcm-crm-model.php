@@ -810,8 +810,12 @@ class PCM_CRM_Model {
 			'is_deleted'          => array( 'type' => 'bool', 'readonly' => true, 'internal' => true ),
 			// Filterable on purpose: the point of the flag is being able to
 			// tell sample data from real records, which means being able to
-			// ask for one and not the other.
-			'is_test'             => array( 'type' => 'bool', 'label' => 'Test Data' ),
+			// ask for one and not the other. 'no_layout' is narrower than
+			// 'internal' — it only keeps this off the layout editor's own
+			// drag palette (pcm_crm_layout_available_fields()); the filter
+			// builder (PCM_CRM_REST::field_list()) does not check it, so
+			// filtering by it still works.
+			'is_test'             => array( 'type' => 'bool', 'label' => 'Test Data', 'no_layout' => true ),
 		);
 	}
 }
