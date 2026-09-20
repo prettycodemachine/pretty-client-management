@@ -48,10 +48,11 @@
   --pcm-control: 38px;
   --pcm-control-lg: 44px;
 
-  /* The filter bar sticks under whatever sits above it — wp-admin's admin
-     bar (32px desktop) here, nothing at all on the front end, where
+  /* The app bar sticks under whatever sits above it — wp-admin's admin bar
+     (32px desktop) here, nothing at all on the front end, where
      .pcm-crm-front overrides this to 0 rather than leaving a 32px gap above
-     a page that has no bar to clear. */
+     a page that has no bar to clear. The filter bar then sticks under the
+     app bar in turn — see --pcm-appbar-height below. */
   --pcm-sticky-top: 32px;
 
   font-family: var(--font-body);
@@ -74,7 +75,13 @@
    the nav renders on every screen there is. A dark band in the same register
    as .pcm-setup-band (setup.css), but not sharing its tokens: those only
    exist once setup.css has loaded, which the front-end nav cannot assume. */
-.pcm-crm-front { --pcm-sticky-top: 0; }
+/* 0px, not a unitless 0: --pcm-appbar-height's own top-level use was fine
+   either way, but calc(var(--pcm-sticky-top) + var(--pcm-appbar-height))
+   below sums it with a length, and a bare 0 there type-mismatches against
+   a px value in at least one real engine — the whole calc() is invalid
+   then, and top falls back to auto, silently turning the sticky filter
+   bar into an ordinary one that scrolls away. */
+.pcm-crm-front { --pcm-sticky-top: 0px; }
 
 /* background: ink / color: paper, never a literal white — ink and paper are
    an inverting pair (setup.css's identical .pcm-setup-band does the same):
@@ -280,7 +287,11 @@
 /* Filter bar ---------------------------------------------------------------- */
 .pcm-crm-filters {
   position: sticky;
-  top: var(--pcm-sticky-top, 32px);
+  /* Stacks under the now-sticky app bar using its own rendered height
+     (crm.js measures it — see .pcm-crm-appbar below — since translation
+     length, item count and viewport width all move it, and a guessed
+     constant would silently drift the moment any of those does). */
+  top: calc(var(--pcm-sticky-top, 32px) + var(--pcm-appbar-height, 0px));
   z-index: 20;
   display: flex;
   align-items: flex-end;
@@ -1803,12 +1814,24 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 
 /* App bar -------------------------------------------------------------------
    Which app you are in and its screens, with Setup at the far end. Drawn in
-   the accent so a work screen is never mistaken for Setup's dark band. */
+   the accent so a work screen is never mistaken for Setup's dark band.
+
+   Sticky at every width, admin and front end alike, so Dashboard/Accounts/
+   Contacts/etc (or Projects/Tasks/Timesheet/etc) stay reachable without
+   scrolling back up — the same --pcm-sticky-top the filter bar already used
+   for the same reason. An opaque background is load-bearing here, not just
+   styling: without one, content scrolling underneath a stuck bar would show
+   through it. z-index sits above the filter bar's own 20 so a resize's
+   measurement lag (crm.js, --pcm-appbar-height) never lets the filter bar
+   paint over the nav, even briefly. */
 .pcm-crm-appbar {
   display: flex;
   align-items: center;
   gap: 6px 18px;
   flex-wrap: wrap;
+  position: sticky;
+  top: var(--pcm-sticky-top, 32px);
+  z-index: 21;
   margin-top: 14px;
   padding: 6px 10px 6px 16px;
   border: 2px solid var(--pcm-ink);

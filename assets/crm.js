@@ -5157,6 +5157,27 @@
 		dom.drawer = root.querySelector('[data-role="drawer"]');
 		dom.scrim = root.querySelector('[data-role="scrim"]');
 
+		// The app bar is sticky (crm.css) and the filter bar stacks under it,
+		// which means the filter bar's own offset has to know the app bar's
+		// real rendered height — translation length, item count and viewport
+		// width (crm.css wraps it onto a second row at narrow widths) all move
+		// it, so a guessed CSS constant would drift the moment any of those
+		// did. Measured instead, the same way initHeroArt() (theme nav.js)
+		// measures a dimension CSS alone cannot know. Setup screens have no
+		// app bar at all, hence the null guard.
+		var appbar = root.querySelector('.pcm-crm-appbar');
+		if (appbar) {
+			var syncAppbarHeight = function () {
+				root.style.setProperty('--pcm-appbar-height', appbar.offsetHeight + 'px');
+			};
+			syncAppbarHeight();
+			if (window.ResizeObserver) {
+				new ResizeObserver(syncAppbarHeight).observe(appbar);
+			} else if (window.addEventListener) {
+				window.addEventListener('resize', syncAppbarHeight);
+			}
+		}
+
 		state.view = root.dataset.view;
 		readHash();
 

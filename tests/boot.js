@@ -25,7 +25,7 @@ function makeEl(tag) {
 		children: [],
 		className: '',
 		hidden: false,
-		style: {},
+		style: { setProperty() {} },
 		appendChild(child) { this.children.push(child); return child; },
 		insertBefore(child) { this.children.unshift(child); return child; },
 		// Views that position one control relative to another walk these, so
