@@ -15,13 +15,16 @@ if ( ! function_exists( 'check' ) ) { exit( "permissions.php is included from ru
 
 echo "\n--- permission areas and actions ---\n";
 
-check( 'the four areas are registered',
-	array_keys( pcm_crm_permission_areas() ), array( 'crm', 'pm', 'settings', 'media' ) );
+check( 'the three areas are registered',
+	array_keys( pcm_crm_permission_areas() ), array( 'crm', 'pm', 'settings' ) );
 check( 'Projects is the only module-backed area',
 	pcm_crm_permission_areas()['pm']['module'], 'pm' );
-// Deleting an attachment maps to delete_posts, which staff will not hold — so
-// offering the action would be a checkbox that does nothing.
-check( 'media offers no delete', in_array( 'delete', pcm_crm_area_actions( 'media' ), true ), false );
+// There is no delete_options equivalent to gate a "wipe every setting" action
+// against, and PCM Settings already has its own dedicated, narrower controls
+// (a Profile still assigned to somebody refuses a delete, a Permission Set
+// simply does not) — a fourth, blanket Delete here would be a checkbox with
+// nothing real behind it.
+check( 'settings offers no delete', in_array( 'delete', pcm_crm_area_actions( 'settings' ), true ), false );
 check( 'crm offers all four', pcm_crm_area_actions( 'crm' ), array( 'view', 'edit', 'delete', 'export' ) );
 
 echo "\n--- grants are sanitised on the way in ---\n";
@@ -31,7 +34,7 @@ check( 'an unknown area is dropped',
 check( 'an unknown action is dropped',
 	pcm_crm_sanitize_grants( array( 'crm' => array( 'view', 'fly' ) ) ), array( 'crm' => array( 'view' ) ) );
 check( 'an action its area does not offer is dropped',
-	pcm_crm_sanitize_grants( array( 'media' => array( 'view', 'delete' ) ) ), array( 'media' => array( 'view' ) ) );
+	pcm_crm_sanitize_grants( array( 'settings' => array( 'view', 'delete' ) ) ), array( 'settings' => array( 'view' ) ) );
 // Applied at save time, not at read time: then what is stored is what is true,
 // the editing matrix never shows a surprising blank, and pcm_crm_can() stays a
 // plain array lookup on a function called once per route.
@@ -164,13 +167,6 @@ check( 'Projects alone still reaches the app', pcm_crm_user_can(), true );
 update_user_meta( get_current_user_id(), PCM_CRM_PROFILE_META, 'empty' );
 pcm_crm_flush_permissions();
 check( 'nothing granted reaches nothing', pcm_crm_user_can(), false );
-
-// Media alone is not app access — it is a library, not a screen.
-update_option( PCM_CRM_PROFILES_OPTION, array_merge( pcm_crm_profiles(),
-	array( 'media-only' => array( 'label' => 'Media', 'grants' => array( 'media' => array( 'view' ) ) ) ) ) );
-update_user_meta( get_current_user_id(), PCM_CRM_PROFILE_META, 'media-only' );
-pcm_crm_flush_permissions();
-check( 'media alone is not app access', pcm_crm_user_can(), false );
 
 echo "\n--- objects resolve to areas ---\n";
 
@@ -378,7 +374,7 @@ check( 'whitespace alone is refused too',
 $pcm_cleaned = pcm_crm_clean_access_definition( array(
 	'label'       => 'Read Only',
 	'description' => 'Sees everything, changes nothing.',
-	'grants'      => array( 'crm' => array( 'view' ), 'bogus' => array( 'view' ), 'media' => array( 'view', 'delete' ) ),
+	'grants'      => array( 'crm' => array( 'view' ), 'bogus' => array( 'view' ), 'settings' => array( 'view', 'delete' ) ),
 ) );
 
 check( 'the label and description come through', array( $pcm_cleaned['label'], $pcm_cleaned['description'] ),
@@ -386,7 +382,7 @@ check( 'the label and description come through', array( $pcm_cleaned['label'], $
 check( 'grants run through the same sanitiser the model uses — an unknown area is dropped',
 	isset( $pcm_cleaned['grants']['bogus'] ), false );
 check( 'and an action its area does not offer is dropped',
-	$pcm_cleaned['grants']['media'], array( 'view' ) );
+	$pcm_cleaned['grants']['settings'], array( 'view' ) );
 
 echo "\n--- deleting a profile that is still somebody's baseline ---\n";
 
@@ -810,10 +806,8 @@ check( 'the settings route enqueues no app at all — there is nothing there to 
 check( 'settings wants the Setup frame', pcm_crm_front_screen_wants_setup_frame( 'settings' ), true );
 check( 'and so does an app-backed page', pcm_crm_front_screen_wants_setup_frame( 'templates' ), true );
 check( 'an ordinary CRM screen does not', pcm_crm_front_screen_wants_setup_frame( 'contacts' ), false );
-check( 'neither does My Profile or Media, which draw outside it on purpose',
-	array( pcm_crm_front_screen_wants_setup_frame( 'profile' ), pcm_crm_front_screen_wants_setup_frame( 'media' ) ),
-	array( false, false )
-);
+check( 'neither does My Profile, which draws outside it on purpose',
+	pcm_crm_front_screen_wants_setup_frame( 'profile' ), false );
 
 pcm_test_set_query_vars( array( 'pcm_crm_screen' => 'templates' ) );
 unset( $GLOBALS['pcm_test_localized'] );
@@ -1067,34 +1061,21 @@ check( 'the logo URL falls through unchanged',
 unset( $_REQUEST['redirect_to'] );
 $GLOBALS['pcm_test_users'] = array();
 
-echo "\n--- My Profile: what is wrong with a submitted change, if anything ---\n";
+echo "\n--- My Profile: what is wrong with a submitted password change, if anything ---\n";
 
 // A plain function, checkable without wp_safe_redirect()'s exit — the same
 // shape pcm_crm_clean_user_access() and pcm_crm_staff_redirect_target()
-// already use.
-check( 'a clean change has nothing wrong with it',
-	pcm_crm_my_profile_validation_error( 5, 'me@example.com', '', '' ), '' );
-check( 'an invalid email is caught',
-	pcm_crm_my_profile_validation_error( 5, 'not-an-email', '', '' ), 'email-invalid' );
-
-$GLOBALS['pcm_test_users'][5] = (object) array( 'ID' => 5, 'user_email' => 'me@example.com', 'user_login' => 'me' );
-$GLOBALS['pcm_test_users'][6] = (object) array( 'ID' => 6, 'user_email' => 'someone-else@example.com', 'user_login' => 'other' );
-
-check( 'an email already yours is not "taken" — you may resave your own address',
-	pcm_crm_my_profile_validation_error( 5, 'me@example.com', '', '' ), '' );
-check( 'an email belonging to a different account is refused',
-	pcm_crm_my_profile_validation_error( 5, 'someone-else@example.com', '', '' ), 'email-taken' );
-
+// already use. Name and email are read-only on this screen now (an
+// administrator changes them from the User screen instead), so this
+// function has nothing left to validate about either.
 check( 'both password fields blank means "leave it unchanged" — not an error',
-	pcm_crm_my_profile_validation_error( 5, 'me@example.com', '', '' ), '' );
+	pcm_crm_my_profile_validation_error( '', '' ), '' );
 check( 'mismatched passwords are caught',
-	pcm_crm_my_profile_validation_error( 5, 'me@example.com', 'a-long-enough-password', 'a-different-one' ), 'password-mismatch' );
+	pcm_crm_my_profile_validation_error( 'a-long-enough-password', 'a-different-one' ), 'password-mismatch' );
 check( 'a matching but too-short password is caught',
-	pcm_crm_my_profile_validation_error( 5, 'me@example.com', 'short', 'short' ), 'password-short' );
+	pcm_crm_my_profile_validation_error( 'short', 'short' ), 'password-short' );
 check( 'a matching, long-enough password passes',
-	pcm_crm_my_profile_validation_error( 5, 'me@example.com', 'a-long-enough-password', 'a-long-enough-password' ), '' );
-
-$GLOBALS['pcm_test_users'] = array();
+	pcm_crm_my_profile_validation_error( 'a-long-enough-password', 'a-long-enough-password' ), '' );
 
 echo "\n--- My Profile stays outside the slug map and the Setup registry, on purpose ---\n";
 
@@ -1110,93 +1091,6 @@ echo "\n--- My Profile stays outside the slug map and the Setup registry, on pur
 // Settings-gate problem this file exists to avoid.
 check( 'profile has no admin-slug mapping', pcm_crm_slug_for_front( 'profile' ), '' );
 check( 'and it is not a registered Setup page either', pcm_crm_setup_page( 'profile' ), null );
-
-echo "\n--- the Media area ---\n";
-
-check( 'the staff role holds upload_files — without it wp.media shows an empty, un-uploadable library',
-	! empty( pcm_crm_staff_capabilities()['upload_files'] ), true );
-
-pcm_test_set_caps( array() );
-pcm_crm_flush_permissions();
-
-ob_start();
-pcm_crm_render_media_library();
-$pcm_media_html = ob_get_clean();
-
-check( 'no media access: the shared deny screen, not the library',
-	array( false !== strpos( $pcm_media_html, 'Not available' ), false !== strpos( $pcm_media_html, 'media-open' ) ),
-	array( true, false )
-);
-
-update_option( PCM_CRM_PROFILES_OPTION, array(
-	'media-viewer' => array( 'label' => 'Viewer', 'description' => '', 'grants' => array( 'media' => array( 'view' ) ) ),
-	'media-editor' => array( 'label' => 'Editor', 'description' => '', 'grants' => array( 'media' => array( 'view', 'edit' ) ) ),
-) );
-$GLOBALS['pcm_test_users'] = array( 20 => (object) array( 'ID' => 20, 'roles' => array( PCM_CRM_STAFF_ROLE ) ) );
-$GLOBALS['pcm_test_current_user'] = $GLOBALS['pcm_test_users'][20];
-pcm_test_set_caps( array( PCM_CRM_CAP => true ) );
-
-update_user_meta( 20, PCM_CRM_PROFILE_META, 'media-viewer' );
-pcm_crm_flush_permissions( 20 );
-
-ob_start();
-pcm_crm_render_media_library();
-$pcm_media_html = ob_get_clean();
-
-check( 'view-only: the library renders, worded as browse-only',
-	array( false !== strpos( $pcm_media_html, 'data-role="media-open"' ), false !== strpos( $pcm_media_html, 'Browse Media Library' ) ),
-	array( true, true )
-);
-check( 'and not worded as though they can add files',
-	false !== strpos( $pcm_media_html, 'Open Media Library' ), false );
-
-update_user_meta( 20, PCM_CRM_PROFILE_META, 'media-editor' );
-pcm_crm_flush_permissions( 20 );
-
-ob_start();
-pcm_crm_render_media_library();
-$pcm_media_html = ob_get_clean();
-
-check( 'edit access: worded to invite adding files',
-	false !== strpos( $pcm_media_html, 'Open Media Library' ), true );
-
-pcm_test_reset_caps();
-$GLOBALS['pcm_test_current_user'] = null;
-$GLOBALS['pcm_test_users']        = array();
-update_option( PCM_CRM_PROFILES_OPTION, array() );
-pcm_crm_flush_permissions();
-
-echo "\n--- the Media door in the app bar — front only, and gated the same way as PCM Settings ---\n";
-
-$GLOBALS['pcm_test_users'] = array( 21 => (object) array( 'ID' => 21, 'roles' => array( PCM_CRM_STAFF_ROLE ) ) );
-$GLOBALS['pcm_test_current_user'] = $GLOBALS['pcm_test_users'][21];
-pcm_test_set_caps( array( PCM_CRM_CAP => true ) );
-
-update_option( PCM_CRM_PROFILES_OPTION, array(
-	'media-only' => array( 'label' => 'Media', 'description' => '', 'grants' => array( 'crm' => array( 'view' ), 'media' => array( 'view' ) ) ),
-) );
-update_user_meta( 21, PCM_CRM_PROFILE_META, 'media-only' );
-pcm_crm_flush_permissions( 21 );
-
-ob_start();
-pcm_crm_app_bar( 'contacts', 'crm', 'front' );
-$pcm_bar_html = ob_get_clean();
-
-check( 'a viewer granted media on the front end sees the door',
-	false !== strpos( $pcm_bar_html, 'Media' ), true );
-
-ob_start();
-pcm_crm_app_bar( 'contacts', 'crm', 'admin' );
-$pcm_bar_html = ob_get_clean();
-
-check( 'the same viewer sees no Media door in wp-admin — there is nowhere for it to go',
-	false !== strpos( $pcm_bar_html, 'Media' ), false );
-
-pcm_test_reset_caps();
-$GLOBALS['pcm_test_current_user'] = null;
-$GLOBALS['pcm_test_users']        = array();
-update_option( PCM_CRM_PROFILES_OPTION, array() );
-pcm_crm_flush_permissions();
 
 echo "\n--- provisioning CRM Access from WordPress's own User screens ---\n";
 

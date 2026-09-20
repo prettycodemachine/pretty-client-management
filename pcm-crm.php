@@ -108,7 +108,6 @@ require_once PCM_CRM_DIR . 'public/form.php';
 // every area whether or not its module is active.
 require_once PCM_CRM_DIR . 'public/staff.php';
 require_once PCM_CRM_DIR . 'public/staff-profile.php';
-require_once PCM_CRM_DIR . 'public/staff-media.php';
 
 // Last, so a module can register against everything above it — objects, related
 // lists, merge prefixes, settings tabs — without the core files knowing it

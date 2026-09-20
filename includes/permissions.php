@@ -48,11 +48,6 @@ function pcm_crm_permission_areas() {
 			'description' => __( 'Everything under PCM Settings — the pipeline, fields and layouts, templates, modules.', 'pcm-crm' ),
 			'module'      => '',
 		),
-		'media'    => array(
-			'label'       => __( 'Media', 'pcm-crm' ),
-			'description' => __( 'The media library, for attachments and project documents.', 'pcm-crm' ),
-			'module'      => '',
-		),
 	) );
 }
 
@@ -62,10 +57,6 @@ function pcm_crm_permission_areas() {
  * Deliberately four and no more. Anything finer becomes a matrix nobody reads,
  * and the place to express "only their own records" is record scoping, not a
  * fifth column here.
- *
- * `delete` is absent from the Media area on purpose: deleting an attachment
- * maps to WordPress's delete_posts, which staff will not hold, so offering it
- * would be a checkbox that does nothing.
  */
 function pcm_crm_permission_actions() {
 	return apply_filters( 'pcm_crm_permission_actions', array(
@@ -81,10 +72,6 @@ function pcm_crm_permission_actions() {
  */
 function pcm_crm_area_actions( $pcm_area ) {
 	$pcm_actions = array_keys( pcm_crm_permission_actions() );
-
-	if ( 'media' === $pcm_area ) {
-		$pcm_actions = array_values( array_diff( $pcm_actions, array( 'delete', 'export' ) ) );
-	}
 
 	if ( 'settings' === $pcm_area ) {
 		$pcm_actions = array_values( array_diff( $pcm_actions, array( 'delete' ) ) );
@@ -163,20 +150,19 @@ function pcm_crm_default_profiles() {
 		'sales'    => array(
 			'label'       => __( 'Sales', 'pcm-crm' ),
 			'description' => __( 'The CRM only — accounts, contacts, deals and reports.', 'pcm-crm' ),
-			'grants'      => array( 'crm' => array( 'view', 'edit', 'export' ), 'media' => array( 'view' ) ),
+			'grants'      => array( 'crm' => array( 'view', 'edit', 'export' ) ),
 		),
 		'delivery' => array(
 			'label'       => __( 'Delivery', 'pcm-crm' ),
 			'description' => __( 'Projects only — no access to the sales pipeline.', 'pcm-crm' ),
-			'grants'      => array( 'pm' => array( 'view', 'edit' ), 'media' => array( 'view', 'edit' ) ),
+			'grants'      => array( 'pm' => array( 'view', 'edit' ) ),
 		),
 		'full'     => array(
 			'label'       => __( 'Sales and Delivery', 'pcm-crm' ),
 			'description' => __( 'Both apps, without PCM Settings.', 'pcm-crm' ),
 			'grants'      => array(
-				'crm'   => array( 'view', 'edit', 'delete', 'export' ),
-				'pm'    => array( 'view', 'edit', 'delete' ),
-				'media' => array( 'view', 'edit' ),
+				'crm' => array( 'view', 'edit', 'delete', 'export' ),
+				'pm'  => array( 'view', 'edit', 'delete' ),
 			),
 		),
 	);

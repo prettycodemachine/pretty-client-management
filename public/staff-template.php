@@ -78,14 +78,6 @@ function pcm_crm_front_route( $pcm_screen, $pcm_id, $pcm_tab ) {
 		return;
 	}
 
-	if ( 'media' === $pcm_screen ) {
-		// pcm_crm_render_media_library() (public/staff-media.php) gates
-		// itself on pcm_crm_can( 'media', 'view' ), the same pattern
-		// pcm_crm_render_settings() already uses.
-		pcm_crm_render_media_library();
-		return;
-	}
-
 	$pcm_admin_slug = pcm_crm_slug_for_front( $pcm_screen );
 	$pcm_callbacks  = pcm_crm_screen_callbacks();
 

@@ -408,11 +408,6 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 		return pcm_crm_can( isset( $pcm_other['area'] ) ? $pcm_other['area'] : 'crm', 'view' );
 	} );
 	$pcm_settings_reachable = pcm_crm_can( 'settings', 'view' );
-	// Media has no wp-admin route at all (public/staff-media.php) — an
-	// administrator already has the real Media Library there, and staff are
-	// meant to reach it only through the front end, per the same reasoning
-	// PCM Settings' app-backed pages stay admin-only until they get one.
-	$pcm_media_reachable = 'front' === $pcm_host && pcm_crm_can( 'media', 'view' );
 	?>
 	<nav class="pcm-crm-appbar" aria-label="<?php echo esc_attr( $pcm_apps[ $pcm_app ]['label'] ); ?>">
 		<span class="pcm-crm-appbar-name"><?php echo esc_html( $pcm_apps[ $pcm_app ]['label'] ); ?></span>
@@ -441,12 +436,6 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 				</li>
 			<?php endforeach; ?>
 		</ul>
-		<?php if ( $pcm_media_reachable ) : ?>
-			<a class="pcm-crm-appbar-setup" href="<?php echo esc_url( pcm_crm_front_base_url() . 'media/' ); ?>">
-				<span class="dashicons dashicons-admin-media" aria-hidden="true"></span>
-				<?php esc_html_e( 'Media', 'pcm-crm' ); ?>
-			</a>
-		<?php endif; ?>
 		<?php if ( $pcm_settings_reachable ) : ?>
 			<a class="pcm-crm-appbar-setup" href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>">
 				<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
