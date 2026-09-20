@@ -19,14 +19,14 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 pcm_crm_register_setup_page( 'access-profiles', array(
 	'group'       => 'platform',
 	'label'       => __( 'Profiles', 'pcm-crm' ),
-	'description' => __( 'The baseline every staff member holds — exactly one each. What Permission Sets add to.', 'pcm-crm' ),
+	'description' => __( 'The baseline every staff member holds — exactly one each. What Permission Extensions add to.', 'pcm-crm' ),
 	'render'      => 'pcm_crm_render_access_profiles_page',
 	'order'       => 30,
 ) );
 
 pcm_crm_register_setup_page( 'access-permission-sets', array(
 	'group'       => 'platform',
-	'label'       => __( 'Permission Sets', 'pcm-crm' ),
+	'label'       => __( 'Permission Extensions', 'pcm-crm' ),
 	'description' => __( 'Extra access on top of a profile. A set never takes access away, only adds it.', 'pcm-crm' ),
 	'render'      => 'pcm_crm_render_access_permission_sets_page',
 	'order'       => 40,
@@ -35,7 +35,7 @@ pcm_crm_register_setup_page( 'access-permission-sets', array(
 pcm_crm_register_setup_page( 'access-users', array(
 	'group'       => 'platform',
 	'label'       => __( 'Staff Access', 'pcm-crm' ),
-	'description' => __( 'Which profile and permission sets each staff member holds.', 'pcm-crm' ),
+	'description' => __( 'Which profile and permission extensions each staff member holds.', 'pcm-crm' ),
 	'render'      => 'pcm_crm_render_access_users_page',
 	'order'       => 50,
 ) );
@@ -63,7 +63,7 @@ function pcm_crm_access_kind( $pcm_kind ) {
 			'singular'  => __( 'Profile', 'pcm-crm' ),
 			'plural'    => __( 'Profiles', 'pcm-crm' ),
 			'new_cta'   => __( 'New Profile', 'pcm-crm' ),
-			'blurb'     => __( 'Every staff member holds exactly one of these as their baseline. Choose the widest access most people in this profile should have — Permission Sets are for the exceptions.', 'pcm-crm' ),
+			'blurb'     => __( 'Every staff member holds exactly one of these as their baseline. Choose the widest access most people in this profile should have — Permission Extensions are for the exceptions.', 'pcm-crm' ),
 		),
 		'set' => array(
 			'option'    => PCM_CRM_SETS_OPTION,
@@ -73,9 +73,9 @@ function pcm_crm_access_kind( $pcm_kind ) {
 			'action'    => 'pcm_crm_save_permission_set',
 			'del_action' => 'pcm_crm_delete_permission_set',
 			'query_arg' => 'set',
-			'singular'  => __( 'Permission Set', 'pcm-crm' ),
-			'plural'    => __( 'Permission Sets', 'pcm-crm' ),
-			'new_cta'   => __( 'New Permission Set', 'pcm-crm' ),
+			'singular'  => __( 'Permission Extension', 'pcm-crm' ),
+			'plural'    => __( 'Permission Extensions', 'pcm-crm' ),
+			'new_cta'   => __( 'New Permission Extension', 'pcm-crm' ),
 			'blurb'     => __( 'A named bundle of extra access. Assign one to anybody who needs more than their profile without changing the profile for everybody who holds it.', 'pcm-crm' ),
 		),
 	);
@@ -242,7 +242,7 @@ function pcm_crm_render_access_definitions_page( $pcm_kind ) {
 		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $pcm_error['message'] ) );
 	} elseif ( 'saved' === $pcm_result ) {
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
-			/* translators: %s: "Profile" or "Permission Set" */
+			/* translators: %s: "Profile" or "Permission Extension" */
 			esc_html( sprintf( __( '%s saved.', 'pcm-crm' ), $pcm_config['singular'] ) ) );
 	} elseif ( 'deleted' === $pcm_result ) {
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
@@ -731,7 +731,7 @@ function pcm_crm_render_access_users_page() {
 				<?php $pcm_invite_sets = pcm_crm_permission_sets(); ?>
 				<?php if ( $pcm_invite_sets ) : ?>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Permission Sets', 'pcm-crm' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Permission Extensions', 'pcm-crm' ); ?></th>
 						<td>
 							<?php foreach ( $pcm_invite_sets as $pcm_key => $pcm_set ) : ?>
 								<label>
@@ -763,7 +763,7 @@ function pcm_crm_render_access_users_page() {
 					<tr>
 						<th><?php esc_html_e( 'Name', 'pcm-crm' ); ?></th>
 						<th><?php esc_html_e( 'Profile', 'pcm-crm' ); ?></th>
-						<th><?php esc_html_e( 'Permission Sets', 'pcm-crm' ); ?></th>
+						<th><?php esc_html_e( 'Permission Extensions', 'pcm-crm' ); ?></th>
 						<th></th>
 					</tr>
 				</thead>
@@ -841,7 +841,7 @@ function pcm_crm_render_access_fields( $pcm_profile_key, array $pcm_set_keys ) {
 	<?php $pcm_sets = pcm_crm_permission_sets(); ?>
 	<?php if ( $pcm_sets ) : ?>
 		<div class="pcm-crm-card">
-			<h2><?php esc_html_e( 'Permission Sets', 'pcm-crm' ); ?></h2>
+			<h2><?php esc_html_e( 'Permission Extensions', 'pcm-crm' ); ?></h2>
 			<p class="description"><?php esc_html_e( 'Any number, each adding to whatever the profile above already gives.', 'pcm-crm' ); ?></p>
 			<table class="form-table" role="presentation">
 				<tr>

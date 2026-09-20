@@ -38,7 +38,7 @@
 			);
 
 			summary.textContent = 'Profile: ' + profileText +
-				(setLabels.length ? ' · Permission Sets: ' + setLabels.join(', ') : '');
+				(setLabels.length ? ' · Permission Extensions: ' + setLabels.join(', ') : '');
 		}
 
 		function openDialog() {

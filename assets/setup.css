@@ -50,19 +50,23 @@
 }
 .pcm-setup-mark img {
   display: block;
-  height: 64px;
+  height: 120px;
   width: auto;
 }
-.pcm-setup-credit {
+/* Scoped like .pcm-setup-crumbs/.pcm-setup-exits below: .pcm-crm a's global
+   link colour (crm.css) outranks a bare .pcm-setup-credit on specificity, so
+   without the .pcm-setup ancestor this read as a blue link on the dark band
+   instead of the band-text colour it declares. */
+.pcm-setup .pcm-setup-credit {
   font-size: 0.65rem;
   font-weight: 600;
   text-align: center;
   white-space: nowrap;
   text-decoration: underline;
   color: var(--pcm-setup-band-text);
-  opacity: 0.85;
+  opacity: 1;
 }
-.pcm-setup-credit:hover { opacity: 1; }
+.pcm-setup .pcm-setup-credit:hover { color: var(--pcm-setup-band-text); text-decoration: none; }
 .pcm-setup-heading { flex: 1 1 auto; min-width: 0; }
 .pcm-setup .pcm-setup-band h1 {
   color: var(--pcm-setup-band-text);
