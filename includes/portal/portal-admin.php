@@ -187,6 +187,61 @@ function pcm_crm_portal_rest_invite( WP_REST_Request $pcm_request ) {
 }
 
 /**
+ * Remove a contact's portal access, without deleting their WordPress user or
+ * anything they created while active — a Help Ticket or a document they
+ * uploaded still needs to say who did it. Breaking pcm_crm_contact_id (the
+ * meta pcm_crm_portal_context() reads to resolve a session to a contact and
+ * its projects) is what actually revokes access: the login itself still
+ * works, but every portal route's permission check comes back with nothing
+ * to check against, the same "resolves to no access" shape a deleted
+ * contact_id already produces there. Re-inviting later finds the same user
+ * by email and relinks it, the same reuse pcm_crm_portal_invite_contact()
+ * already does for a lost invite.
+ */
+function pcm_crm_portal_revoke_contact( $pcm_contact_id ) {
+	if ( ! pcm_crm_module_active( 'portal' ) ) {
+		return new WP_Error( 'pcm_crm_portal_off', __( 'The Client Portal module is switched off.', 'pcm-crm' ) );
+	}
+
+	$pcm_contact = pcm_crm_contacts()->get( $pcm_contact_id );
+
+	if ( ! $pcm_contact ) {
+		return new WP_Error( 'pcm_crm_no_contact', __( 'That contact no longer exists.', 'pcm-crm' ) );
+	}
+
+	if ( empty( $pcm_contact['portal_user_id'] ) ) {
+		return new WP_Error( 'pcm_crm_portal_not_invited', __( 'This contact has no portal access to remove.', 'pcm-crm' ) );
+	}
+
+	delete_user_meta( $pcm_contact['portal_user_id'], 'pcm_crm_contact_id' );
+
+	global $wpdb;
+	$wpdb->update( PCM_CRM_Schema::contacts(), array( 'portal_user_id' => 0 ), array( 'id' => $pcm_contact_id ) );
+
+	return array( 'revoked' => true );
+}
+
+function pcm_crm_portal_register_revoke_route() {
+	register_rest_route( PCM_CRM_REST::NS, '/contacts/(?P<pcm_id>\d+)/revoke-portal', array(
+		'methods'             => 'POST',
+		'callback'            => 'pcm_crm_portal_rest_revoke',
+		'permission_callback' => array( 'PCM_CRM_REST', 'permission' ),
+	) );
+}
+add_action( 'rest_api_init', 'pcm_crm_portal_register_revoke_route' );
+
+function pcm_crm_portal_rest_revoke( WP_REST_Request $pcm_request ) {
+	$pcm_result = pcm_crm_portal_revoke_contact( absint( $pcm_request->get_url_params()['pcm_id'] ) );
+
+	if ( is_wp_error( $pcm_result ) ) {
+		$pcm_result->add_data( array( 'status' => 400 ) );
+		return $pcm_result;
+	}
+
+	return rest_ensure_response( $pcm_result );
+}
+
+/**
  * The Invite to Portal button on a Contact's record page — a module adding a
  * record action without editing crm.js, via registerRecordActions().
  */

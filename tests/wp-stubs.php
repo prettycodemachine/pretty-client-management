@@ -319,6 +319,9 @@ function wp_update_user( array $pcm_args ) {
 function get_password_reset_key( $pcm_user ) {
 	return 'test-reset-key';
 }
+function get_permalink( $pcm_id = 0 ) {
+	return $pcm_id ? 'https://example.com/?page_id=' . (int) $pcm_id : '';
+}
 function wp_delete_file( $f ) { @unlink( $f ); }
 function get_temp_dir() { return sys_get_temp_dir() . '/'; }
 function trailingslashit( $p ) { return rtrim( $p, '/' ) . '/'; }
@@ -441,6 +444,7 @@ function get_user_meta( $id, $key = '', $single = false ) {
 	return isset( $GLOBALS['pcm_test_user_meta'][ $id ][ $key ] ) ? $GLOBALS['pcm_test_user_meta'][ $id ][ $key ] : '';
 }
 function update_user_meta( $id, $key, $value ) { $GLOBALS['pcm_test_user_meta'][ $id ][ $key ] = $value; return true; }
+function delete_user_meta( $id, $key ) { unset( $GLOBALS['pcm_test_user_meta'][ $id ][ $key ] ); return true; }
 function get_post( $id ) { return in_array( (int) $id, isset( $GLOBALS['pcm_test_attachments'] ) ? $GLOBALS['pcm_test_attachments'] : array(), true ) ? (object) array( 'ID' => (int) $id ) : null; }
 function esc_attr_e( $s ) { echo $s; }
 function esc_js( $s ) { return addslashes( (string) $s ); }

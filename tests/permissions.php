@@ -204,6 +204,7 @@ $pcm_routes = array(
 	'/contacts/(?P<pcm_id>[\d]+)/email'         => array( 'POST' => 'crm/edit' ),
 	'/contacts/(?P<pcm_id>[\d]+)/enroll'        => array( 'POST' => 'crm/edit' ),
 	'/contacts/(?P<pcm_id>[\d]+)/invite-portal' => array( 'POST' => 'crm/edit' ),
+	'/contacts/(?P<pcm_id>[\d]+)/revoke-portal' => array( 'POST' => 'crm/edit' ),
 	'/enrollments/(?P<pcm_id>[\d]+)/stop'       => array( 'POST' => 'crm/edit' ),
 	'/schedules/(?P<pcm_id>[\d]+)/send'         => array( 'POST' => 'crm/edit' ),
 	'/pm/time-context'                          => array( 'GET' => 'pm/view' ),

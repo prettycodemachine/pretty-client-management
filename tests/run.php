@@ -2404,6 +2404,92 @@ check( 'a quarterly retainer says Quarter',
 check( 'an unrecognised or missing cadence falls back to a generic Period',
 	pcm_crm_portal_period_label( array() ), 'Hours Used This Period' );
 
+echo "\n--- client portal invite and revoke ---\n";
+
+// A dedicated fixture rather than extending PCM_Portal_WPDB further: that one
+// answers for contact 7 with no email or portal_user_id, and several checks
+// above already depend on that exact shape.
+class PCM_Portal_Invite_WPDB extends FakeWPDB {
+	public $contacts = array(
+		20 => array( 'id' => 20, 'email' => 'client@example.com', 'first_name' => 'Robin', 'last_name' => 'Vega', 'portal_user_id' => 0 ),
+		21 => array( 'id' => 21, 'email' => '', 'first_name' => 'No', 'last_name' => 'Email', 'portal_user_id' => 0 ),
+	);
+
+	function get_row( $q = '', $o = null ) {
+		if ( false !== strpos( $q, 'pcm_crm_contacts' ) && preg_match( '/id = (\d+)/', $q, $m ) && isset( $this->contacts[ (int) $m[1] ] ) ) {
+			return $this->contacts[ (int) $m[1] ];
+		}
+
+		return null;
+	}
+
+	function update( $table = '', $data = array(), $where = array() ) {
+		if ( isset( $where['id'] ) && isset( $this->contacts[ $where['id'] ] ) && array_key_exists( 'portal_user_id', $data ) ) {
+			$this->contacts[ $where['id'] ]['portal_user_id'] = $data['portal_user_id'];
+		}
+
+		return 1;
+	}
+}
+
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 0, 'portal' => 0 ) );
+check( 'invite is refused while the module is off',
+	pcm_crm_portal_invite_contact( 20 )->get_error_code(), 'pcm_crm_portal_off' );
+check( 'and so is revoke', pcm_crm_portal_revoke_contact( 20 )->get_error_code(), 'pcm_crm_portal_off' );
+
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1, 'portal' => 1 ) );
+
+$pcm_invite_wpdb = new PCM_Portal_Invite_WPDB();
+$GLOBALS['wpdb'] = $pcm_invite_wpdb;
+
+check( 'a nonexistent contact is refused',
+	pcm_crm_portal_invite_contact( 999 )->get_error_code(), 'pcm_crm_no_contact' );
+check( 'a contact with no email is refused',
+	pcm_crm_portal_invite_contact( 21 )->get_error_code(), 'pcm_crm_portal_no_email' );
+check( 'no portal page configured is refused',
+	pcm_crm_portal_invite_contact( 20 )->get_error_code(), 'pcm_crm_portal_no_page' );
+
+update_option( 'pcm_crm_portal_page_id', 42 );
+
+$pcm_invited = pcm_crm_portal_invite_contact( 20 );
+check( 'inviting a contact succeeds',
+	is_wp_error( $pcm_invited ) ? $pcm_invited->get_error_code() : $pcm_invited['invited'], true );
+
+$pcm_new_user = get_user_by( 'email', 'client@example.com' );
+check( 'a pcm_client user is created for them', $pcm_new_user->roles, array( 'pcm_client' ) );
+check( 'and linked to the contact both ways',
+	array( (int) get_user_meta( $pcm_new_user->ID, 'pcm_crm_contact_id', true ), $pcm_invite_wpdb->contacts[20]['portal_user_id'] ),
+	array( 20, $pcm_new_user->ID ) );
+
+// Inviting again — a lost invite, say — reuses the same account rather than
+// colliding on wp_insert_user(), and is what lets Resend just call this again.
+$pcm_users_before = count( $GLOBALS['pcm_test_users'] );
+$pcm_resent = pcm_crm_portal_invite_contact( 20 );
+check( 'inviting again resends rather than creating a second account',
+	is_wp_error( $pcm_resent ) ? $pcm_resent->get_error_code() : $pcm_resent['portal_user_id'],
+	$pcm_new_user->ID );
+check( 'and no new user was created', count( $GLOBALS['pcm_test_users'] ), $pcm_users_before );
+
+check( 'a contact never invited has nothing to revoke',
+	pcm_crm_portal_revoke_contact( 21 )->get_error_code(), 'pcm_crm_portal_not_invited' );
+
+$pcm_revoked = pcm_crm_portal_revoke_contact( 20 );
+check( 'revoking succeeds',
+	is_wp_error( $pcm_revoked ) ? $pcm_revoked->get_error_code() : $pcm_revoked['revoked'], true );
+check( 'the contact no longer carries a portal user', $pcm_invite_wpdb->contacts[20]['portal_user_id'], 0 );
+check( 'and the reverse-lookup meta is gone, not just zeroed',
+	get_user_meta( $pcm_new_user->ID, 'pcm_crm_contact_id', true ), '' );
+
+// The WordPress user itself is never touched by a revoke, so a later invite
+// relinks the same account instead of creating a duplicate.
+check( 'the WordPress user survives a revoke', get_user_by( 'id', $pcm_new_user->ID ) !== null, true );
+
+$pcm_relinked = pcm_crm_portal_invite_contact( 20 );
+check( 'inviting again after a revoke relinks the same account',
+	is_wp_error( $pcm_relinked ) ? $pcm_relinked->get_error_code() : $pcm_relinked['portal_user_id'],
+	$pcm_new_user->ID );
+check( 'and still no new user was created', count( $GLOBALS['pcm_test_users'] ), $pcm_users_before );
+
 unset( $GLOBALS['pcm_test_current_user'], $GLOBALS['pcm_test_user_meta'], $GLOBALS['pcm_test_attachments'], $GLOBALS['pcm_test_users'][4] );
 $GLOBALS['wpdb'] = $pcm_real_wpdb;
 
