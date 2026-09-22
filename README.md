@@ -4,6 +4,10 @@ A WordPress plugin providing a customizable CRM (Accounts, Contacts, Opportuniti
 
 Pretty Client Management includes both an employee interface and a client portal for project management. This plugin can be used from lead intake, to tracking the sales pipeline, all the way through project management and time tracking. The system includes a contact form builder, a full admin experience, the capability to export all data, and much more. 
 
+## Installation
+
+Download the plugin zip from the **[latest release](https://github.com/prettycodemachine/pretty-client-management/releases/latest)** and upload it via Plugins → Add New → Upload Plugin — don't use this repo page's own "Code → Download ZIP", which packages the whole repository (tests, README, LICENSE included) rather than an installable plugin folder.
+
 ## Requirements
 
 - WordPress 6.0+
