@@ -192,15 +192,22 @@ function pcm_crm_ensure_custom_column( $pcm_object, array $pcm_field ) {
 	return true;
 }
 
+/**
+ * An object's table, read from its own registered model rather than a second
+ * hand-kept list — the object registry (includes/objects.php) already ended
+ * four of those, and a table name is exactly the kind of fact a model already
+ * knows about itself.
+ */
 function pcm_crm_object_table( $pcm_object ) {
-	$pcm_tables = array(
-		'accounts'      => PCM_CRM_Schema::accounts(),
-		'contacts'      => PCM_CRM_Schema::contacts(),
-		'opportunities' => PCM_CRM_Schema::opportunities(),
-		'activities'    => PCM_CRM_Schema::activities(),
-	);
+	$pcm_def = pcm_crm_object( $pcm_object );
 
-	return isset( $pcm_tables[ $pcm_object ] ) ? $pcm_tables[ $pcm_object ] : '';
+	if ( ! $pcm_def || empty( $pcm_def['model'] ) || ! is_callable( $pcm_def['model'] ) ) {
+		return '';
+	}
+
+	$pcm_model = call_user_func( $pcm_def['model'] );
+
+	return $pcm_model instanceof PCM_CRM_Model ? $pcm_model->table() : '';
 }
 
 /**

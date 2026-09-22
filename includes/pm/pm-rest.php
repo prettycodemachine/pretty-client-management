@@ -177,21 +177,14 @@ pcm_crm_register_related( 'projects', 'pcm_crm_pm_related_project' );
  * Supplied through the layout filter rather than added to
  * pcm_crm_default_layouts(), which is core's list — a module should not have to
  * edit it to describe its own objects. An admin can still rearrange these on the
- * Fields & Layouts tab, and a saved arrangement wins, because pcm_crm_layout()
- * reaches for the stored one first and only falls through to here.
+ * Fields & Layouts tab, and a saved arrangement wins — not decided here:
+ * pcm_crm_layout_sections() only reaches this filter (via
+ * pcm_crm_layout_default()) once it has already checked both the per-variant
+ * and the base saved options and found neither, so this callback can simply
+ * answer for the objects it knows about without checking for itself whether
+ * something was saved.
  */
-function pcm_crm_pm_layout( $pcm_layout, $pcm_object ) {
-	// The filter runs after pcm_crm_append_unplaced(), which has already swept
-	// every field of an object with no layout into one "Custom fields" section —
-	// so what arrives here is never empty and cannot be used to detect "no
-	// layout yet". The saved option is the only honest signal, and an
-	// arrangement someone made on the Fields & Layouts tab must win over this.
-	$pcm_saved = get_option( PCM_CRM_LAYOUTS_OPTION, array() );
-
-	if ( is_array( $pcm_saved ) && ! empty( $pcm_saved[ $pcm_object ] ) ) {
-		return $pcm_layout;
-	}
-
+function pcm_crm_pm_layout( $pcm_layout, $pcm_object, $pcm_variant = '' ) {
 	$pcm_layouts = array(
 		'projects' => array(
 			array( 'title' => '', 'fields' => array( 'name', 'project_code', 'account_id', 'opportunity_id', 'owner_id', 'project_type', 'stage_name' ) ),
@@ -245,7 +238,28 @@ function pcm_crm_pm_layout( $pcm_layout, $pcm_object ) {
 
 	return isset( $pcm_layouts[ $pcm_object ] ) ? $pcm_layouts[ $pcm_object ] : $pcm_layout;
 }
-add_filter( 'pcm_crm_layout', 'pcm_crm_pm_layout', 10, 2 );
+add_filter( 'pcm_crm_layout', 'pcm_crm_pm_layout', 10, 3 );
+
+/**
+ * The Project Types a project's layout can vary by — key => label, the shape
+ * pcm_crm_layout_variant_keys() promises. Only Project declares a
+ * layout_variant field (pm-objects.php), so every other object passes
+ * straight through.
+ */
+function pcm_crm_pm_layout_variant_keys( $pcm_keys, $pcm_object ) {
+	if ( 'projects' !== $pcm_object ) {
+		return $pcm_keys;
+	}
+
+	$pcm_out = array();
+
+	foreach ( pcm_crm_pm_types() as $pcm_key => $pcm_type ) {
+		$pcm_out[ $pcm_key ] = $pcm_type['label'];
+	}
+
+	return $pcm_out;
+}
+add_filter( 'pcm_crm_layout_variant_keys', 'pcm_crm_pm_layout_variant_keys', 10, 2 );
 
 /**
  * {{project.*}} in an email template.

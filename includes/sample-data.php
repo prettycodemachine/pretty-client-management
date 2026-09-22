@@ -552,29 +552,19 @@ class PCM_CRM_Sample_Data {
 /**
  * Is this an environment where fake data is acceptable?
  *
- * Deny by default: an unrecognised host is treated as production, because the
- * failure mode of guessing wrong is hundreds of fake records in a real CRM.
- * They are flagged and removable now, which makes the mistake recoverable —
- * not one worth making.
+ * Allowed by default on any site: sample data is flagged (is_test = 1) and
+ * removable with one click from the same screen it was created on, so the
+ * failure mode of guessing wrong is no longer hundreds of unrecoverable fake
+ * records — it is a few hundred rows with a one-click undo. Define
+ * PCM_CRM_ALLOW_SEED as false in wp-config.php to withhold it on a specific
+ * site anyway.
  */
 function pcm_crm_seed_allowed() {
-	if ( defined( 'PCM_CRM_ALLOW_SEED' ) && PCM_CRM_ALLOW_SEED ) {
-		return true;
+	if ( defined( 'PCM_CRM_ALLOW_SEED' ) ) {
+		return (bool) PCM_CRM_ALLOW_SEED;
 	}
 
-	$pcm_host = wp_parse_url( home_url(), PHP_URL_HOST );
-
-	if ( ! $pcm_host ) {
-		return false;
-	}
-
-	foreach ( array( 'staging', 'localhost', '.local', '.test', 'dev.' ) as $pcm_marker ) {
-		if ( false !== strpos( $pcm_host, $pcm_marker ) ) {
-			return true;
-		}
-	}
-
-	return false;
+	return true;
 }
 
 /**

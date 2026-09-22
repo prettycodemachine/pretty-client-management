@@ -84,19 +84,19 @@ class PCM_CRM_PM_Sample_Data {
 		$accounts = ! empty( $pcm_context['accounts'] ) ? $pcm_context['accounts'] : array();
 		$won      = $this->won_opportunities( $pcm_context );
 
-		// Weighted so the two retainer types dominate, which is what the real
+		// Weighted so the retainer type dominates, which is what the real
 		// business looks like, and so the board has something in every column.
 		$plan = array(
-			array( 'Salesforce Support Retainer', 'Active' ),
-			array( 'Salesforce Support Retainer', 'Active' ),
-			array( 'Salesforce Support Retainer', 'At Risk' ),
-			array( 'Salesforce Support Retainer', 'Renewal Pending' ),
-			array( 'Salesforce Support Retainer', 'Onboarding' ),
-			array( 'Salesforce Support Retainer', 'Churned' ),
-			array( 'AI Enablement Retainer', 'Active' ),
-			array( 'AI Enablement Retainer', 'Active' ),
-			array( 'AI Enablement Retainer', 'Onboarding' ),
-			array( 'AI Enablement Retainer', 'Ended' ),
+			array( 'Support Retainer', 'Active' ),
+			array( 'Support Retainer', 'Active' ),
+			array( 'Support Retainer', 'At Risk' ),
+			array( 'Support Retainer', 'Renewal Pending' ),
+			array( 'Support Retainer', 'Onboarding' ),
+			array( 'Support Retainer', 'Churned' ),
+			array( 'Support Retainer', 'Active' ),
+			array( 'Support Retainer', 'Active' ),
+			array( 'Support Retainer', 'Onboarding' ),
+			array( 'Support Retainer', 'Ended' ),
 			array( 'Custom Development', 'Build' ),
 			array( 'Custom Development', 'Discovery' ),
 			array( 'Custom Development', 'UAT' ),
@@ -108,9 +108,8 @@ class PCM_CRM_PM_Sample_Data {
 		);
 
 		$names = array(
-			'Salesforce Support Retainer' => array( 'Managed Support', 'Admin Retainer', 'Ongoing Support', 'Platform Care' ),
-			'AI Enablement Retainer'      => array( 'AI Enablement', 'Agentforce Enablement', 'AI Advisory', 'Copilot Rollout' ),
-			'Custom Development'          => array( 'Volunteer Portal', 'Grants Module', 'Data Migration', 'Reporting Rebuild', 'Integration Build', 'Donor Portal' ),
+			'Support Retainer'   => array( 'Managed Support', 'Admin Retainer', 'Ongoing Support', 'Platform Care', 'AI Advisory', 'Copilot Rollout' ),
+			'Custom Development' => array( 'Volunteer Portal', 'Grants Module', 'Data Migration', 'Reporting Rebuild', 'Integration Build', 'Donor Portal' ),
 		);
 
 		$model    = pcm_crm_projects();

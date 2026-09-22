@@ -42,7 +42,7 @@ function pcm_crm_modules() {
 			'pm' => array(
 				'label'       => __( 'Project Management', 'pcm-crm' ),
 				'description' => __( 'Projects, time, a RAID log and resourcing, hanging off the accounts and opportunities already here.', 'pcm-crm' ),
-				'default'     => 0,
+				'default'     => 1,
 				'schema'      => array(
 					'pm/pm-archetypes.php',
 					'pm/pm-picklists.php',

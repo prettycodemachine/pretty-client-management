@@ -68,6 +68,11 @@ function pcm_crm_register_settings() {
 		'sanitize_callback' => 'pcm_crm_sanitize_layouts',
 		'default'           => array(),
 	) );
+	pcm_crm_register_setting( 'pcm_crm_fields_settings', PCM_CRM_LAYOUT_VARIANTS_OPTION, array(
+		'type'              => 'array',
+		'sanitize_callback' => 'pcm_crm_sanitize_layout_variants',
+		'default'           => array(),
+	) );
 
 	pcm_crm_register_setting( 'pcm_crm_export_settings', 'pcm_crm_npsp_namespace', array(
 		'type'              => 'string',
@@ -942,21 +947,94 @@ add_action( 'admin_notices', 'pcm_crm_test_email_notice' );
    --------------------------------------------------------------------------- */
 
 /**
+ * Which module's objects this screen is showing — CRM (the default) or
+ * Project Management. Falls back to CRM whenever the pm module is off, the
+ * same as the module's own settings group disappearing from the sidebar —
+ * there is nothing to edit on a tab for a module nobody has switched on.
+ *
+ * A request naming an object but not a module (every custom-field save and
+ * delete redirect, which only ever knew the object it just touched) infers
+ * the module from that object's own registration rather than silently
+ * defaulting to CRM and stranding the request on the wrong screen — the
+ * object already carries this fact, the same one
+ * pcm_crm_fields_objects_for_module() reads off it.
+ */
+function pcm_crm_current_fields_module() {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
+	$pcm_module = isset( $_GET['module'] ) ? sanitize_key( wp_unslash( $_GET['module'] ) ) : '';
+
+	if ( '' === $pcm_module && isset( $_GET['object'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
+		$pcm_requested = pcm_crm_object( sanitize_key( wp_unslash( $_GET['object'] ) ) );
+
+		if ( $pcm_requested && ! empty( $pcm_requested['module'] ) ) {
+			$pcm_module = (string) $pcm_requested['module'];
+		}
+	}
+
+	return ( 'pm' === $pcm_module && function_exists( 'pcm_crm_module_active' ) && pcm_crm_module_active( 'pm' ) ) ? 'pm' : '';
+}
+
+/**
+ * The layoutable objects that belong on one module's tab.
+ */
+function pcm_crm_fields_objects_for_module( $pcm_module ) {
+	$pcm_out = array();
+
+	foreach ( pcm_crm_layoutable_objects() as $pcm_slug => $pcm_label ) {
+		$pcm_object = pcm_crm_object( $pcm_slug );
+
+		if ( $pcm_object && (string) $pcm_object['module'] === $pcm_module ) {
+			$pcm_out[ $pcm_slug ] = $pcm_label;
+		}
+	}
+
+	return $pcm_out;
+}
+
+/**
  * Which object this screen is editing.
  *
- * One object at a time rather than all four on one page: a layout editor is
- * already a busy screen, and four of them would be unusable.
+ * One object at a time rather than all of a module's on one page: a layout
+ * editor is already a busy screen, and several of them would be unusable.
  */
 function pcm_crm_current_fields_object() {
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
-	$pcm_object = isset( $_GET['object'] ) ? sanitize_key( wp_unslash( $_GET['object'] ) ) : 'contacts';
+	$pcm_module  = pcm_crm_current_fields_module();
+	$pcm_objects = pcm_crm_fields_objects_for_module( $pcm_module );
+	$pcm_default = 'pm' === $pcm_module ? 'projects' : 'contacts';
 
-	return isset( pcm_crm_customisable_objects()[ $pcm_object ] ) ? $pcm_object : 'contacts';
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
+	$pcm_object = isset( $_GET['object'] ) ? sanitize_key( wp_unslash( $_GET['object'] ) ) : $pcm_default;
+
+	return isset( $pcm_objects[ $pcm_object ] ) ? $pcm_object : $pcm_default;
+}
+
+/**
+ * Which of an object's layout variants this screen is editing — '' for its
+ * one shared layout, unless the object itself varies by something (Project,
+ * by project_type) and the request names one of its real keys.
+ */
+function pcm_crm_current_fields_variant( $pcm_object ) {
+	$pcm_keys = pcm_crm_layout_variant_keys( $pcm_object );
+
+	if ( ! $pcm_keys ) {
+		return '';
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
+	$pcm_variant = isset( $_GET['variant'] ) ? sanitize_key( wp_unslash( $_GET['variant'] ) ) : '';
+
+	return isset( $pcm_keys[ $pcm_variant ] ) ? $pcm_variant : '';
 }
 
 function pcm_crm_render_fields_tab() {
-	$pcm_object = pcm_crm_current_fields_object();
-	$pcm_model  = PCM_CRM_REST::model( $pcm_object );
+	$pcm_module        = pcm_crm_current_fields_module();
+	$pcm_object        = pcm_crm_current_fields_object();
+	$pcm_variant       = pcm_crm_current_fields_variant( $pcm_object );
+	$pcm_variant_keys  = pcm_crm_layout_variant_keys( $pcm_object );
+	$pcm_model         = PCM_CRM_REST::model( $pcm_object );
+	$pcm_customisable  = isset( pcm_crm_customisable_objects()[ $pcm_object ] );
+	$pcm_pm_active     = function_exists( 'pcm_crm_module_active' ) && pcm_crm_module_active( 'pm' );
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only
 	$pcm_result   = isset( $_GET['pcm_crm_field'] ) ? sanitize_key( wp_unslash( $_GET['pcm_crm_field'] ) ) : '';
@@ -967,10 +1045,23 @@ function pcm_crm_render_fields_tab() {
 		'key-taken'      => array( 'error', __( 'A field with that name already exists.', 'pcm-crm' ) ),
 	);
 	?>
+	<?php if ( $pcm_pm_active ) : ?>
+		<div class="pcm-crm-tabs pcm-crm-module-switch">
+			<a class="pcm-crm-tab<?php echo '' === $pcm_module ? ' is-active' : ''; ?>"
+				href="<?php echo esc_url( pcm_crm_setup_url( 'fields' ) ); ?>">
+				<?php esc_html_e( 'CRM', 'pcm-crm' ); ?>
+			</a>
+			<a class="pcm-crm-tab<?php echo 'pm' === $pcm_module ? ' is-active' : ''; ?>"
+				href="<?php echo esc_url( add_query_arg( 'module', 'pm', pcm_crm_setup_url( 'fields' ) ) ); ?>">
+				<?php echo esc_html( pcm_crm_modules()['pm']['label'] ); ?>
+			</a>
+		</div>
+	<?php endif; ?>
+
 	<div class="pcm-crm-object-switch">
-		<?php foreach ( pcm_crm_customisable_objects() as $pcm_slug => $pcm_label ) : ?>
+		<?php foreach ( pcm_crm_fields_objects_for_module( $pcm_module ) as $pcm_slug => $pcm_label ) : ?>
 			<a class="pcm-crm-object-pill<?php echo $pcm_slug === $pcm_object ? ' is-active' : ''; ?>"
-				href="<?php echo esc_url( add_query_arg( 'object', $pcm_slug, pcm_crm_setup_url( 'fields' ) ) ); ?>">
+				href="<?php echo esc_url( add_query_arg( array( 'module' => $pcm_module, 'object' => $pcm_slug ), pcm_crm_setup_url( 'fields' ) ) ); ?>">
 				<?php echo esc_html( $pcm_label ); ?>
 			</a>
 		<?php endforeach; ?>
@@ -982,6 +1073,39 @@ function pcm_crm_render_fields_tab() {
 		</div>
 	<?php endif; ?>
 
+	<?php if ( $pcm_variant_keys ) : ?>
+		<div class="pcm-crm-object-switch pcm-crm-variant-switch">
+			<a class="pcm-crm-object-pill<?php echo '' === $pcm_variant ? ' is-active' : ''; ?>"
+				href="<?php echo esc_url( add_query_arg( array( 'module' => $pcm_module, 'object' => $pcm_object ), pcm_crm_setup_url( 'fields' ) ) ); ?>">
+				<?php esc_html_e( 'Default', 'pcm-crm' ); ?>
+			</a>
+			<?php foreach ( $pcm_variant_keys as $pcm_key => $pcm_label ) : ?>
+				<a class="pcm-crm-object-pill<?php echo $pcm_key === $pcm_variant ? ' is-active' : ''; ?>"
+					href="<?php echo esc_url( add_query_arg( array( 'module' => $pcm_module, 'object' => $pcm_object, 'variant' => $pcm_key ), pcm_crm_setup_url( 'fields' ) ) ); ?>">
+					<?php echo esc_html( $pcm_label ); ?>
+				</a>
+			<?php endforeach; ?>
+		</div>
+		<p class="description">
+			<?php esc_html_e( 'Each project type can carry its own arrangement of fields. One left on Default follows the layout below.', 'pcm-crm' ); ?>
+		</p>
+	<?php endif; ?>
+
+	<?php
+	// Which option a change here is saved into: the object's one shared
+	// layout, or one project type's own override of it.
+	$pcm_option_base = $pcm_variant
+		? PCM_CRM_LAYOUT_VARIANTS_OPTION . '[' . $pcm_object . '][' . $pcm_variant . ']'
+		: PCM_CRM_LAYOUTS_OPTION . '[' . $pcm_object . ']';
+
+	$pcm_has_override = false;
+
+	if ( $pcm_variant ) {
+		$pcm_saved_variants = get_option( PCM_CRM_LAYOUT_VARIANTS_OPTION, array() );
+		$pcm_has_override    = is_array( $pcm_saved_variants ) && ! empty( $pcm_saved_variants[ $pcm_object ][ $pcm_variant ] );
+	}
+	?>
+
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-fields-form" data-object="<?php echo esc_attr( $pcm_object ); ?>">
 		<?php settings_fields( 'pcm_crm_fields_settings' ); ?>
 
@@ -991,23 +1115,25 @@ function pcm_crm_render_fields_tab() {
 				<?php esc_html_e( 'Drag a field to move it, within a section or between them. Sections become the headed blocks on the record. Anything left in Available is simply not on the form — the data is still there, and still exported.', 'pcm-crm' ); ?>
 			</p>
 
-			<div class="pcm-crm-layout-editor" data-role="layout" data-object="<?php echo esc_attr( $pcm_object ); ?>">
+			<div class="pcm-crm-layout-editor" data-role="layout" data-object="<?php echo esc_attr( $pcm_object ); ?>" data-option-base="<?php echo esc_attr( $pcm_option_base ); ?>">
 				<div class="pcm-crm-layout-sections" data-role="sections">
-					<?php foreach ( pcm_crm_layout_sections( $pcm_object ) as $pcm_i => $pcm_section ) : ?>
-						<?php pcm_crm_render_layout_section( $pcm_object, $pcm_model, $pcm_i, $pcm_section ); ?>
+					<?php foreach ( pcm_crm_layout_sections( $pcm_object, $pcm_variant ) as $pcm_i => $pcm_section ) : ?>
+						<?php pcm_crm_render_layout_section( $pcm_option_base, $pcm_object, $pcm_model, $pcm_i, $pcm_section ); ?>
 					<?php endforeach; ?>
 				</div>
 
 				<div class="pcm-crm-layout-available">
 					<div class="pcm-crm-layout-available-head">
 						<h3><?php esc_html_e( 'Available fields', 'pcm-crm' ); ?></h3>
-						<button type="button" class="button" data-role="add-custom-field"><?php esc_html_e( 'Add custom field', 'pcm-crm' ); ?></button>
+						<?php if ( $pcm_customisable ) : ?>
+							<button type="button" class="button" data-role="add-custom-field"><?php esc_html_e( 'Add custom field', 'pcm-crm' ); ?></button>
+						<?php endif; ?>
 					</div>
 					<p class="description">
 						<?php esc_html_e( 'Drag a field to the page layout section to display it to users.', 'pcm-crm' ); ?>
 					</p>
 					<div class="pcm-crm-layout-list" data-role="available">
-						<?php foreach ( pcm_crm_layout_available_fields( $pcm_object ) as $pcm_name ) : ?>
+						<?php foreach ( pcm_crm_layout_available_fields( $pcm_object, $pcm_variant ) as $pcm_name ) : ?>
 							<?php pcm_crm_render_layout_chip( $pcm_object, $pcm_model, $pcm_name, false ); ?>
 						<?php endforeach; ?>
 					</div>
@@ -1022,7 +1148,19 @@ function pcm_crm_render_fields_tab() {
 		<?php submit_button( __( 'Save fields and layout', 'pcm-crm' ) ); ?>
 	</form>
 
-	<?php pcm_crm_render_custom_field_dialog( $pcm_object ); ?>
+	<?php if ( $pcm_has_override ) : ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pcm-crm-revert-variant">
+			<input type="hidden" name="action" value="pcm_crm_delete_layout_variant">
+			<input type="hidden" name="object" value="<?php echo esc_attr( $pcm_object ); ?>">
+			<input type="hidden" name="variant" value="<?php echo esc_attr( $pcm_variant ); ?>">
+			<?php wp_nonce_field( 'pcm_crm_delete_layout_variant' ); ?>
+			<button type="submit" class="button-link"><?php esc_html_e( 'Use the default layout instead', 'pcm-crm' ); ?></button>
+		</form>
+	<?php endif; ?>
+
+	<?php if ( $pcm_customisable ) : ?>
+		<?php pcm_crm_render_custom_field_dialog( $pcm_object ); ?>
+	<?php endif; ?>
 	<?php
 }
 
@@ -1099,8 +1237,8 @@ function pcm_crm_render_custom_field_dialog( $pcm_object ) {
 }
 
 
-function pcm_crm_render_layout_section( $pcm_object, $pcm_model, $pcm_index, array $pcm_section ) {
-	$pcm_name = PCM_CRM_LAYOUTS_OPTION . '[' . $pcm_object . '][' . $pcm_index . ']';
+function pcm_crm_render_layout_section( $pcm_option_base, $pcm_object, $pcm_model, $pcm_index, array $pcm_section ) {
+	$pcm_name = $pcm_option_base . '[' . $pcm_index . ']';
 	?>
 	<div class="pcm-crm-layout-section" data-role="section">
 		<div class="pcm-crm-layout-section-head">

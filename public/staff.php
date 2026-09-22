@@ -49,18 +49,35 @@ function pcm_crm_front_query_vars( $pcm_vars ) {
 add_filter( 'query_vars', 'pcm_crm_front_query_vars' );
 
 /**
- * Reflush whenever the rule shape or the base itself changes.
+ * Reflush whenever the rule shape or the base itself changes — or when the
+ * live rules simply do not contain ours any more, whatever the stamp says.
  *
  * Rewrite rules live in an option, and an rsync deploy fires no activation
  * hook — the same reason PCM_CRM_Schema::install() runs on a version check
  * rather than only on activation. Keyed on the base too, so changing the
  * Employee Portal address (includes/urls.php) reflushes on its own without a
  * version bump.
+ *
+ * The stamp alone is not proof the rule survived, though: a new client site
+ * stood up by cloning an existing install's database carries
+ * pcm_crm_rewrite_stamp forward as an ordinary option, but 'rewrite_rules' is
+ * exactly the kind of thing a migration or backup tool treats as disposable
+ * cache and drops, or never regenerates for the new host — leaving this
+ * function convinced there is nothing to do while /staff/ 404s outright, with
+ * Employee Portal Settings still showing the base as configured. Checking
+ * that our own pattern is actually present, not only that the stamp matches,
+ * is what makes a cloned or restored site self-heal on its very next page
+ * load the same way a fresh install already does — costing nothing extra on
+ * the front end, where WordPress's own request routing already fetches this
+ * same option for every request regardless.
  */
 function pcm_crm_maybe_flush_front_rewrites() {
-	$pcm_stamp = PCM_CRM_REWRITE_VERSION . ':' . pcm_crm_front_base();
+	$pcm_base  = pcm_crm_front_base();
+	$pcm_stamp = PCM_CRM_REWRITE_VERSION . ':' . $pcm_base;
+	$pcm_rules = get_option( 'rewrite_rules' );
+	$pcm_ours  = is_array( $pcm_rules ) && array_key_exists( '^' . $pcm_base . '/?$', $pcm_rules );
 
-	if ( get_option( 'pcm_crm_rewrite_stamp' ) === $pcm_stamp ) {
+	if ( $pcm_ours && get_option( 'pcm_crm_rewrite_stamp' ) === $pcm_stamp ) {
 		return;
 	}
 

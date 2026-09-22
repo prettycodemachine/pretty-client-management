@@ -151,19 +151,14 @@ function pcm_crm_pm_archetype( $pcm_key ) {
 }
 
 /**
- * The types a fresh install starts with — the three this business sells.
+ * The types a fresh install starts with — the two this business sells.
  */
 function pcm_crm_pm_default_types() {
 	return array(
-		'salesforce-support-retainer' => array(
-			'label'       => 'Salesforce Support Retainer',
+		'support-retainer' => array(
+			'label'       => 'Support Retainer',
 			'archetype'   => 'retainer',
-			'description' => __( 'Ongoing admin and support hours for a Salesforce org.', 'pcm-crm' ),
-		),
-		'ai-enablement-retainer' => array(
-			'label'       => 'AI Enablement Retainer',
-			'archetype'   => 'retainer',
-			'description' => __( 'A standing allotment for AI rollout, advice and tuning.', 'pcm-crm' ),
+			'description' => __( 'Ongoing support hours for a client, billed against a period allotment.', 'pcm-crm' ),
 		),
 		'custom-development' => array(
 			'label'       => 'Custom Development',

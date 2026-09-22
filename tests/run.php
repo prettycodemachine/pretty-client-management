@@ -889,17 +889,14 @@ check( 'history is in scope for removal too',
 check( 'and so are all four objects', count( pcm_crm_sample_tables() ), 5 );
 
 echo "\n--- demo data guard ---\n";
-$allowed = function( $host ) {
-	$GLOBALS['pcm_test_host'] = $host;
-	return pcm_crm_seed_allowed();
-};
+check( 'sample data is allowed on any site by default', pcm_crm_seed_allowed(), true );
 
-check( 'staging is allowed', $allowed( 'staging2.prettycodemachine.com' ), true );
-check( 'localhost is allowed', $allowed( 'localhost' ), true );
-check( 'a .local host is allowed', $allowed( 'pcm.local' ), true );
-check( 'PRODUCTION IS REFUSED', $allowed( 'prettycodemachine.com' ), false );
-check( 'www production is refused', $allowed( 'www.prettycodemachine.com' ), false );
-check( 'an unknown host is refused', $allowed( 'some-other-site.com' ), false );
+// Nothing else in this run calls pcm_crm_seed_allowed(), so defining the
+// constant here — permanent for the rest of the process, since PHP constants
+// cannot be undefined — cannot affect any other check.
+define( 'PCM_CRM_ALLOW_SEED', false );
+check( 'wp-config can still withhold it', pcm_crm_seed_allowed(), false );
+
 check( 'the seed command is CLI-only', isset( WP_CLI::$commands['pcm-crm'] ), true );
 $GLOBALS['pcm_test_host'] = 'example.com';
 
@@ -1321,10 +1318,14 @@ check( 'and comes back out of the database as a float',
 
 echo "\n--- module gate ---\n";
 
-// The suite loads the plugin with no options set, so the module is at its
-// default — off. Everything below is asserted from that starting point outwards.
+// wp-stubs.php forces both modules off before the plugin's own bootstrap load,
+// independent of either module's shipped default, so the gated files below are
+// proved to have never been required. The default itself — now on — is
+// checked here on its own terms, with the option removed entirely.
 check( 'the pm module is registered', isset( pcm_crm_modules()['pm'] ), true );
-check( 'and is off by default', pcm_crm_module_active( 'pm' ), false );
+
+delete_option( PCM_CRM_MODULES_OPTION );
+check( 'and is on by default', pcm_crm_module_active( 'pm' ), true );
 
 update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1 ) );
 check( 'the option switches it on', pcm_crm_module_active( 'pm' ), true );
@@ -1478,15 +1479,15 @@ check( 'every PM table can be marked as test data',
 echo "\n--- project stages ---\n";
 
 check( 'a retainer and a build do not share a lifecycle',
-	pcm_crm_pm_stage_names( 'Salesforce Support Retainer' ) === pcm_crm_pm_stage_names( 'Custom Development' ),
+	pcm_crm_pm_stage_names( 'Support Retainer' ) === pcm_crm_pm_stage_names( 'Custom Development' ),
 	false );
 
-check( 'the two retainers do share one',
-	pcm_crm_pm_stage_names( 'Salesforce Support Retainer' ),
-	pcm_crm_pm_stage_names( 'AI Enablement Retainer' ) );
+check( 'a type with no stage override follows its archetype',
+	pcm_crm_pm_stage_names( 'Support Retainer' ),
+	wp_list_pluck( pcm_crm_pm_archetype( 'retainer' )['stages'], 'name' ) );
 
 check( 'a retainer ends or churns',
-	array_slice( pcm_crm_pm_stage_names( 'AI Enablement Retainer' ), -2 ),
+	array_slice( pcm_crm_pm_stage_names( 'Support Retainer' ), -2 ),
 	array( 'Ended', 'Churned' ) );
 
 check( 'a build launches and closes',
@@ -1495,7 +1496,7 @@ check( 'a build launches and closes',
 // The mistake worth catching: a stage that saves cleanly, then reads as
 // closed-or-not according to a set the project was never in.
 check( 'a build stage is not valid on a retainer',
-	pcm_crm_pm_stage( 'AI Enablement Retainer', 'UAT' ), null );
+	pcm_crm_pm_stage( 'Support Retainer', 'UAT' ), null );
 check( 'and a retainer stage is not valid on a build',
 	pcm_crm_pm_stage( 'Custom Development', 'Renewal Pending' ), null );
 
@@ -1504,8 +1505,8 @@ check( 'and a running one does not', pcm_crm_pm_stage( 'Custom Development', 'Bu
 // Renewed is a moment rather than a state: a project passing through it returns
 // to Active, so it must not read as either running or finished.
 check( 'Renewed is neither active nor closed',
-	array( pcm_crm_pm_stage( 'AI Enablement Retainer', 'Renewed' )['is_active'],
-		pcm_crm_pm_stage( 'AI Enablement Retainer', 'Renewed' )['is_closed'] ),
+	array( pcm_crm_pm_stage( 'Support Retainer', 'Renewed' )['is_active'],
+		pcm_crm_pm_stage( 'Support Retainer', 'Renewed' )['is_closed'] ),
 	array( 0, 0 ) );
 
 // An empty picklist makes a project unsaveable, and a type arriving from an old
@@ -1518,10 +1519,10 @@ check( 'the union covers both lifecycles',
 		&& in_array( 'Churned', pcm_crm_pm_all_stage_names(), true ), true );
 
 check( 'closed stages are left out of the open list',
-	in_array( 'Ended', pcm_crm_pm_open_stage_names( 'AI Enablement Retainer' ), true ), false );
+	in_array( 'Ended', pcm_crm_pm_open_stage_names( 'Support Retainer' ), true ), false );
 
 check( 'retainers are identified from a list, not from their name',
-	array( pcm_crm_pm_is_retainer( 'AI Enablement Retainer' ), pcm_crm_pm_is_retainer( 'Custom Development' ) ),
+	array( pcm_crm_pm_is_retainer( 'Support Retainer' ), pcm_crm_pm_is_retainer( 'Custom Development' ) ),
 	array( true, false ) );
 
 pcm_test_add_filter( 'pcm_crm_pm_stages', function ( $pcm_sets ) {
@@ -1595,9 +1596,10 @@ check( 'a backwards range writes nothing',
    The PM surface, with the module switched on
    --------------------------------------------------------------------------- */
 
-// The suite loaded the plugin with the module off, so the gated files were never
-// required. Switch it on and load them, which is exactly what the bootstrap does
-// on a site where the box is ticked.
+// The suite forced the module off before the plugin's own bootstrap load (see
+// wp-stubs.php), so the gated files were never required regardless of what the
+// module's default says. Switch it on and load them, which is exactly what the
+// bootstrap does on a site where the box is ticked — or, now, on any fresh one.
 update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 1 ) );
 pcm_crm_load_modules();
 
@@ -1605,9 +1607,35 @@ echo "\n--- pm surface ---\n";
 
 check( 'switching it on registers the objects', pcm_crm_object( 'projects' ) !== null, true );
 check( 'projects are reportable', pcm_crm_object_is( 'projects', 'reportable' ), true );
-// A custom field is a real ALTER TABLE and columns are never dropped, so a cf_
-// column on a project would outlive the module being switched off.
-check( 'but not customisable in this release', pcm_crm_object_is( 'projects', 'customisable' ), false );
+check( 'and customisable, the same as the four core objects', pcm_crm_object_is( 'projects', 'customisable' ), true );
+// pcm_crm_object_table() used to be a second hand-kept list of the same four
+// CRM tables the object registry already knew about; it now reads the table
+// straight off the object's own registered model, so this is the one place a
+// PM table can prove that generic path actually resolves correctly.
+check( 'a PM object\'s table is resolved from its own model, not a second hand-kept list',
+	pcm_crm_object_table( 'projects' ), pcm_crm_pm_projects_table() );
+check( 'a core object still resolves the same way',
+	pcm_crm_object_table( 'accounts' ), PCM_CRM_Schema::accounts() );
+check( 'an unregistered object resolves to nothing rather than an error',
+	pcm_crm_object_table( 'nonsense' ), '' );
+check( 'its layout can still be edited on Fields & Layouts', pcm_crm_object_is( 'projects', 'layoutable' ), true );
+check( 'and its Fields & Layouts pill reads a plural label',
+	isset( pcm_crm_layoutable_objects()['projects'] ), true );
+
+// A real bug, caught only once a PM object had a custom field to save: the
+// custom-field save/delete redirect only ever names the object it touched,
+// never the module, and with no PM object customisable before this there was
+// never a save to redirect from — so nobody had reached this path with
+// module missing and object set to something CRM's own list does not carry.
+$_GET['object'] = 'projects';
+check( 'a request naming a PM object but no module still resolves to PM',
+	pcm_crm_current_fields_module(), 'pm' );
+check( 'so the save/delete redirect lands back on the object it just touched',
+	pcm_crm_current_fields_object(), 'projects' );
+unset( $_GET['object'] );
+check( 'but its bookkeeping objects stay off Fields & Layouts too',
+	array( pcm_crm_object_is( 'retainer_periods', 'layoutable' ), pcm_crm_object_is( 'status_reports', 'layoutable' ) ),
+	array( false, false ) );
 check( 'and they are exportable, because a table you cannot read out of is a liability',
 	pcm_crm_object_is( 'projects', 'exportable' ), true );
 // Deleting a project by accident should be survivable, the way deleting an
@@ -1676,13 +1704,13 @@ echo "\n--- project types and archetypes ---\n";
 
 check( 'a type is found by its key', pcm_crm_pm_type( 'custom-development' )['label'], 'Custom Development' );
 // Every project stored before types had keys holds the label.
-check( 'and by the label an older row stores', pcm_crm_pm_type_key( 'AI Enablement Retainer' ), 'ai-enablement-retainer' );
+check( 'and by the label an older row stores', pcm_crm_pm_type_key( 'Support Retainer' ), 'support-retainer' );
 check( 'an unknown type is nobody', pcm_crm_pm_type( 'Consulting' ), null );
 check( 'a type follows its archetype’s time rules', pcm_crm_pm_type( 'custom-development' )['time']['task_required'], 1 );
 check( 'a build hides the retainer fields',
 	in_array( 'retainer_hours', pcm_crm_pm_type_fields( 'custom-development' )['hidden'], true ), true );
 check( 'and a retainer hides the budget',
-	in_array( 'budget_amount', pcm_crm_pm_type_fields( 'salesforce-support-retainer' )['hidden'], true ), true );
+	in_array( 'budget_amount', pcm_crm_pm_type_fields( 'support-retainer' )['hidden'], true ), true );
 
 update_option( PCM_CRM_PM_TYPES_OPTION, array(
 	'studio-time' => array( 'label' => 'Studio Time', 'archetype' => 'tm', 'time' => array( 'description_required' => 1, 'not_a_rule' => 1 ) ),
@@ -1709,7 +1737,7 @@ update_option( PCM_CRM_PM_STAGES_OPTION, array( 'Custom Development' => array( a
 
 pcm_crm_pm_migrate_types();
 
-check( 'the migration saves the types', array_keys( get_option( PCM_CRM_PM_TYPES_OPTION ) ), array( 'salesforce-support-retainer', 'ai-enablement-retainer', 'custom-development' ) );
+check( 'the migration saves the types', array_keys( get_option( PCM_CRM_PM_TYPES_OPTION ) ), array( 'support-retainer', 'custom-development' ) );
 check( 'folds saved stages into their type', pcm_crm_pm_stage_names( 'custom-development' ), array( 'Only' ) );
 check( 'and retires the old option', get_option( PCM_CRM_PM_STAGES_OPTION, 'gone' ), 'gone' );
 check( 'rewrites each project’s type from label to key',
@@ -1728,24 +1756,23 @@ echo "\n--- project bootstrap payload ---\n";
 
 $pcm_pm_boot = pcm_crm_pm_bootstrap( array() );
 
-check( 'the three project types are sent, by key with their names',
+check( 'the two project types are sent, by key with their names',
 	$pcm_pm_boot['projectTypes'],
 	array(
-		array( 'value' => 'salesforce-support-retainer', 'label' => 'Salesforce Support Retainer' ),
-		array( 'value' => 'ai-enablement-retainer', 'label' => 'AI Enablement Retainer' ),
+		array( 'value' => 'support-retainer', 'label' => 'Support Retainer' ),
 		array( 'value' => 'custom-development', 'label' => 'Custom Development' ),
 	) );
 // Sent as a map so the record form can narrow the stage picklist once a type is
 // chosen, without a request per keystroke.
 check( 'and the per-type stage sets, so the form can narrow the picklist',
 	array_keys( $pcm_pm_boot['projectStageSets'] ),
-	array( 'salesforce-support-retainer', 'ai-enablement-retainer', 'custom-development' ) );
+	array( 'support-retainer', 'custom-development' ) );
 check( 'the stage union covers both lifecycles',
 	in_array( 'Hypercare', $pcm_pm_boot['projectStages'], true )
 		&& in_array( 'Churned', $pcm_pm_boot['projectStages'], true ), true );
 check( 'and which types bill against an allotment',
 	$pcm_pm_boot['retainerTypes'],
-	array( 'salesforce-support-retainer', 'ai-enablement-retainer' ) );
+	array( 'support-retainer' ) );
 check( 'each type says what its archetype decides',
 	array( $pcm_pm_boot['projectTypeDefs']['custom-development']['archetype'], $pcm_pm_boot['projectTypeDefs']['custom-development']['time']['task_required'] ),
 	array( 'fixed', 1 ) );
@@ -1773,19 +1800,19 @@ check( 'an invented type is refused',
 // The failure worth catching: it saves cleanly, then reads as closed-or-not
 // according to a stage set the project was never in.
 check( 'a build stage on a retainer is refused',
-	$pcm_valid( array( 'name' => 'X', 'project_type' => 'AI Enablement Retainer', 'stage_name' => 'UAT', 'start_date' => null, 'end_date' => null ) ),
+	$pcm_valid( array( 'name' => 'X', 'project_type' => 'Support Retainer', 'stage_name' => 'UAT', 'start_date' => null, 'end_date' => null ) ),
 	'pcm_crm_pm_wrong_stage' );
 check( 'but its own stage is accepted',
-	$pcm_valid( array( 'name' => 'X', 'project_type' => 'AI Enablement Retainer', 'stage_name' => 'Active', 'start_date' => null, 'end_date' => null,
+	$pcm_valid( array( 'name' => 'X', 'project_type' => 'Support Retainer', 'stage_name' => 'Active', 'start_date' => null, 'end_date' => null,
 		'retainer_hours' => 20, 'retainer_period' => 'monthly' ) ),
 	'ok' );
 
 // What a type's process needs, asked when a project is created.
 check( 'a new retainer without an allotment is refused',
-	$pcm_valid( array( 'name' => 'X', 'project_type' => 'ai-enablement-retainer', 'stage_name' => 'Active', 'start_date' => null, 'end_date' => null, 'retainer_hours' => null, 'retainer_period' => '' ) ),
+	$pcm_valid( array( 'name' => 'X', 'project_type' => 'support-retainer', 'stage_name' => 'Active', 'start_date' => null, 'end_date' => null, 'retainer_hours' => null, 'retainer_period' => '' ) ),
 	'pcm_crm_pm_type_required' );
 check( 'and says what is missing',
-	pcm_crm_pm_missing_for_type( 'ai-enablement-retainer', array( 'retainer_hours' => 0, 'retainer_period' => 'monthly' ) ),
+	pcm_crm_pm_missing_for_type( 'support-retainer', array( 'retainer_hours' => 0, 'retainer_period' => 'monthly' ) ),
 	array( 'Hours per Period' ) );
 check( 'a build needs a budget and an end date',
 	pcm_crm_pm_missing_for_type( 'custom-development', array() ), array( 'Budget', 'Planned End Date' ) );
@@ -1850,7 +1877,7 @@ check( 'a full day is not', $pcm_time_valid( array( 'hours' => 24 ) ), 'ok' );
 // each archetype, and for a task on project 12.
 class PCM_Time_WPDB extends FakeWPDB {
 	function get_row( $q = '', $o = null ) {
-		$types = array( 12 => 'custom-development', 13 => 'salesforce-support-retainer', 14 => 'studio-time', 15 => 'side-quest' );
+		$types = array( 12 => 'custom-development', 13 => 'support-retainer', 14 => 'studio-time', 15 => 'side-quest' );
 
 		if ( false !== strpos( $q, 'pcm_crm_projects' ) && preg_match( '/id = (\d+)/', $q, $m ) && isset( $types[ (int) $m[1] ] ) ) {
 			return array( 'id' => (int) $m[1], 'project_type' => $types[ (int) $m[1] ], 'default_bill_rate' => 14 === (int) $m[1] ? '' : '150.00', 'default_cost_rate' => '60.00', 'name' => 'P' );
@@ -1933,6 +1960,57 @@ check( 'a saved arrangement wins over the shipped one',
 	wp_list_pluck( pcm_crm_layout( 'projects' ), 'title' ), array( 'Mine' ) );
 delete_option( PCM_CRM_LAYOUTS_OPTION );
 
+// The Fields & Layouts editor reads pcm_crm_layout_sections(), never
+// pcm_crm_layout() — before pcm_crm_layout_default() existed, this function
+// reached pcm_crm_default_layouts() directly, which has no 'projects' entry,
+// so the editor showed an object with a real shipped form as entirely empty.
+check( 'the editor sees the module\'s real default too, not a blank slate',
+	wp_list_pluck( pcm_crm_layout_sections( 'projects' ), 'title' ),
+	array( '', 'Health', 'Timeline', 'Budget', 'Retainer', 'Notes' ) );
+
+echo "\n--- per-project-type layouts ---\n";
+
+pcm_test_add_filter( 'pcm_crm_layout_variant_keys', 'pcm_crm_pm_layout_variant_keys' );
+
+check( 'a project\'s layout varies by its type',
+	pcm_crm_layout_variant_keys( 'projects' ),
+	array( 'support-retainer' => 'Support Retainer', 'custom-development' => 'Custom Development' ) );
+check( 'an object with no layout_variant field has none',
+	pcm_crm_layout_variant_keys( 'contacts' ), array() );
+
+update_option( PCM_CRM_LAYOUT_VARIANTS_OPTION, array( 'projects' => array(
+	'custom-development' => array( array( 'title' => 'Build', 'fields' => array( 'name', 'budget_amount' ) ) ),
+) ) );
+
+check( 'the type with an override sees only its own sections',
+	wp_list_pluck( pcm_crm_layout( 'projects', 'custom-development' ), 'title' ), array( 'Build' ) );
+check( 'a different type falls through to the shared default, not another type\'s override',
+	wp_list_pluck( pcm_crm_layout( 'projects', 'support-retainer' ), 'title' ),
+	array( '', 'Health', 'Timeline', 'Budget', 'Retainer', 'Notes' ) );
+check( 'and asking for no variant at all is unaffected by any override existing',
+	wp_list_pluck( pcm_crm_layout( 'projects' ), 'title' ),
+	array( '', 'Health', 'Timeline', 'Budget', 'Retainer', 'Notes' ) );
+
+$pcm_variants_rejected = pcm_crm_sanitize_layout_variants( array(
+	// An object with no layout_variant field at all — must not be reachable
+	// however a form happens to post it.
+	'retainer_periods' => array( 'custom-development' => array( array( 'title' => '', 'fields' => array( 'name' ) ) ) ),
+	// A real object, but a variant key that names no configured project type.
+	'projects'         => array( 'not-a-real-type' => array( array( 'title' => '', 'fields' => array( 'name' ) ) ) ),
+) );
+
+check( 'the sanitiser refuses an object with no layout variants',
+	isset( $pcm_variants_rejected['retainer_periods'] ), false );
+check( 'and refuses a variant key that is not a configured project type',
+	isset( $pcm_variants_rejected['projects']['not-a-real-type'] ), false );
+// Its own override from just above must survive a save that only touched
+// other, invalid rows — the same "merge into what's stored" rule the base
+// layout and custom-field sanitisers already follow.
+check( 'while leaving an existing, valid override alone',
+	isset( $pcm_variants_rejected['projects']['custom-development'] ), true );
+
+delete_option( PCM_CRM_LAYOUT_VARIANTS_OPTION );
+pcm_test_reset_filters( 'pcm_crm_layout_variant_keys' );
 pcm_test_reset_filters( 'pcm_crm_layout' );
 
 echo "\n--- opportunity type follows account project history ---\n";
@@ -2379,7 +2457,7 @@ check( 'an emptied picklist falls back rather than saving nothing',
 ob_start();
 pcm_crm_pm_render_types_page();
 $pcm_html = ob_get_clean();
-check( 'the types page lists every type', substr_count( $pcm_html, 'type=' ) >= 4, true );
+check( 'the types page lists every type', substr_count( $pcm_html, 'type=' ) >= 3, true );
 
 $_GET['type'] = 'custom-development';
 ob_start();
@@ -2402,12 +2480,19 @@ check( 'a known tab is the current page', pcm_crm_current_setup_key(), 'theme' )
 check( 'an app-backed slug resolves to its page', pcm_crm_current_setup_key( 'pcm-crm-schedules' ), 'schedules' );
 unset( $_GET['tab'] );
 
+// Projects now ships on by default, so it is switched off explicitly here to
+// exercise the tile's off-state rendering — restored afterwards to keep
+// everything below running against the untouched defaults, same as above.
+update_option( PCM_CRM_MODULES_OPTION, array( 'pm' => 0 ) );
+
 ob_start();
 pcm_crm_render_settings();
 $pcm_html = ob_get_clean();
 check( 'Home renders the frame', false !== strpos( $pcm_html, 'class="wrap pcm-crm pcm-setup"' ), true );
 check( 'Home says the Projects module is off', false !== strpos( $pcm_html, 'This module is switched off.' ), true );
 check( 'Home closes every div it opens', substr_count( $pcm_html, '<div' ), substr_count( $pcm_html, '</div>' ) );
+
+delete_option( PCM_CRM_MODULES_OPTION );
 
 ob_start();
 pcm_crm_screen( 'templates', 'Email Templates', '', array( 'setup' => 'templates' ) );

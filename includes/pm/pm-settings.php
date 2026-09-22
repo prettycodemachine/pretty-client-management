@@ -290,6 +290,46 @@ function pcm_crm_pm_handle_save_type() {
 }
 add_action( 'admin_post_pcm_crm_pm_save_type', 'pcm_crm_pm_handle_save_type' );
 
+/**
+ * Delete one project type's definition.
+ *
+ * Refused while any project still follows it — the same reasoning as the
+ * stage-in-use guard above: a project's type must always resolve to something
+ * real, so a type in use can only be retired (Status, on its own form), never
+ * removed. Deleting the last remaining type is not specially refused: with
+ * none saved, pcm_crm_pm_types() already falls back to the shipped defaults,
+ * the same as a fresh install that never saved this option at all.
+ */
+function pcm_crm_pm_handle_delete_type() {
+	if ( ! pcm_crm_can( 'settings', 'edit' ) ) {
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+	}
+
+	check_admin_referer( 'pcm_crm_pm_delete_type' );
+
+	$pcm_key   = isset( $_POST['key'] ) ? sanitize_title( wp_unslash( $_POST['key'] ) ) : '';
+	$pcm_back  = pcm_crm_setup_url( 'project-types' );
+	$pcm_types = get_option( PCM_CRM_PM_TYPES_OPTION, array() );
+	$pcm_types = ( is_array( $pcm_types ) && $pcm_types ) ? $pcm_types : pcm_crm_pm_default_types();
+
+	if ( ! isset( $pcm_types[ $pcm_key ] ) ) {
+		wp_safe_redirect( $pcm_back );
+		exit;
+	}
+
+	if ( array_sum( pcm_crm_pm_type_usage( $pcm_key ) ) ) {
+		wp_safe_redirect( add_query_arg( array( 'type' => $pcm_key, 'pcm_type' => 'in-use' ), $pcm_back ) );
+		exit;
+	}
+
+	unset( $pcm_types[ $pcm_key ] );
+	update_option( PCM_CRM_PM_TYPES_OPTION, $pcm_types );
+
+	wp_safe_redirect( add_query_arg( 'pcm_type', 'deleted', $pcm_back ) );
+	exit;
+}
+add_action( 'admin_post_pcm_crm_pm_delete_type', 'pcm_crm_pm_handle_delete_type' );
+
 /* Rendering ---------------------------------------------------------------- */
 
 function pcm_crm_pm_render_types_page() {
@@ -309,6 +349,10 @@ function pcm_crm_pm_render_types_page() {
 		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $pcm_error['message'] ) );
 	} elseif ( 'saved' === $pcm_result ) {
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Project type saved.', 'pcm-crm' ) );
+	} elseif ( 'deleted' === $pcm_result ) {
+		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Project type deleted.', 'pcm-crm' ) );
+	} elseif ( 'in-use' === $pcm_result ) {
+		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html__( 'Projects still follow this type, so it cannot be deleted. Retire it instead, below, to leave it out of the New Project chooser.', 'pcm-crm' ) );
 	}
 
 	if ( $pcm_editing ) {
@@ -331,6 +375,7 @@ function pcm_crm_pm_render_types_page() {
 					<th><?php esc_html_e( 'Stages', 'pcm-crm' ); ?></th>
 					<th><?php esc_html_e( 'Projects', 'pcm-crm' ); ?></th>
 					<th><?php esc_html_e( 'Status', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Layout', 'pcm-crm' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -349,6 +394,9 @@ function pcm_crm_pm_render_types_page() {
 						<td><?php echo esc_html( implode( ' → ', wp_list_pluck( $pcm_type['stages'], 'name' ) ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( array_sum( pcm_crm_pm_type_usage( $pcm_key ) ) ) ); ?></td>
 						<td><?php echo $pcm_type['active'] ? esc_html__( 'Active', 'pcm-crm' ) : esc_html__( 'Retired', 'pcm-crm' ); ?></td>
+						<td>
+							<a href="<?php echo esc_url( add_query_arg( array( 'module' => 'pm', 'object' => 'projects', 'variant' => $pcm_key ), pcm_crm_setup_url( 'fields' ) ) ); ?>"><?php esc_html_e( 'Edit fields', 'pcm-crm' ); ?></a>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
@@ -558,6 +606,24 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 
 		<?php submit_button( $pcm_is_new ? __( 'Create Project Type', 'pcm-crm' ) : __( 'Save Project Type', 'pcm-crm' ) ); ?>
 	</form>
+
+	<?php if ( ! $pcm_is_new ) : ?>
+		<div class="pcm-crm-card pcm-crm-card-accent">
+			<h2><?php esc_html_e( 'Delete this type', 'pcm-crm' ); ?></h2>
+			<?php if ( $pcm_locked ) : ?>
+				<p class="description"><?php esc_html_e( 'Projects still follow this type, so it cannot be deleted. Retire it instead — Status, above — to leave it out of the New Project chooser; its projects keep it.', 'pcm-crm' ); ?></p>
+			<?php else : ?>
+				<p class="description"><?php esc_html_e( 'Permanent, and only offered while no project follows this type.', 'pcm-crm' ); ?></p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+					onsubmit="return confirm('<?php echo esc_js( __( 'Delete this project type? This cannot be undone.', 'pcm-crm' ) ); ?>');">
+					<input type="hidden" name="action" value="pcm_crm_pm_delete_type">
+					<input type="hidden" name="key" value="<?php echo esc_attr( $pcm_key ); ?>">
+					<?php wp_nonce_field( 'pcm_crm_pm_delete_type' ); ?>
+					<?php submit_button( __( 'Delete Project Type', 'pcm-crm' ), 'delete', 'submit', false ); ?>
+				</form>
+			<?php endif; ?>
+		</div>
+	<?php endif; ?>
 
 	<script>
 	( function () {

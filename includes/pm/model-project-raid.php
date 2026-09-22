@@ -34,7 +34,8 @@ function pcm_crm_project_raid() {
 					'resolution'       => array( 'type' => 'longtext', 'sf' => 'PCM_Resolution__c', 'label' => 'Resolution' ),
 					'description'      => array( 'type' => 'longtext', 'sf' => 'PCM_Description__c', 'label' => 'Detail' ),
 				),
-				PCM_CRM_Model::system_fields()
+				PCM_CRM_Model::system_fields(),
+				pcm_crm_custom_field_map( 'project_raid' )
 			),
 			array( 'title', 'description', 'mitigation', 'resolution' ),
 			array(

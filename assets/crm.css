@@ -765,6 +765,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--pcm-body);
+  text-decoration: none;
   cursor: pointer;
   /* Pulled down by its own border width so the tab's bottom edge lands exactly
      on the strip's rule rather than beside it. */
@@ -1411,6 +1412,21 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 }
 .pcm-crm-object-pill:hover { background: var(--pcm-paper-tint); color: var(--pcm-ink); }
 .pcm-crm-object-pill.is-active { background: var(--pcm-ink); color: #fff; }
+
+/* The module row (CRM / Project Management) picks which app the object pills
+   below it belong to — a level above that choice, not another instance of
+   it — so it reuses the record modal's tab strip instead of another row of
+   pills, which is what made all three rows read as one undifferentiated
+   stack of buttons. */
+.pcm-crm-module-switch { margin-bottom: 22px; }
+
+/* The variant row (a project type's own layout) sits a level below the
+   object pills — smaller, so the object row it sits under still reads as
+   the primary choice. */
+.pcm-crm-variant-switch { margin-bottom: 12px; }
+.pcm-crm-variant-switch .pcm-crm-object-pill { padding: 5px 12px; font-size: 0.8rem; }
+
+.pcm-crm-revert-variant { margin-top: 12px; }
 
 .pcm-crm-field-key {
   font-size: 0.76rem;

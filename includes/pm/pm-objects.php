@@ -12,30 +12,38 @@
  * Export tab lists — which for an export is dependency order, since a task
  * cannot reference a project that has not been loaded yet.
  *
- * Deliberately not customisable in this first release. A custom field is a real
- * ALTER TABLE and columns are never dropped, so a cf_ column added to a project
- * would outlive the module being switched off. It is one array key to flip once
- * the tables have settled.
+ * Customisable, the same as the four core objects: a cf_ column added here
+ * will outlive the module being switched off, the same as any other custom
+ * field's column is never dropped once the module has settled into use — see
+ * includes/custom-fields.php's own docblock. Every layoutable object below
+ * carries the flag; the two below that are not layoutable (retainer_periods,
+ * status_reports) are bookkeeping nobody edits by hand and stay off both.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 pcm_crm_register_object( 'projects', array(
-	'model'         => 'pcm_crm_projects',
-	'label'         => 'Project',
-	'plural'        => 'Projects',
-	'reportable'    => true,
-	'exportable'    => true,
-	'recyclable'    => true,
+	'model'          => 'pcm_crm_projects',
+	'label'          => 'Project',
+	'plural'         => 'Projects',
+	'reportable'     => true,
+	'exportable'     => true,
+	'recyclable'     => true,
+	'customisable'   => true,
+	// project_type is what makes a Custom Development project ask a
+	// different form than a Support Retainer one, without hardcoding either
+	// arrangement into the JS the way the old showWhen-only approach did.
+	'layoutable'     => true,
+	'layout_variant' => 'project_type',
 	// No standard Salesforce counterpart. The Data Export tab labels these as a
 	// local extract rather than a migration path, so the header row cannot be
 	// mistaken for a mapping.
-	'sf'            => 'PCM_Project__c',
-	'group_options' => array( 'stage_name', 'project_type', 'health', 'account_id', 'owner_id' ),
-	'related'       => 'fetch',
-	'module'        => 'pm',
-	'icon'          => 'portfolio',
-	'color'         => 2,
-	'page'          => 'pcm-crm-projects',
+	'sf'             => 'PCM_Project__c',
+	'group_options'  => array( 'stage_name', 'project_type', 'health', 'account_id', 'owner_id' ),
+	'related'        => 'fetch',
+	'module'         => 'pm',
+	'icon'           => 'portfolio',
+	'color'          => 2,
+	'page'           => 'pcm-crm-projects',
 ) );
 
 pcm_crm_register_object( 'project_tasks', array(
@@ -45,6 +53,8 @@ pcm_crm_register_object( 'project_tasks', array(
 	'reportable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
+	'customisable'  => true,
+	'layoutable'    => true,
 	'sf'            => 'PCM_Project_Task__c',
 	'group_options' => array( 'status', 'assignee_user_id', 'project_id' ),
 	'module'        => 'pm',
@@ -60,6 +70,8 @@ pcm_crm_register_object( 'project_raid', array(
 	'reportable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
+	'customisable'  => true,
+	'layoutable'    => true,
 	'sf'            => 'PCM_Project_RAID__c',
 	'group_options' => array( 'raid_type', 'status', 'impact', 'project_id' ),
 	'module'        => 'pm',
@@ -75,6 +87,8 @@ pcm_crm_register_object( 'project_milestones', array(
 	'reportable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
+	'customisable'  => true,
+	'layoutable'    => true,
 	'sf'            => 'PCM_Project_Milestone__c',
 	'group_options' => array( 'status', 'project_id' ),
 	'module'        => 'pm',
@@ -90,6 +104,8 @@ pcm_crm_register_object( 'project_roles', array(
 	'reportable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
+	'customisable'  => true,
+	'layoutable'    => true,
 	'sf'            => 'PCM_Project_Role__c',
 	'group_options' => array( 'party_type', 'role', 'project_id' ),
 	'module'        => 'pm',
@@ -104,6 +120,8 @@ pcm_crm_register_object( 'time_entries', array(
 	'reportable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
+	'customisable'  => true,
+	'layoutable'    => true,
 	'sf'            => 'PCM_Time_Entry__c',
 	'group_options' => array( 'project_id', 'user_id', 'is_billable', 'task_id' ),
 	'module'        => 'pm',
@@ -119,6 +137,8 @@ pcm_crm_register_object( 'allocations', array(
 	'reportable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
+	'customisable'  => true,
+	'layoutable'    => true,
 	'sf'            => 'PCM_Allocation__c',
 	'group_options' => array( 'user_id', 'project_id', 'role' ),
 	'module'        => 'pm',
@@ -158,6 +178,8 @@ pcm_crm_register_object( 'help_tickets', array(
 	'reportable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
+	'customisable'  => true,
+	'layoutable'    => true,
 	'sf'            => 'PCM_Help_Ticket__c',
 	'group_options' => array( 'status', 'project_id', 'account_id' ),
 	// No related section: a ticket's only detail beyond its fields is its

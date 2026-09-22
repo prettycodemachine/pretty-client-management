@@ -41,7 +41,13 @@ const schema = {
 		label: 'contact',
 		fields: [field('first_name'), field('last_name'), lookup('account_id', 'accounts'), field('email', 'email'),
 			field('do_not_contact', 'bool'), field('do_not_contact_reason')],
-		layout: [{ title: '', fields: ['first_name', 'last_name', 'account_id', 'email', 'do_not_contact', 'do_not_contact_reason'] }],
+		// do_not_contact_reason on its own, titled section — every check below
+		// still finds it by [data-field], not by position, so this is free to
+		// exercise a titled group whose only field is conditionally hidden.
+		layout: [
+			{ title: '', fields: ['first_name', 'last_name', 'account_id', 'email', 'do_not_contact'] },
+			{ title: 'Contact details', fields: ['do_not_contact_reason'] },
+		],
 		related: [],
 	},
 	accounts: { label: 'account', fields: [field('name')], layout: [{ title: '', fields: ['name'] }], related: [] },
@@ -203,6 +209,12 @@ async function main() {
 	check('a lookup reads as a link to the record', accountLink && accountLink.getAttribute('href'), '/wp-admin/admin.php?page=pcm-crm-accounts#id=2');
 	check('named, not numbered', accountLink && accountLink.textContent, 'Acme');
 	check('a field that does not apply is hidden when read, too', fieldWrap(page, 'do_not_contact_reason').hidden, true);
+	// A group heading has DOM children whether or not any of them are
+	// individually visible — do_not_contact_reason is the only field under
+	// "Contact details," so the heading itself must follow it into hiding
+	// rather than printing over blank space.
+	const detailsHeading = page.querySelectorAll('.pcm-crm-group-head').find(h => h.textContent === 'Contact details');
+	check('and its own group heading is hidden along with it', !!detailsHeading && detailsHeading.hidden, true);
 	check('an email reads as a mailto link', fieldWrap(page, 'email').querySelector('a').getAttribute('href'), 'mailto:ada@example.org');
 
 	accountLink.dispatch('click', { button: 0 });

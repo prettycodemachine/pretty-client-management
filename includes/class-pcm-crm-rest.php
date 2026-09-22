@@ -113,7 +113,24 @@ class PCM_CRM_REST {
 			return true;
 		}
 
-		return pcm_crm_can( self::route_area( $pcm_request, $pcm_route ), $pcm_action );
+		if ( ! pcm_crm_can( self::route_area( $pcm_request, $pcm_route ), $pcm_action ) ) {
+			return false;
+		}
+
+		// An area grant answers "may this person edit Projects records in
+		// general" -- a different question from "is this specific record
+		// theirs to touch", which is record scoping rather than a fifth
+		// permission column (see pcm_crm_permission_actions()). Only a single
+		// record has an owner to check against; a collection route has no id
+		// yet to ask the question about.
+		$pcm_object = self::route_object( $pcm_request );
+		$pcm_id     = self::route_id( $pcm_request );
+
+		if ( $pcm_object && $pcm_id && in_array( $pcm_action, array( 'edit', 'delete' ), true ) ) {
+			return (bool) apply_filters( 'pcm_crm_can_touch_record', true, $pcm_object, $pcm_id, $pcm_action );
+		}
+
+		return true;
 	}
 
 	/**
@@ -859,6 +876,21 @@ class PCM_CRM_REST {
 				// in the JS, which is what makes a layout editable at all.
 				'layout'  => pcm_crm_layout( $pcm_slug ),
 			);
+
+			// An object whose layout varies by another field (Project, by
+			// project_type) also serves every variant, keyed the same way the
+			// browser will look one up once it knows a particular record's
+			// value — schema() is fetched once per object, well before any
+			// one record is in view, so there is no "current record" here to
+			// resolve a single winning layout against.
+			if ( $pcm_object && $pcm_object['layout_variant'] ) {
+				$pcm_out[ $pcm_slug ]['layoutVariantField'] = $pcm_object['layout_variant'];
+				$pcm_out[ $pcm_slug ]['layoutVariants']     = array();
+
+				foreach ( pcm_crm_layout_variant_keys( $pcm_slug ) as $pcm_variant_key => $pcm_variant_label ) {
+					$pcm_out[ $pcm_slug ]['layoutVariants'][ $pcm_variant_key ] = pcm_crm_layout( $pcm_slug, $pcm_variant_key );
+				}
+			}
 		}
 
 		return rest_ensure_response( $pcm_out );

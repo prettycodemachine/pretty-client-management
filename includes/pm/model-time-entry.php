@@ -36,7 +36,8 @@ function pcm_crm_time_entries() {
 					'invoice_ref'        => array( 'type' => 'text',  'sf' => 'PCM_Invoice_Ref__c', 'label' => 'Invoice Reference' ),
 					'description'        => array( 'type' => 'longtext', 'sf' => 'PCM_Description__c', 'label' => 'What you did' ),
 				),
-				PCM_CRM_Model::system_fields()
+				PCM_CRM_Model::system_fields(),
+				pcm_crm_custom_field_map( 'time_entries' )
 			),
 			array( 'description', 'invoice_ref' ),
 			array(
@@ -256,3 +257,32 @@ function pcm_crm_pm_validate_time_entry( $pcm_error, $pcm_object, $pcm_row, $pcm
 	return $pcm_error;
 }
 add_filter( 'pcm_crm_validate', 'pcm_crm_pm_validate_time_entry', 10, 4 );
+
+/**
+ * A time entry is the one record here where "may edit Projects" and "may
+ * edit this entry" are different questions, because the data model already
+ * names exactly one person it belongs to. Wired through the REST layer's
+ * pcm_crm_can_touch_record hook rather than pcm_crm_validate, deliberately:
+ * validate runs for every caller including the sample-data seeder, which
+ * inserts entries under a pool of fictitious owners that is never the
+ * process running it, and an authorization rule has no business there.
+ *
+ * An administrator bypasses it — correcting somebody else's logged hours is
+ * routine for payroll and billing, not a loophole.
+ */
+function pcm_crm_pm_guard_time_entry_ownership( $pcm_allowed, $pcm_object, $pcm_id, $pcm_action ) {
+	if ( 'time_entries' !== $pcm_object || ! $pcm_allowed || pcm_crm_is_administrator() ) {
+		return $pcm_allowed;
+	}
+
+	$pcm_entry = pcm_crm_time_entries()->get( $pcm_id );
+
+	// A missing row is not this function's question to answer — the update
+	// or delete call finds the same thing and reports it as not found.
+	if ( ! $pcm_entry ) {
+		return $pcm_allowed;
+	}
+
+	return (int) $pcm_entry['user_id'] === get_current_user_id();
+}
+add_filter( 'pcm_crm_can_touch_record', 'pcm_crm_pm_guard_time_entry_ownership', 10, 4 );

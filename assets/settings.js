@@ -284,8 +284,11 @@
 			addSection.addEventListener('click', function () {
 				var sections = editor.querySelector('[data-role="sections"]');
 				var index = sections.querySelectorAll('[data-role="section"]').length;
-				var object = editor.dataset.object;
-				var base = 'pcm_crm_layouts[' + object + '][' + index + ']';
+				// Which option this editor saves into — the object's own shared
+				// layout, or (editing a project type, say) its own override —
+				// set server-side to match whatever existing sections were
+				// rendered with, so a section added here posts to the same place.
+				var base = editor.dataset.optionBase + '[' + index + ']';
 
 				var section = document.createElement('div');
 				section.className = 'pcm-crm-layout-section';

@@ -190,6 +190,7 @@ pcm_crm_register_object( 'contacts', array(
 	'plural'        => 'Contacts',
 	'reportable'    => true,
 	'customisable'  => true,
+	'layoutable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
 	'sf'            => 'Contact',

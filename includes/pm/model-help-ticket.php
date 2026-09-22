@@ -34,7 +34,8 @@ function pcm_crm_help_tickets() {
 					'description' => array( 'type' => 'longtext', 'sf' => 'PCM_Description__c', 'label' => 'Description' ),
 					'status'      => array( 'type' => 'text', 'sf' => 'PCM_Status__c', 'label' => 'Status', 'options' => 'pcm_crm_pm_ticket_statuses' ),
 				),
-				PCM_CRM_Model::system_fields()
+				PCM_CRM_Model::system_fields(),
+				pcm_crm_custom_field_map( 'help_tickets' )
 			),
 			array( 'subject', 'description' ),
 			array(

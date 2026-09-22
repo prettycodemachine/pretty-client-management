@@ -120,6 +120,7 @@ pcm_crm_register_object( 'accounts', array(
 	'plural'        => 'Accounts',
 	'reportable'    => true,
 	'customisable'  => true,
+	'layoutable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
 	'sf'            => 'Account',

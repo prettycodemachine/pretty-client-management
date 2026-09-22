@@ -2203,7 +2203,7 @@
 			current.form = form;
 		}
 
-		layoutFor(object).forEach(function (group) {
+		layoutFor(object, values).forEach(function (group) {
 			var grid = el('div.pcm-crm-fields');
 
 			// A layout section holds field *names*, to be looked up in the
@@ -2225,8 +2225,14 @@
 			// print its heading over nothing.
 			if (!grid.children.length) { return; }
 
+			// A section whose fields are all individually showWhen-hidden (a
+			// Retainer group on a fixed-scope project, say) still has that many
+			// DOM children — just none of them visible — so the heading needs
+			// its own check rather than trusting grid.children.length.
 			if (group.title) {
-				form.appendChild(el('h4.pcm-crm-group-head', { text: group.title }));
+				var heading = el('h4.pcm-crm-group-head', { text: group.title });
+				heading.hidden = !groupHasVisibleChild(grid);
+				form.appendChild(heading);
 			}
 
 			form.appendChild(grid);
@@ -2693,8 +2699,17 @@
 	 * few hints a layout cannot carry — which fields sit full width, which are
 	 * conditional on another.
 	 */
-	function layoutFor(object) {
+	function layoutFor(object, values) {
 		var schema = state.schema && state.schema[object];
+
+		// An object with layout variants (Project, by its project_type) keeps
+		// one arrangement per type; a record without a matching override, or
+		// with no type chosen yet, falls through to the object's one shared
+		// layout below exactly as an object with no variants at all does.
+		if (schema && schema.layoutVariantField && schema.layoutVariants && values) {
+			var variant = schema.layoutVariants[values[schema.layoutVariantField]];
+			if (variant && variant.length) { return variant; }
+		}
 
 		if (schema && schema.layout && schema.layout.length) { return schema.layout; }
 
@@ -2785,9 +2800,9 @@
 				}
 			});
 
-			return el('div.pcm-crm-field.pcm-crm-field-check', { dataset: { field: field.key } }, [
+			return withCondition(el('div.pcm-crm-field.pcm-crm-field-check', { dataset: { field: field.key } }, [
 				el('label.pcm-crm-check', { for: id }, [box, el('span', { text: field.label })])
-			]);
+			]), field, values);
 		}
 
 		var wrap = el('div.pcm-crm-field' + (field.wide ? '.pcm-crm-field-wide' : ''), {
@@ -2906,6 +2921,15 @@
 	}
 
 	/**
+	 * Whether a layout group has anything left to show, once its individually
+	 * conditional fields are accounted for — a group heading is only worth
+	 * printing over at least one visible field.
+	 */
+	function groupHasVisibleChild(grid) {
+		return Array.prototype.some.call(grid.children, function (child) { return !child.hidden; });
+	}
+
+	/**
 	 * Show or hide the fields that depend on another field's value.
 	 *
 	 * Searches the whole modal rather than one grid, because a dependency can
@@ -2918,6 +2942,17 @@
 
 		root.querySelectorAll('[data-show-when]').forEach(function (node) {
 			node.hidden = !conditionMet(node.dataset, values);
+		});
+
+		// A group's heading follows its fields, not just their state when the
+		// form was first built — Project Type, say, can change what the group
+		// beneath it shows while the form stays open (model-project.php's
+		// before-update rules already treat that as a real, handled edit).
+		root.querySelectorAll('.pcm-crm-group-head').forEach(function (heading) {
+			var grid = heading.nextElementSibling;
+			if (grid && grid.classList.contains('pcm-crm-fields')) {
+				heading.hidden = !groupHasVisibleChild(grid);
+			}
 		});
 	}
 
@@ -3555,7 +3590,7 @@
 		var form = el('form.pcm-crm-details.is-editing', { dataset: { object: object }, onsubmit: function (e) { e.preventDefault(); } });
 		form.pcmLookups = [];
 
-		layoutFor(object).forEach(function (group) {
+		layoutFor(object, values).forEach(function (group) {
 			var grid = el('div.pcm-crm-fields');
 
 			group.fields.forEach(function (entry) {
@@ -3564,7 +3599,13 @@
 			});
 
 			if (!grid.children.length) { return; }
-			if (group.title) { form.appendChild(el('h4.pcm-crm-group-head', { text: group.title })); }
+
+			if (group.title) {
+				var heading = el('h4.pcm-crm-group-head', { text: group.title });
+				heading.hidden = !groupHasVisibleChild(grid);
+				form.appendChild(heading);
+			}
+
 			form.appendChild(grid);
 		});
 

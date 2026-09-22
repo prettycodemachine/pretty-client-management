@@ -25,7 +25,8 @@ function pcm_crm_allocations() {
 					'role'          => array( 'type' => 'text',  'sf' => 'PCM_Role__c', 'label' => 'Role', 'options' => 'pcm_crm_pm_roles' ),
 					'description'   => array( 'type' => 'longtext', 'sf' => 'PCM_Description__c', 'label' => 'Notes' ),
 				),
-				PCM_CRM_Model::system_fields()
+				PCM_CRM_Model::system_fields(),
+				pcm_crm_custom_field_map( 'allocations' )
 			),
 			array( 'role', 'description' ),
 			array(

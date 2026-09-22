@@ -49,7 +49,11 @@ function pcm_crm_projects() {
 				'is_closed'             => array( 'type' => 'bool', 'sf' => 'PCM_Is_Closed__c', 'label' => 'Closed', 'readonly' => true ),
 				'description'           => array( 'type' => 'longtext', 'sf' => 'PCM_Description__c', 'label' => 'Notes' ),
 			),
-			PCM_CRM_Model::system_fields()
+			PCM_CRM_Model::system_fields(),
+			// Admin-defined fields are real columns, so they join the map as
+			// equals — every filter, export and report downstream reads this
+			// map and needs no idea that some of it was configured.
+			pcm_crm_custom_field_map( 'projects' )
 		);
 
 		$pcm_model = new PCM_CRM_Model(

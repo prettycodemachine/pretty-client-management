@@ -513,11 +513,11 @@ pcm_crm_register_setup_page( 'sales-process', array(
 ) );
 
 pcm_crm_register_setup_page( 'fields', array(
-	'group'       => 'crm',
+	'group'       => 'platform',
 	'label'       => __( 'Fields & Layouts', 'pcm-crm' ),
-	'description' => __( 'Custom fields, and the order a record’s form shows them in.', 'pcm-crm' ),
+	'description' => __( 'Custom fields, and the order a record’s form shows them in — for the CRM and, once switched on, Project Management.', 'pcm-crm' ),
 	'render'      => 'pcm_crm_render_fields_tab',
-	'order'       => 20,
+	'order'       => 25,
 ) );
 
 pcm_crm_register_setup_page( 'form', array(

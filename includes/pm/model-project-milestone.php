@@ -27,7 +27,8 @@ function pcm_crm_project_milestones() {
 					'completed_date' => array( 'type' => 'date', 'sf' => 'PCM_Completed_Date__c', 'label' => 'Completed Date', 'readonly' => true ),
 					'description'    => array( 'type' => 'longtext', 'sf' => 'PCM_Description__c', 'label' => 'Notes' ),
 				),
-				PCM_CRM_Model::system_fields()
+				PCM_CRM_Model::system_fields(),
+				pcm_crm_custom_field_map( 'project_milestones' )
 			),
 			array( 'name', 'description' ),
 			array(

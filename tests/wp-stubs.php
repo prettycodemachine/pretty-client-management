@@ -556,4 +556,12 @@ class FakeWPDB {
 }
 $GLOBALS['wpdb'] = new FakeWPDB();
 
+// Forced off ahead of the plugin's own bootstrap (pcm-crm.php calls
+// pcm_crm_load_modules() at the top level, so this is the only chance to
+// control what it sees) regardless of either module's own shipped default —
+// the "module gate" section in run.php needs the gated files to have never
+// been required at all, which it can then only prove by loading them itself,
+// later, with the option flipped on.
+update_option( 'pcm_crm_modules', array( 'pm' => 0, 'portal' => 0 ) );
+
 require dirname( __DIR__ ) . '/pcm-crm.php';

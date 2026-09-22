@@ -165,6 +165,7 @@ pcm_crm_register_object( 'opportunities', array(
 	'plural'        => 'Opportunities',
 	'reportable'    => true,
 	'customisable'  => true,
+	'layoutable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
 	'sf'            => 'Opportunity',

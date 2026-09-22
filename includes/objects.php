@@ -28,7 +28,18 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  *     @type string   $label        Singular, human-facing.
  *     @type string   $plural       Plural, human-facing.
  *     @type bool     $reportable   In the filter builder, reports and /schema.
- *     @type bool     $customisable Can carry admin-defined custom fields.
+ *     @type bool     $customisable Can carry admin-defined custom fields — a
+ *                                  real ALTER TABLE, so this stays deliberate
+ *                                  per object even once it is layoutable.
+ *     @type bool     $layoutable   Its field arrangement can be edited on
+ *                                  Fields & Layouts, independent of whether it
+ *                                  is customisable — arranging existing fields
+ *                                  needs no schema change, so an object can
+ *                                  offer this without offering new fields.
+ *     @type string   $layout_variant A field whose value selects among several
+ *                                  saved layouts for this object (Project, by
+ *                                  project_type) — '' for the ordinary case of
+ *                                  one layout.
  *     @type bool     $exportable   Offered on the Data Export tab.
  *     @type bool     $recyclable   Deleted rows can be restored from the
  *                                  Recycle Bin. Needs an is_deleted column.
@@ -56,21 +67,23 @@ function pcm_crm_register_object( $pcm_slug, array $pcm_args ) {
 	}
 
 	$GLOBALS['pcm_crm_objects'][ $pcm_slug ] = array_merge( array(
-		'model'         => '',
-		'label'         => '',
-		'plural'        => '',
-		'reportable'    => false,
-		'customisable'  => false,
-		'exportable'    => false,
-		'recyclable'    => false,
-		'sf'            => '',
-		'group_by'      => '',
-		'group_options' => array(),
-		'related'       => '',
-		'module'        => '',
-		'icon'          => 'media-default',
-		'color'         => 1,
-		'page'          => '',
+		'model'          => '',
+		'label'          => '',
+		'plural'         => '',
+		'reportable'     => false,
+		'customisable'   => false,
+		'layoutable'     => false,
+		'layout_variant' => '',
+		'exportable'     => false,
+		'recyclable'     => false,
+		'sf'             => '',
+		'group_by'       => '',
+		'group_options'  => array(),
+		'related'        => '',
+		'module'         => '',
+		'icon'           => 'media-default',
+		'color'          => 1,
+		'page'           => '',
 	), $pcm_args );
 }
 

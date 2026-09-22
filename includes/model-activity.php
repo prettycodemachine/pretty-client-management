@@ -148,6 +148,7 @@ pcm_crm_register_object( 'activities', array(
 	'plural'        => 'Activities',
 	'reportable'    => true,
 	'customisable'  => true,
+	'layoutable'    => true,
 	'exportable'    => true,
 	'recyclable'    => true,
 	'sf'            => 'Task',
