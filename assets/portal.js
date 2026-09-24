@@ -1291,7 +1291,7 @@
 			state.project = me.projects.length ? me.projects[0].id : 0;
 
 			if (!me.projects.length) {
-				root.appendChild(el('div.pcm-portal-empty', [
+				root.appendChild(el('div.pcm-portal-empty', null, [
 					el('h2', { text: 'Welcome' + (me.contact_name ? ', ' + me.contact_name : '') }),
 					el('p', { text: 'No project is set up for you yet. Once one is, it will appear here.' })
 				]));

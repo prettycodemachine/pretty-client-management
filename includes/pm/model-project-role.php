@@ -54,8 +54,18 @@ function pcm_crm_project_roles() {
 	return $pcm_model;
 }
 
+/**
+ * Party's choices for the record form: the stored key as the value, its
+ * capitalised name as the label. Bare keys showed as "partner" and "client".
+ */
 function pcm_crm_pm_party_type_values() {
-	return array_keys( pcm_crm_pm_party_types() );
+	$pcm_out = array();
+
+	foreach ( pcm_crm_pm_party_types() as $pcm_key => $pcm_label ) {
+		$pcm_out[] = array( 'value' => $pcm_key, 'label' => $pcm_label );
+	}
+
+	return $pcm_out;
 }
 
 /**
