@@ -172,19 +172,47 @@
 .pcm-portal-badge.is-past-due { background: #fbeeee; color: var(--pcm-accent-deeper); border-color: var(--pcm-accent-deep); }
 .pcm-portal-badge.is-primary { background: #e8f1fb; color: var(--pcm-blue-deep); border-color: var(--pcm-blue-deep); min-width: 0; }
 
-/* Project Team — a read-only list, so no hover or pointer the way a
-   .pcm-portal-row that opens something has. Chained with .pcm-portal-row
-   for specificity, not just written after it: a single-class override loses
-   to .pcm-portal-row:hover (defined later, same specificity) by source
-   order alone. */
-.pcm-portal-role { cursor: default; justify-content: space-between; }
-.pcm-portal-row.pcm-portal-role:hover { background: none; }
-.pcm-portal-role-detail { flex: 0 0 auto; margin-left: auto; text-align: right; }
+/* Project Team — one colour-keyed section per side of the project, each a
+   grid of compact cards. Blue for the delivery team, amber for partners,
+   green for the client's own people — the ticket badges' hues, with amber
+   and green a shade darker here, since small text on their tints fell just
+   short of 4.5:1 (4.18 and 4.45). Every text pair below now clears it. */
+.pcm-portal-team { display: flex; flex-direction: column; gap: 22px; }
+.pcm-portal-team-group { --team: var(--pcm-blue-deep); --team-tint: #e8f1fb; }
+.pcm-portal-team-group.is-partner { --team: #8a5a0c; --team-tint: #fdf3e2; }
+.pcm-portal-team-group.is-client { --team: #276b4f; --team-tint: #e8f5ee; }
 
-@media (max-width: 560px) {
-  .pcm-portal-role { flex-wrap: wrap; }
-  .pcm-portal-role-detail { margin-left: 0; text-align: left; }
+.pcm-portal-team-head {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 10px; padding-bottom: 6px; border-bottom: 3px solid var(--team);
 }
+.pcm-portal-team-head h3 { margin: 0; font-size: 1rem; color: var(--team); }
+.pcm-portal-team-count {
+  min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--team); color: #fff;
+  font-size: 0.75rem; font-weight: 700; line-height: 20px; text-align: center;
+}
+.pcm-portal-team-note { font-size: 0.82rem; color: var(--pcm-body); }
+
+.pcm-portal-team-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.pcm-portal-team-card {
+  display: flex; align-items: flex-start; gap: 10px; min-width: 0;
+  padding: 10px 12px; border: 1px solid var(--pcm-line); border-left: 4px solid var(--team);
+  border-radius: 8px; background: #fff;
+}
+.pcm-portal-team-mark {
+  flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--team-tint); color: var(--team); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.02em;
+}
+.pcm-portal-team-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 0.9rem; }
+.pcm-portal-team-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pcm-portal-team-name strong { color: var(--pcm-ink); overflow-wrap: anywhere; }
+.pcm-portal-team-primary {
+  padding: 0 6px; border-radius: 999px; background: var(--team-tint); color: var(--team);
+  font-size: 0.66rem; font-weight: 800; line-height: 17px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.pcm-portal-team-role { color: var(--pcm-ink); }
+.pcm-portal-team-meta { font-size: 0.8rem; color: var(--pcm-body); }
 
 .pcm-portal-list { display: flex; flex-direction: column; gap: 2px; }
 

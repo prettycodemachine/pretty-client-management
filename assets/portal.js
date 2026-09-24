@@ -690,8 +690,10 @@
 
 	/**
 	 * Grouped by party, in the order a client reads them: the delivery team
-	 * first, then partners, then their own people. Names and roles only —
-	 * portal-rest.php has already dropped both rates.
+	 * first, then partners, then their own people. Each group is its own
+	 * colour-keyed section of compact cards, so which side someone is on reads
+	 * at a glance rather than from a heading scrolled past. Names and roles
+	 * only — portal-rest.php has already dropped both rates.
 	 */
 	function loadRoles(body) {
 		api('/portal/roles', { query: { project_id: state.project } }).then(function (rows) {
@@ -702,43 +704,68 @@
 				return;
 			}
 
+			var team = el('div.pcm-portal-team');
+
 			[
-				['internal', 'Delivery Team'],
-				['partner', 'Partners'],
-				['client', 'Your Team']
+				['internal', 'Delivery Team', 'The people doing the work'],
+				['partner', 'Partners', 'Firms working alongside us'],
+				['client', 'Your Team', 'People on your side of the project']
 			].forEach(function (group) {
 				var members = rows.filter(function (row) { return row.party_type === group[0]; });
 				if (!members.length) { return; }
 
-				body.appendChild(el('h3', { text: group[1] }));
+				var cards = el('div.pcm-portal-team-cards');
+				members.forEach(function (row) { cards.appendChild(roleCard(row)); });
 
-				var list = el('div.pcm-portal-list');
-				members.forEach(function (row) { list.appendChild(roleRow(row)); });
-				body.appendChild(list);
+				team.appendChild(el('section.pcm-portal-team-group.is-' + group[0], {}, [
+					el('div.pcm-portal-team-head', {}, [
+						el('h3', { text: group[1] }),
+						el('span.pcm-portal-team-count', { text: String(members.length) }),
+						el('span.pcm-portal-team-note', { text: group[2] })
+					]),
+					cards
+				]));
 			});
+
+			body.appendChild(team);
 		}).catch(function (error) { showError(body, error); });
 	}
 
 	/**
-	 * A partner firm may be engaged before anyone there is named, so the row
-	 * falls back to the firm's own name rather than rendering a blank line
-	 * with a role beside it.
+	 * Initials for the card's mark: first and last word, so "Bright Harbor
+	 * Consulting" reads BC rather than BH.
 	 */
-	function roleRow(row) {
+	function initials(name) {
+		var words = String(name || '').trim().split(/\s+/).filter(Boolean);
+		if (!words.length) { return '?'; }
+		var first = words[0].charAt(0);
+		var last = words.length > 1 ? words[words.length - 1].charAt(0) : '';
+		return (first + last).toUpperCase();
+	}
+
+	/**
+	 * A partner firm may be engaged before anyone there is named, so the card
+	 * falls back to the firm's own name rather than a blank line.
+	 */
+	function roleCard(row) {
 		var name = row.party_name || row.organization || 'Not yet named';
-		var detail = [];
+		var meta = [];
 
-		if (row.party_name && row.organization) { detail.push(row.organization); }
-		if (row.start_date) { detail.push('From ' + formatDate(row.start_date)); }
-		if (row.end_date) { detail.push('Until ' + formatDate(row.end_date)); }
+		if (row.party_name && row.organization) { meta.push(row.organization); }
+		if (row.start_date && row.end_date) { meta.push(formatDate(row.start_date) + ' – ' + formatDate(row.end_date)); }
+		else if (row.start_date) { meta.push('Since ' + formatDate(row.start_date)); }
+		else if (row.end_date) { meta.push('Until ' + formatDate(row.end_date)); }
 
-		return el('div.pcm-portal-row.pcm-portal-role', {}, [
-			el('div.pcm-portal-row-body', {}, [
-				el('strong', { text: name }),
-				el('span.pcm-portal-muted', { text: row.role || row.party_label })
-			]),
-			detail.length ? el('span.pcm-portal-muted.pcm-portal-role-detail', { text: detail.join(' · ') }) : null,
-			row.is_primary ? el('span.pcm-portal-badge.is-primary', { text: 'Primary' }) : null
+		return el('div.pcm-portal-team-card', {}, [
+			el('span.pcm-portal-team-mark', { text: initials(name), 'aria-hidden': 'true' }),
+			el('div.pcm-portal-team-body', {}, [
+				el('div.pcm-portal-team-name', {}, [
+					el('strong', { text: name }),
+					row.is_primary ? el('span.pcm-portal-team-primary', { text: 'Primary' }) : null
+				]),
+				el('span.pcm-portal-team-role', { text: row.role || row.party_label }),
+				meta.length ? el('span.pcm-portal-team-meta', { text: meta.join(' · ') }) : null
+			])
 		]);
 	}
 
