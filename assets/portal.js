@@ -689,8 +689,8 @@
 	   --------------------------------------------------------------------- */
 
 	/**
-	 * Grouped by party, in the order a client reads them: the delivery team
-	 * first, then partners, then their own people. Each group is its own
+	 * Grouped by party, in the order a client reads them: their own people
+	 * first, then the delivery team, then partners. Each group is its own
 	 * colour-keyed section of compact cards, so which side someone is on reads
 	 * at a glance rather than from a heading scrolled past. Names and roles
 	 * only — portal-rest.php has already dropped both rates.
@@ -707,9 +707,9 @@
 			var team = el('div.pcm-portal-team');
 
 			[
+				['client', 'Your Team', 'People on your side of the project'],
 				['internal', 'Delivery Team', 'The people doing the work'],
-				['partner', 'Partners', 'Firms working alongside us'],
-				['client', 'Your Team', 'People on your side of the project']
+				['partner', 'Partners', 'Firms working alongside us']
 			].forEach(function (group) {
 				var members = rows.filter(function (row) { return row.party_type === group[0]; });
 				if (!members.length) { return; }
