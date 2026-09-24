@@ -403,12 +403,12 @@
 
 		card.appendChild(el('h2.pcm-portal-summary-name', { text: project.name || (currentProject() && currentProject().name) || 'Project' }));
 
-		var facts = el('dl.pcm-portal-facts');
+		// The same label/value pairs as a RAID item, so the two tabs read alike.
+		var facts = el('div.pcm-portal-raid-fields.pcm-portal-facts');
 
 		function fact(label, value) {
-			if (!value) { return; }
-			facts.appendChild(el('dt', { text: label }));
-			facts.appendChild(el('dd', { text: value }));
+			var pair = raidField(label, value);
+			if (pair) { facts.appendChild(pair); }
 		}
 
 		fact('Project Type', project.type_label || summary.type_label);
@@ -435,9 +435,8 @@
 		if (meters.childNodes.length) { card.appendChild(meters); }
 
 		if (summary.next_milestone) {
-			var next = el('dl.pcm-portal-facts');
-			next.appendChild(el('dt', { text: 'Next milestone' }));
-			next.appendChild(el('dd', { text: summary.next_milestone.name + (summary.next_milestone.due_date ? ' · ' + formatDate(summary.next_milestone.due_date) : '') }));
+			var next = el('div.pcm-portal-raid-fields.pcm-portal-facts');
+			next.appendChild(raidField('Next Milestone', summary.next_milestone.name + (summary.next_milestone.due_date ? ' · ' + formatDate(summary.next_milestone.due_date) : '')));
 			card.appendChild(next);
 		}
 

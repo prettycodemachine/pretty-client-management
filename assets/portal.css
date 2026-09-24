@@ -78,9 +78,6 @@
   margin: 0 0 14px; padding-bottom: 12px; border-bottom: 2px solid var(--pcm-line);
 }
 
-.pcm-portal-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 20px; margin: 0; }
-.pcm-portal-facts dt { font-weight: 700; color: var(--pcm-body); font-size: 0.86rem; }
-.pcm-portal-facts dd { margin: 0; color: var(--pcm-ink); font-weight: 600; }
 
 /* The bars, and whatever facts list follows them, both get a rule above
    them — but only the one that actually follows something, so the first
@@ -217,7 +214,7 @@
 .pcm-portal-raid-head strong { color: var(--pcm-ink); }
 .pcm-portal-raid-fields { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
 .pcm-portal-raid-field-pair { display: flex; gap: 8px; align-items: baseline; }
-.pcm-portal-raid-field-label { flex: 0 0 110px; font-weight: 700; color: var(--pcm-body); }
+.pcm-portal-raid-field-label { flex: 0 0 130px; font-weight: 700; color: var(--pcm-body); }
 .pcm-portal-raid-field-value { flex: 1; color: var(--pcm-ink); white-space: pre-wrap; }
 .pcm-portal-row {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
