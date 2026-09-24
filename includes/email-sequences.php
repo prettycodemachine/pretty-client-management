@@ -352,7 +352,7 @@ function pcm_crm_send_contact_email( $pcm_contact_id, $pcm_subject, $pcm_body, a
 
 	$pcm_from    = pcm_crm_contact_recipient();
 	$pcm_headers = array(
-		'From: Pretty Code Machine <' . $pcm_from . '>',
+		'From: ' . pcm_crm_email_from(),
 		'Reply-To: ' . $pcm_from,
 	);
 

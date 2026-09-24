@@ -306,7 +306,7 @@ function pcm_crm_send_schedule( array $pcm_schedule ) {
 	}
 
 	$pcm_from    = pcm_crm_contact_recipient();
-	$pcm_headers = array( 'From: Pretty Code Machine <' . $pcm_from . '>' );
+	$pcm_headers = array( 'From: ' . pcm_crm_email_from(), 'Reply-To: ' . $pcm_from );
 
 	add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 	$pcm_sent = wp_mail( $pcm_to, $pcm_subject, pcm_crm_email_wrapper( $pcm_body ), $pcm_headers, $pcm_attachments );

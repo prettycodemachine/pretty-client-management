@@ -157,7 +157,7 @@ function pcm_crm_pm_send_ticket_comment_email( $pcm_comment_id ) {
 
 	add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 	$pcm_sent = wp_mail( $pcm_contact['email'], $pcm_subject, $pcm_wrapped, array(
-		'From: Pretty Code Machine <' . $pcm_from . '>',
+		'From: ' . pcm_crm_email_from(),
 		'Reply-To: ' . $pcm_from,
 	) );
 	remove_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );

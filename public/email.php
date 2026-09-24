@@ -19,7 +19,7 @@ function pcm_crm_contact_recipient() {
 }
 
 function pcm_crm_autoresponder_default_subject() {
-	return 'Thanks for getting in touch — Pretty Code Machine';
+	return sprintf( 'Thanks for getting in touch — %s', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) );
 }
 
 /**
@@ -32,16 +32,15 @@ function pcm_crm_autoresponder_default_subject() {
  */
 function pcm_crm_autoresponder_default_body() {
 	$pcm_site = esc_url( set_url_scheme( home_url( '/' ), 'https' ) );
+	$pcm_name = esc_html( get_bloginfo( 'name' ) );
 
+	// Signed by the site, not a person: this is what every install sends
+	// until someone writes their own, so it must not speak for anyone.
 	return
 		"Dear {{FIRST NAME}},\n\n" .
-		"Thank you for your interest in working with Pretty Code Machine!\n\n" .
-		"We&rsquo;ve attached a copy of our pricing sheet for your convenience.\n\n" .
-		"We look forward to being in touch within one business day.\n\n" .
-		"Talk soon,\nJason\n\n" .
-		"<strong>Jason Jensen</strong>\n" .
-		'Founder, <a href="' . $pcm_site . '">Pretty Code Machine</a>' . "\n" .
-		'<a href="https://calendly.com/jason-eric-jensen">Schedule a Meeting</a>';
+		"Thank you for getting in touch with {$pcm_name}. We&rsquo;ve received your message and will be in touch soon.\n\n" .
+		"Best regards,\n" .
+		'<a href="' . $pcm_site . '">' . $pcm_name . '</a>';
 }
 
 /**
@@ -144,6 +143,50 @@ function pcm_crm_migrate_theme_options() {
 	add_option( 'pcm_crm_attachment_ids', $pcm_legacy ? array( $pcm_legacy ) : array() );
 }
 
+/**
+ * The name mail from this plugin is sent under: the site's own.
+ *
+ * It was hardcoded as "Pretty Code Machine", which is right on one site and
+ * wrong on every other the plugin is installed on.
+ */
+function pcm_crm_email_from_name() {
+	$pcm_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+	// A From display name cannot carry these unquoted; a site name rarely
+	// has them, and dropping them beats a malformed header.
+	$pcm_name = trim( str_replace( array( '"', '<', '>', "\r", "\n" ), '', $pcm_name ) );
+
+	return '' !== $pcm_name ? $pcm_name : wp_parse_url( home_url(), PHP_URL_HOST );
+}
+
+/**
+ * The address mail from this plugin is sent from: wordpress@ the site's own
+ * domain, the same one WordPress core uses for its own mail.
+ *
+ * It used to be the contact-form recipient, which is usually a mailbox on
+ * some other domain — a Gmail or Workspace address this server is not
+ * authorised to send for, so the mail failed SPF and was filtered. No mailbox
+ * needs to exist here: sending only needs the domain's SPF to allow this
+ * server, and replies go to the recipient through Reply-To instead. An SMTP
+ * plugin that forces its own From still overrides this.
+ */
+function pcm_crm_email_from_address() {
+	$pcm_host = strtolower( (string) wp_parse_url( network_home_url(), PHP_URL_HOST ) );
+
+	if ( 0 === strpos( $pcm_host, 'www.' ) ) {
+		$pcm_host = substr( $pcm_host, 4 );
+	}
+
+	return apply_filters( 'wp_mail_from', 'wordpress@' . $pcm_host );
+}
+
+/**
+ * The From header value: the site's name at the site's own address.
+ */
+function pcm_crm_email_from() {
+	return pcm_crm_email_from_name() . ' <' . pcm_crm_email_from_address() . '>';
+}
+
 function pcm_crm_html_content_type() {
 	return 'text/html';
 }
@@ -163,6 +206,13 @@ function pcm_crm_email_wrapper( $pcm_content ) {
 	// the scheme is forced regardless of how the mail was triggered.
 	$pcm_logo = pcm_crm_email_logo_url();
 	$pcm_home = esc_url( set_url_scheme( home_url( '/' ), 'https' ) );
+	// The footer names the site the mail came from, and its link text is that
+	// same site's host. It once read "prettycodemachine.com" over a link to
+	// whichever site sent it — link text naming one domain and an href going
+	// to another, in a set-your-password email, is exactly what mail filters
+	// quarantine as phishing, and invites from other installs went missing.
+	$pcm_site = get_bloginfo( 'name' );
+	$pcm_host = wp_parse_url( home_url(), PHP_URL_HOST );
 	$pcm_ink  = '#1a1a1d';
 	$pcm_body = '#46464a';
 	$pcm_acc  = '#c94040';
@@ -185,7 +235,7 @@ function pcm_crm_email_wrapper( $pcm_content ) {
 					<tr>
 						<td align="center" style="padding:26px 32px 6px;">
 							<a href="<?php echo esc_url( $pcm_home ); ?>">
-								<img src="<?php echo esc_url( $pcm_logo ); ?>" width="150" alt="Pretty Code Machine"
+								<img src="<?php echo esc_url( $pcm_logo ); ?>" width="150" alt="<?php echo esc_attr( $pcm_site ); ?>"
 									style="display:block;width:150px;height:auto;border:0;">
 							</a>
 						</td>
@@ -205,8 +255,8 @@ function pcm_crm_email_wrapper( $pcm_content ) {
 				<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
 					<tr>
 						<td align="center" style="padding:16px 20px;font-family:<?php echo esc_attr( $pcm_font ); ?>;font-size:12px;line-height:1.6;color:#7a7a80;">
-							Pretty Code Machine &middot; Crafted in Vermont, USA<br>
-							<a href="<?php echo esc_url( $pcm_home ); ?>" style="color:#7a7a80;">prettycodemachine.com</a>
+							<?php echo esc_html( $pcm_site ); ?><br>
+							<a href="<?php echo esc_url( $pcm_home ); ?>" style="color:#7a7a80;"><?php echo esc_html( $pcm_host ); ?></a>
 						</td>
 					</tr>
 				</table>
@@ -371,7 +421,7 @@ function pcm_crm_send_autoresponder( array $pcm_fields ) {
 	$pcm_html    = pcm_crm_email_wrapper( pcm_crm_format_body( pcm_crm_fill_tokens( pcm_crm_autoresponder_body(), $pcm_fields ) ) );
 	$pcm_from    = pcm_crm_contact_recipient();
 	$pcm_headers = array(
-		'From: Pretty Code Machine <' . $pcm_from . '>',
+		'From: ' . pcm_crm_email_from(),
 		'Reply-To: ' . $pcm_from,
 	);
 

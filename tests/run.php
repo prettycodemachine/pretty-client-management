@@ -123,8 +123,12 @@ check( 'no stray paragraph from trailing blank lines',
 	substr_count( pcm_crm_format_body( "One\n\nTwo\n\n\n" ), '<p>' ), 2 );
 check( 'the shipped default has no pre-tagged paragraphs',
 	strpos( pcm_crm_autoresponder_default_body(), '<p>' ), false );
-check( 'the shipped default still carries its links',
-	substr_count( pcm_crm_autoresponder_default_body(), '<a href=' ), 2 );
+check( 'the shipped default links back to the site',
+	substr_count( pcm_crm_autoresponder_default_body(), '<a href=' ), 1 );
+check( 'mail is sent from the site\'s own domain, whatever the recipient is',
+	pcm_crm_email_from(), 'Pretty Code Machine <wordpress@' . preg_replace( '/^www\./', '', parse_url( home_url(), PHP_URL_HOST ) ) . '>' );
+check( 'and speaks for the site, not for a person',
+	strpos( pcm_crm_autoresponder_default_body(), 'Jason' ), false );
 
 echo "\n--- picklists ---\n";
 $stage = pcm_crm_stage( 'Closed Won' );

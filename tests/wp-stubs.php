@@ -55,6 +55,8 @@ function apply_filters( $h, $v ) {
 $GLOBALS['pcm_test_filters'] = array();
 
 function get_bloginfo( $s = '' ) { return 'Pretty Code Machine'; }
+function wp_specialchars_decode( $s, $q = ENT_NOQUOTES ) { return htmlspecialchars_decode( (string) $s, $q ); }
+function network_home_url( $p = '' ) { return home_url( $p ); }
 function bloginfo( $s = '' ) { echo get_bloginfo( $s ); }
 
 /**
