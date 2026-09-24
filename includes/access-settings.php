@@ -517,11 +517,12 @@ function pcm_crm_invite_staff( $pcm_email, $pcm_first, $pcm_last, $pcm_profile_k
 	), wp_login_url() );
 
 	$pcm_body = pcm_crm_email_wrapper( pcm_crm_format_body( sprintf(
-		/* translators: 1: the invited person's first name or email, 2: a set-password link */
-		__( "Hi %1\$s,\n\nYou now have access to the employee portal.\n\nSet your password to get started: %2\$s", 'pcm-crm' ),
+		/* translators: 1: the invited person's first name or email, 2: a set-password link, 3: how to sign in */
+		__( "Hi %1\$s,\n\nYou now have access to the employee portal.\n\nSet your password to get started: %2\$s\n\n%3\$s", 'pcm-crm' ),
 		$pcm_first ? $pcm_first : $pcm_email,
-		esc_url_raw( $pcm_url )
-	) ) );
+		esc_url_raw( $pcm_url ),
+		pcm_crm_invite_sign_in_line( $pcm_user )
+	) ), pcm_crm_front_logo_url() );
 
 	add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 	$pcm_sent = wp_mail( $pcm_email, __( 'You’re invited to the employee portal', 'pcm-crm' ), $pcm_body );

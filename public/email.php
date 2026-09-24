@@ -199,12 +199,14 @@ function pcm_crm_html_content_type() {
  * palette is repeated here and will not follow a change to the theme's
  * style.css.
  */
-function pcm_crm_email_wrapper( $pcm_content ) {
+function pcm_crm_email_wrapper( $pcm_content, $pcm_logo = '' ) {
 	// siteurl and home are stored as http:// and rewritten to https at runtime
 	// by SiteGround, so anything generated outside a web request emits http://.
 	// Mail clients block insecure images rather than follow the redirect, so
 	// the scheme is forced regardless of how the mail was triggered.
-	$pcm_logo = pcm_crm_email_logo_url();
+	// A caller sending on behalf of one portal passes that portal's logo;
+	// anything else, or a portal with none chosen, gets the email logo.
+	$pcm_logo = $pcm_logo ? $pcm_logo : pcm_crm_email_logo_url();
 	$pcm_home = esc_url( set_url_scheme( home_url( '/' ), 'https' ) );
 	// The footer names the site the mail came from, and its link text is that
 	// same site's host. It once read "prettycodemachine.com" over a link to
@@ -318,11 +320,76 @@ function pcm_crm_email_logo_url() {
  * own redirect_to against it is the whole question either destination needs
  * answered.
  */
-function pcm_crm_is_branded_login_visit( $pcm_prefix ) {
+function pcm_crm_is_branded_login_visit( $pcm_prefix, $pcm_kind = '' ) {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only, decides styling only
 	$pcm_redirect = isset( $_REQUEST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) : '';
 
-	return $pcm_prefix && $pcm_redirect && 0 === strpos( $pcm_redirect, $pcm_prefix );
+	if ( '' !== $pcm_redirect ) {
+		return $pcm_prefix && 0 === strpos( $pcm_redirect, $pcm_prefix );
+	}
+
+	// No redirect_to: WordPress drops it on its own redirects — an expired
+	// or already-used reset link lands on ?action=lostpassword&error=invalidkey
+	// with nothing to say where the visit started — so fall back to the
+	// destination remembered when it did (pcm_crm_remember_login_destination()).
+	return $pcm_kind && isset( $_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] ) && $pcm_kind === $_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ];
+}
+
+const PCM_CRM_LOGIN_DEST_COOKIE = 'pcm_crm_login_dest';
+
+/**
+ * Remember which portal a wp-login.php visit is for, for the rest of the
+ * browser session, so every screen of the password flow stays branded for
+ * it — including the ones WordPress reaches by redirecting without the
+ * redirect_to that identified it. A visit with a redirect_to for neither
+ * portal forgets it, so an admin logging in afterwards gets the plain screen.
+ */
+function pcm_crm_login_destination_for( $pcm_redirect ) {
+	foreach ( array(
+		'portal' => function_exists( 'pcm_crm_portal_url' ) ? pcm_crm_portal_url() : '',
+		'staff'  => pcm_crm_front_base_url(),
+	) as $pcm_kind => $pcm_prefix ) {
+		if ( $pcm_prefix && 0 === strpos( $pcm_redirect, $pcm_prefix ) ) {
+			return $pcm_kind;
+		}
+	}
+
+	return '';
+}
+
+function pcm_crm_remember_login_destination() {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only, decides styling only
+	if ( ! isset( $_REQUEST['redirect_to'] ) || headers_sent() ) {
+		return;
+	}
+
+	$pcm_kind = pcm_crm_login_destination_for( esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) );
+
+	if ( $pcm_kind ) {
+		setcookie( PCM_CRM_LOGIN_DEST_COOKIE, $pcm_kind, 0, SITECOOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
+		$_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] = $pcm_kind;
+	} elseif ( isset( $_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] ) ) {
+		setcookie( PCM_CRM_LOGIN_DEST_COOKIE, '', time() - HOUR_IN_SECONDS, SITECOOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
+		unset( $_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] );
+	}
+}
+add_action( 'login_init', 'pcm_crm_remember_login_destination' );
+
+/**
+ * The line an invite email uses to tell someone how to sign in.
+ *
+ * The login is not always the email address: sanitize_user() strips a "+"
+ * (jason+client@… becomes jasonclient@…), and WordPress's lost-password
+ * screen asks for "Username or Email Address" — so the invite names both.
+ */
+function pcm_crm_invite_sign_in_line( $pcm_user ) {
+	if ( strtolower( $pcm_user->user_login ) === strtolower( $pcm_user->user_email ) ) {
+		/* translators: %s: the account's email address, which is also its username */
+		return sprintf( __( 'Your username is your email address: %s', 'pcm-crm' ), $pcm_user->user_email );
+	}
+
+	/* translators: 1: username, 2: email address */
+	return sprintf( __( "Your username is %1\$s\nYou can also sign in with your email address, %2\$s", 'pcm-crm' ), $pcm_user->user_login, $pcm_user->user_email );
 }
 
 /**
@@ -332,8 +399,8 @@ function pcm_crm_is_branded_login_visit( $pcm_prefix ) {
  * above, which is why it is a caller's job to decide whether to call this at
  * all and this function's job only to draw once that is decided.
  */
-function pcm_crm_branded_login_style() {
-	$pcm_logo = pcm_crm_email_logo_url();
+function pcm_crm_branded_login_style( $pcm_logo = '' ) {
+	$pcm_logo = $pcm_logo ? $pcm_logo : pcm_crm_email_logo_url();
 	?>
 	<style>
 		#login h1 a, .login h1 a {

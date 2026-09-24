@@ -454,7 +454,7 @@ function esc_textarea( $s ) { return htmlspecialchars( (string) $s, ENT_QUOTES )
 function wp_get_attachment_image() { return ''; } function antispambot( $s ) { return $s; }
 function wp_die() {} function nocache_headers() {}
 function flush_rewrite_rules() { $GLOBALS['pcm_test_flushes'] = isset( $GLOBALS['pcm_test_flushes'] ) ? $GLOBALS['pcm_test_flushes'] + 1 : 1; }
-function wp_mail() { return true; } function remove_filter() {}
+function wp_mail( ...$pcm_args ) { $GLOBALS['pcm_test_last_mail'] = $pcm_args; return true; } function remove_filter() {}
 function wp_verify_nonce() { return true; }
 
 /**

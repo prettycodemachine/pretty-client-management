@@ -1059,6 +1059,30 @@ check( 'an ordinary wp-admin redirect is not a branded visit', pcm_crm_staff_is_
 check( 'the logo URL falls through unchanged',
 	pcm_crm_staff_login_logo_url( 'https://example.com/wp-login.php' ), 'https://example.com/wp-login.php' );
 
+// WordPress drops redirect_to on its own redirects (an invalid reset link
+// lands on ?action=lostpassword&error=invalidkey), so the destination
+// remembered at the start of the visit carries the branding through.
+unset( $_REQUEST['redirect_to'] );
+$_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] = 'staff';
+check( 'with no redirect_to, the remembered destination still brands the visit', pcm_crm_staff_is_login_visit(), true );
+$_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] = 'portal';
+check( 'but only for the portal it was remembered for', pcm_crm_staff_is_login_visit(), false );
+unset( $_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] );
+check( 'a redirect_to under the staff base is recognised as a staff visit',
+	pcm_crm_login_destination_for( 'https://example.com/staff/contacts/' ), 'staff' );
+check( 'and anything else as neither', pcm_crm_login_destination_for( 'https://example.com/wp-admin/' ), '' );
+
+echo "\n--- invite emails say how to sign in ---\n";
+check( 'a login that differs from the email names both',
+	pcm_crm_invite_sign_in_line( (object) array( 'user_login' => 'jasonclient@example.com', 'user_email' => 'jason+client@example.com' ) ),
+	"Your username is jasonclient@example.com\nYou can also sign in with your email address, jason+client@example.com" );
+check( 'a login that is the email says so once',
+	pcm_crm_invite_sign_in_line( (object) array( 'user_login' => 'nadia@example.com', 'user_email' => 'nadia@example.com' ) ),
+	'Your username is your email address: nadia@example.com' );
+pcm_crm_invite_staff( 'newhire@example.com', 'Nadia', 'Nguyen', 'sales', array() );
+check( 'the staff invite carries the sign-in line',
+	strpos( $GLOBALS['pcm_test_last_mail'][2], 'Your username is' ) !== false, true );
+
 unset( $_REQUEST['redirect_to'] );
 $GLOBALS['pcm_test_users'] = array();
 

@@ -45,29 +45,38 @@ add_action( 'admin_init', 'pcm_crm_portal_redirect_from_admin' );
  * login screen is untouched the rest of the time.
  */
 function pcm_crm_portal_is_login_visit() {
-	return pcm_crm_is_branded_login_visit( pcm_crm_portal_url() );
+	return pcm_crm_is_branded_login_visit( pcm_crm_portal_url(), 'portal' );
 }
 
-function pcm_crm_portal_login_logo_url() {
-	if ( pcm_crm_portal_is_login_visit() ) {
-		return home_url( '/' );
-	}
+// Both filters pass the value through on any other visit. They used to return
+// nothing, which blanked the WordPress logo's link and label on every
+// non-portal login screen while this module was on.
+function pcm_crm_portal_login_logo_url( $pcm_url ) {
+	return pcm_crm_portal_is_login_visit() ? pcm_crm_portal_url() : $pcm_url;
 }
 add_filter( 'login_headerurl', 'pcm_crm_portal_login_logo_url' );
 
-function pcm_crm_portal_login_logo_text() {
-	if ( pcm_crm_portal_is_login_visit() ) {
-		return get_bloginfo( 'name' );
-	}
+function pcm_crm_portal_login_logo_text( $pcm_text ) {
+	return pcm_crm_portal_is_login_visit() ? get_bloginfo( 'name' ) : $pcm_text;
 }
 add_filter( 'login_headertext', 'pcm_crm_portal_login_logo_text' );
+
+/**
+ * No "← Go to <site>" link under a portal login. The portal is its own place,
+ * not a side door of the marketing site, and a client who has come to sign in
+ * has nothing to do there.
+ */
+function pcm_crm_portal_login_site_link( $pcm_link ) {
+	return pcm_crm_portal_is_login_visit() ? '' : $pcm_link;
+}
+add_filter( 'login_site_html_link', 'pcm_crm_portal_login_site_link' );
 
 function pcm_crm_portal_login_style() {
 	if ( ! pcm_crm_portal_is_login_visit() ) {
 		return;
 	}
 
-	pcm_crm_branded_login_style();
+	pcm_crm_branded_login_style( pcm_crm_portal_logo_url() );
 }
 add_action( 'login_enqueue_scripts', 'pcm_crm_portal_login_style' );
 
@@ -149,11 +158,12 @@ function pcm_crm_portal_invite_contact( $pcm_contact_id ) {
 	), wp_login_url() );
 
 	$pcm_body = pcm_crm_email_wrapper( pcm_crm_format_body( sprintf(
-		/* translators: 1: contact's first name, 2: a set-password link */
-		__( "Hi %1\$s,\n\nYou now have access to your client portal, where you can see your project's time, RAID log and documents, and raise Help Tickets.\n\nSet your password to get started: %2\$s", 'pcm-crm' ),
+		/* translators: 1: contact's first name, 2: a set-password link, 3: how to sign in */
+		__( "Hi %1\$s,\n\nYou now have access to your client portal, where you can see your project's time, RAID log and documents, and raise Help Tickets.\n\nSet your password to get started: %2\$s\n\n%3\$s", 'pcm-crm' ),
 		$pcm_contact['first_name'] ? $pcm_contact['first_name'] : $pcm_contact['email'],
-		esc_url_raw( $pcm_url )
-	) ) );
+		esc_url_raw( $pcm_url ),
+		pcm_crm_invite_sign_in_line( $pcm_user )
+	) ), pcm_crm_portal_logo_url() );
 
 	add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 	$pcm_sent = wp_mail( $pcm_contact['email'], __( 'You’re invited to your client portal', 'pcm-crm' ), $pcm_body );

@@ -152,7 +152,7 @@ function pcm_crm_pm_send_ticket_comment_email( $pcm_comment_id ) {
 
 	/* translators: %s: the ticket's subject */
 	$pcm_subject = sprintf( __( 'Re: %s', 'pcm-crm' ), $pcm_ticket['subject'] );
-	$pcm_wrapped = pcm_crm_email_wrapper( pcm_crm_format_body( wp_kses_post( $pcm_comment['body'] ) ) );
+	$pcm_wrapped = pcm_crm_email_wrapper( pcm_crm_format_body( wp_kses_post( $pcm_comment['body'] ) ), function_exists( 'pcm_crm_portal_logo_url' ) ? pcm_crm_portal_logo_url() : '' );
 	$pcm_from    = pcm_crm_contact_recipient();
 
 	add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );

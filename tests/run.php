@@ -2436,6 +2436,21 @@ check( 'inviting a contact succeeds',
 
 $pcm_new_user = get_user_by( 'email', 'client@example.com' );
 check( 'a pcm_client user is created for them', $pcm_new_user->roles, array( 'pcm_client' ) );
+check( 'the invite tells them their username',
+	strpos( $GLOBALS['pcm_test_last_mail'][2], $pcm_new_user->user_login ) !== false, true );
+
+// Every other login screen keeps WordPress's own logo link, label and
+// back-to-site link; these filters used to return nothing when not a portal visit.
+unset( $_REQUEST['redirect_to'], $_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] );
+check( 'an ordinary login keeps its logo link', pcm_crm_portal_login_logo_url( 'https://wordpress.org/' ), 'https://wordpress.org/' );
+check( 'and its logo label', pcm_crm_portal_login_logo_text( 'Powered by WordPress' ), 'Powered by WordPress' );
+check( 'and its back-to-site link', pcm_crm_portal_login_site_link( '<a>Go to site</a>' ), '<a>Go to site</a>' );
+$_REQUEST['redirect_to'] = pcm_crm_portal_url();
+check( 'a portal login has no back-to-site link', pcm_crm_portal_login_site_link( '<a>Go to site</a>' ), '' );
+unset( $_REQUEST['redirect_to'] );
+$_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] = 'portal';
+check( 'nor does the invalid-link screen WordPress redirects a portal visit to', pcm_crm_portal_login_site_link( '<a>Go to site</a>' ), '' );
+unset( $_COOKIE[ PCM_CRM_LOGIN_DEST_COOKIE ] );
 check( 'and linked to the contact both ways',
 	array( (int) get_user_meta( $pcm_new_user->ID, 'pcm_crm_contact_id', true ), $pcm_invite_wpdb->contacts[20]['portal_user_id'] ),
 	array( 20, $pcm_new_user->ID ) );

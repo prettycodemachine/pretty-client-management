@@ -175,7 +175,7 @@ add_action( 'admin_bar_menu', 'pcm_crm_prune_admin_bar', 999 );
  * regardless.
  */
 function pcm_crm_staff_is_login_visit() {
-	return pcm_crm_is_branded_login_visit( pcm_crm_front_base_url() );
+	return pcm_crm_is_branded_login_visit( pcm_crm_front_base_url(), 'staff' );
 }
 
 function pcm_crm_staff_login_logo_url( $pcm_url ) {
@@ -193,6 +193,6 @@ function pcm_crm_staff_login_style() {
 		return;
 	}
 
-	pcm_crm_branded_login_style();
+	pcm_crm_branded_login_style( pcm_crm_front_logo_url() );
 }
 add_action( 'login_enqueue_scripts', 'pcm_crm_staff_login_style' );
