@@ -192,9 +192,11 @@ function pcm_crm_pm_task_statuses() {
  */
 function pcm_crm_pm_party_types() {
 	return apply_filters( 'pcm_crm_pm_party_types', array(
+		// Client first: it is the party that gives a contact portal access,
+		// and the one most roles are added for.
+		'client'   => 'Client',
 		'internal' => 'Internal',
 		'partner'  => 'Partner',
-		'client'   => 'Client',
 	) );
 }
 
