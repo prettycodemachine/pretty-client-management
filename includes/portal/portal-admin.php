@@ -40,6 +40,15 @@ function pcm_crm_portal_redirect_from_admin() {
 add_action( 'admin_init', 'pcm_crm_portal_redirect_from_admin' );
 
 /**
+ * No admin bar for a client. Everything on it — the site menu, the dashboard,
+ * "Edit Profile" — leads into wp-admin, which a client is bounced out of.
+ */
+function pcm_crm_portal_hide_admin_bar( $pcm_show ) {
+	return pcm_crm_portal_is_client() ? false : $pcm_show;
+}
+add_filter( 'show_admin_bar', 'pcm_crm_portal_hide_admin_bar' );
+
+/**
  * Where a client belongs: the portal page, or the site's front page on the
  * rare install that has not chosen one yet.
  */

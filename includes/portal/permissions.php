@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * suite does constantly, and which a long-running request (a queue worker,
  * WP-CLI) is not so different from either.
  */
-function pcm_crm_portal_context() {
+function pcm_crm_portal_context( $pcm_allow_no_project = false ) {
 	if ( ! is_user_logged_in() ) {
 		return new WP_Error( 'pcm_crm_portal_login_required', __( 'Please log in.', 'pcm-crm' ), array( 'status' => 401 ) );
 	}
@@ -40,7 +40,7 @@ function pcm_crm_portal_context() {
 
 	$pcm_project_ids = pcm_crm_portal_projects_for_contact( $pcm_contact_id );
 
-	if ( ! $pcm_project_ids ) {
+	if ( ! $pcm_project_ids && ! $pcm_allow_no_project ) {
 		return new WP_Error( 'pcm_crm_portal_no_project', __( 'No project is set up for you yet.', 'pcm-crm' ), array( 'status' => 404 ) );
 	}
 
@@ -86,7 +86,21 @@ function pcm_crm_portal_projects_for_contact( $pcm_contact_id ) {
  * project_id and check it themselves.
  */
 function pcm_crm_portal_permission() {
-	return ! is_wp_error( pcm_crm_portal_context() );
+	// The error itself, not false: false makes WordPress answer with its own
+	// "Sorry, you are not allowed to do that.", which told a client nothing.
+	$pcm_context = pcm_crm_portal_context();
+
+	return is_wp_error( $pcm_context ) ? $pcm_context : true;
+}
+
+/**
+ * /portal/me only: a client with no project yet is still a client, and the
+ * portal needs to be able to say so rather than refuse them outright.
+ */
+function pcm_crm_portal_permission_me() {
+	$pcm_context = pcm_crm_portal_context( true );
+
+	return is_wp_error( $pcm_context ) ? $pcm_context : true;
 }
 
 /**

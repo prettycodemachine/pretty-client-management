@@ -290,3 +290,38 @@
   .pcm-portal { padding: 16px 12px 40px; }
   .pcm-portal-comment.is-reply { margin-left: 12px; }
 }
+
+/* ==========================================================================
+   The portal's own page (public/portal-template.php)
+
+   The theme's stylesheet is not on this page, so the document itself needs
+   a ground, a font and a header. Scoped to .pcm-portal-page, which only the
+   portal template puts on <body>.
+   ========================================================================== */
+body.pcm-portal-page {
+  margin: 0;
+  background: #fff;
+  color: #46464a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+.pcm-portal-page img { max-width: 100%; }
+
+.pcm-portal-topbar { border-bottom: 2px solid #2c2c2e; background: #fff; }
+.pcm-portal-topbar-inner {
+  max-width: 1040px; margin: 0 auto; padding: 14px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.pcm-portal-brand { display: inline-flex; align-items: center; min-height: 48px; font-weight: 700; font-size: 1.15rem; color: #2c2c2e; }
+.pcm-portal-brand img { display: block; max-height: 88px; width: auto; }
+.pcm-portal-account { display: flex; align-items: center; gap: 20px; font-weight: 700; }
+.pcm-portal-account-name { color: #2c2c2e; }
+.pcm-portal-account a { color: #3f6b96; text-decoration: none; }
+.pcm-portal-account a:hover, .pcm-portal-account a:focus { text-decoration: underline; }
+
+@media (min-width: 700px) {
+  .pcm-portal-topbar-inner { padding-left: 40px; padding-right: 40px; }
+}
+
+.pcm-portal-empty { padding: 28px; border: 2px solid var(--pcm-ink); border-radius: 14px; background: var(--pcm-paper-tint); }
+.pcm-portal-empty p { margin: 0; }

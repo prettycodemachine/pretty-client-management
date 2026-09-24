@@ -16,7 +16,7 @@ function pcm_crm_portal_register_routes() {
 	register_rest_route( PCM_CRM_REST::NS, '/portal/me', array(
 		'methods'             => 'GET',
 		'callback'            => 'pcm_crm_portal_rest_me',
-		'permission_callback' => 'pcm_crm_portal_permission',
+		'permission_callback' => 'pcm_crm_portal_permission_me',
 	) );
 
 	register_rest_route( PCM_CRM_REST::NS, '/portal/summary', array(
@@ -116,7 +116,7 @@ function pcm_crm_portal_register_routes() {
 add_action( 'rest_api_init', 'pcm_crm_portal_register_routes' );
 
 function pcm_crm_portal_rest_me( WP_REST_Request $pcm_request ) {
-	$pcm_context = pcm_crm_portal_context();
+	$pcm_context = pcm_crm_portal_context( true );
 	$pcm_contact = pcm_crm_contacts()->get( $pcm_context['contact_id'] );
 
 	$pcm_projects = array();

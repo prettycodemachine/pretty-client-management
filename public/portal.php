@@ -77,3 +77,75 @@ function pcm_crm_portal_shortcode() {
 	return '<div id="pcm-portal-root" class="pcm-portal"></div>';
 }
 add_shortcode( 'pcm_client_portal', 'pcm_crm_portal_shortcode' );
+
+/**
+ * Is this request the portal page?
+ */
+function pcm_crm_is_portal_page() {
+	if ( ! is_singular() ) {
+		return false;
+	}
+
+	$pcm_post = get_queried_object();
+
+	return $pcm_post instanceof WP_Post && has_shortcode( $pcm_post->post_content, 'pcm_client_portal' );
+}
+
+/**
+ * The portal draws in the plugin's own document, not the theme's.
+ *
+ * It is a client's app, not a page of the marketing site: the site's header,
+ * navigation and footer are all ways out of it. The employee portal does the
+ * same (public/staff-template.php). Only a client ever reaches this —
+ * pcm_crm_portal_gate() has already sent anyone else to log in.
+ */
+function pcm_crm_portal_template( $pcm_template ) {
+	if ( pcm_crm_is_portal_page() && pcm_crm_portal_is_client() ) {
+		return PCM_CRM_DIR . 'public/portal-template.php';
+	}
+
+	return $pcm_template;
+}
+add_filter( 'template_include', 'pcm_crm_portal_template', 99 );
+
+function pcm_crm_portal_document_title( $pcm_title = '' ) {
+	return sprintf( __( '%s — Client Portal', 'pcm-crm' ), get_bloginfo( 'name' ) );
+}
+
+function pcm_crm_portal_title_filter( $pcm_title ) {
+	return pcm_crm_is_portal_page() && pcm_crm_portal_is_client() ? pcm_crm_portal_document_title() : $pcm_title;
+}
+add_filter( 'pre_get_document_title', 'pcm_crm_portal_title_filter', 99 );
+
+/**
+ * Drop the theme's own styles and scripts from the portal page.
+ *
+ * The template never calls get_header(), but wp_head() still prints whatever
+ * the theme enqueued, and a theme's stylesheet restyles headings, links and
+ * layout wholesale. Anything served from the theme's own directory goes,
+ * along with the block theme's global styles; plugins' assets stay.
+ */
+function pcm_crm_portal_dequeue_theme_assets() {
+	if ( ! pcm_crm_is_portal_page() || ! pcm_crm_portal_is_client() ) {
+		return;
+	}
+
+	$pcm_theme_dirs = array_unique( array( get_template_directory_uri(), get_stylesheet_directory_uri() ) );
+
+	foreach ( array( wp_styles(), wp_scripts() ) as $pcm_deps ) {
+		foreach ( (array) $pcm_deps->queue as $pcm_handle ) {
+			$pcm_src = isset( $pcm_deps->registered[ $pcm_handle ] ) ? (string) $pcm_deps->registered[ $pcm_handle ]->src : '';
+
+			foreach ( $pcm_theme_dirs as $pcm_dir ) {
+				if ( $pcm_src && 0 === strpos( set_url_scheme( $pcm_src ), set_url_scheme( $pcm_dir ) ) ) {
+					$pcm_deps->dequeue( $pcm_handle );
+				}
+			}
+		}
+	}
+
+	wp_dequeue_style( 'global-styles' );
+	wp_dequeue_style( 'classic-theme-styles' );
+	wp_dequeue_style( 'wp-block-library-theme' );
+}
+add_action( 'wp_enqueue_scripts', 'pcm_crm_portal_dequeue_theme_assets', 999 );

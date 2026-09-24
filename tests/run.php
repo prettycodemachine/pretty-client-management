@@ -2253,6 +2253,13 @@ check( 'a client with no linked contact is refused', pcm_crm_portal_context()->g
 
 update_user_meta( 10, 'pcm_crm_contact_id', 7 );
 check( 'linked but with no project yet', pcm_crm_portal_context()->get_error_code(), 'pcm_crm_portal_no_project' );
+check( 'a route refusal carries its own reason, not WordPress\'s generic one',
+	is_wp_error( pcm_crm_portal_permission() ) ? pcm_crm_portal_permission()->get_error_code() : null, 'pcm_crm_portal_no_project' );
+check( 'but /portal/me lets a client with no project in, so the portal can say so',
+	pcm_crm_portal_permission_me(), true );
+check( 'and tells them they have no projects rather than refusing',
+	pcm_crm_portal_context( true )['project_ids'], array() );
+check( 'a client never sees the admin bar', pcm_crm_portal_hide_admin_bar( true ), false );
 
 // A second client role, on a different project — the portal shows both, not
 // a single most-recent one.
