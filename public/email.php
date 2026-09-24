@@ -393,6 +393,8 @@ function pcm_crm_fill_tokens( $pcm_text, array $pcm_values ) {
 		'{{LAST_NAME}}'    => 'contact.last_name',
 		'{{ORGANIZATION}}' => 'account.name',
 		'{{EMAIL}}'        => 'contact.email',
+		// Nothing stores an interest any more; kept so an old reply's
+		// {{INTEREST}} resolves to nothing rather than printing the token.
 		'{{INTEREST}}'     => 'contact.service_interest',
 	);
 
@@ -446,11 +448,9 @@ function pcm_crm_send_notification( array $pcm_values, $pcm_contact_id = 0 ) {
 		( isset( $pcm_mapped['contact']['last_name'] ) ? $pcm_mapped['contact']['last_name'] : '' )
 	);
 
-	$pcm_interest = isset( $pcm_mapped['contact']['service_interest'] ) ? $pcm_mapped['contact']['service_interest'] : '';
 	$pcm_email    = isset( $pcm_mapped['contact']['email'] ) ? $pcm_mapped['contact']['email'] : '';
 
 	$pcm_subject = 'New inquiry';
-	if ( $pcm_interest ) { $pcm_subject .= ' — ' . $pcm_interest; }
 	if ( $pcm_name ) { $pcm_subject .= ' — ' . $pcm_name; }
 
 	$pcm_message = pcm_crm_submission_summary( $pcm_values ) . "\n";

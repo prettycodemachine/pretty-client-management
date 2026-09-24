@@ -179,12 +179,12 @@ foreach ( array( 'Qualification' => 10, 'Discovery' => 25, 'Proposal' => 50, 'Ne
 check( 'a posted probability cannot override the stage on a new record',
 	pcm_crm_apply_stage( array( 'stage_name' => 'Proposal', 'probability' => 99 ), 'opportunity' )['probability'], 50 );
 
-echo "\n--- service interest ---\n";
-check( 'contacts store what was asked about', pcm_crm_contacts()->has_field( 'service_interest' ), true );
-check( 'opportunities do too', pcm_crm_opportunities()->has_field( 'service_interest' ), true );
-check( 'the picklist is the labels the form posts',
-	pcm_crm_interest_labels(), array_values( pcm_crm_interest_options() ) );
-check( 'and includes the catch-all', in_array( 'Something else', pcm_crm_interest_labels(), true ), true );
+echo "\n--- no Interested In field ---\n";
+// It was a built-in field fed by one site's service list. A site that wants
+// it creates a custom field; the plugin ships nothing that names services.
+check( 'contacts carry no built-in interest field', pcm_crm_contacts()->has_field( 'service_interest' ), false );
+check( 'nor do opportunities', pcm_crm_opportunities()->has_field( 'service_interest' ), false );
+check( 'and the form cannot map a question to it', isset( pcm_crm_form_field_targets()['contact.service_interest'] ), false );
 
 echo "\n--- activity status sync ---\n";
 check( 'Completed implies is_completed',

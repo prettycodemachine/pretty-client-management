@@ -22,7 +22,7 @@ function pcm_crm_sample_templates() {
 			'subject' => 'Thanks for reaching out, {{contact.first_name}}',
 			'body'    =>
 				"Hi {{contact.first_name}},\n\n" .
-				"Thanks for getting in touch about {{contact.service_interest}}. I read what you sent about {{account.name}}.\n\n" .
+				"Thanks for getting in touch. I read what you sent about {{account.name}}.\n\n" .
 				"Before I suggest anything, it would help to understand where things stand today — what is working, what is not, and what prompted you to look now.\n\n" .
 				"Would a short call this week or next suit you? Happy to work around your calendar.\n\n" .
 				"Talk soon,\n{{sender.name}}",
@@ -70,7 +70,7 @@ function pcm_crm_sample_templates() {
 			'subject' => 'Still worth a conversation?',
 			'body'    =>
 				"Hi {{contact.first_name}},\n\n" .
-				"It has been a while since we spoke about {{contact.service_interest}}. Priorities move, so this may be long settled.\n\n" .
+				"It has been a while since we last spoke. Priorities move, so this may be long settled.\n\n" .
 				"If it is still on the list, I am glad to pick it up. If not, I will stop cluttering your inbox.\n\n" .
 				"Best,\n{{sender.name}}",
 		),

@@ -22,7 +22,6 @@ function pcm_crm_opportunities() {
 				'type'               => array( 'type' => 'text', 'sf' => 'Type', 'label' => 'Type', 'options' => 'pcm_crm_opportunity_types' ),
 				'lead_source'        => array( 'type' => 'text', 'sf' => 'LeadSource', 'label' => 'Lead Source', 'options' => 'pcm_crm_lead_sources' ),
 				'next_step'          => array( 'type' => 'text', 'sf' => 'NextStep', 'label' => 'Next Step' ),
-				'service_interest'   => array( 'type' => 'text', 'sf' => 'Service_Interest__c', 'label' => 'Interested In', 'options' => 'pcm_crm_interest_labels' ),
 				'closed_lost_reason' => array( 'type' => 'text', 'sf' => 'Closed_Lost_Reason__c', 'label' => 'Closed Lost Reason' ),
 				// Maintained by the history recorder, never posted: the moment
 				// the current stage was entered, and the moment the deal

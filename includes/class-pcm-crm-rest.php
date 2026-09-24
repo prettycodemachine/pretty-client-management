@@ -806,7 +806,6 @@ class PCM_CRM_REST {
 			'activityTypes'     => pcm_crm_activity_types(),
 			'activityStatuses'  => pcm_crm_activity_statuses(),
 			'priorities'        => pcm_crm_priorities(),
-			'interests'         => pcm_crm_interest_options(),
 			'owners'            => pcm_crm_owner_choices(),
 			'users'             => pcm_crm_user_directory(),
 			'currency'          => pcm_crm_currency_symbol(),

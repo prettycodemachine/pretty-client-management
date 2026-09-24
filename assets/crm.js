@@ -378,19 +378,6 @@
 	}
 
 	/**
-	 * The contact form's interest options, as the labels the form posts.
-	 *
-	 * bootstrap sends them keyed by slug, but the stored value is the label —
-	 * that is what the form submits and what the notification email carries —
-	 * so the dropdown offers labels on both sides.
-	 */
-	function interestLabels() {
-		var interests = (state.boot && state.boot.interests) || {};
-
-		return Object.keys(interests).map(function (slug) { return interests[slug]; });
-	}
-
-	/**
 	 * The stage definition behind a stage name.
 	 */
 	function stageByName(name) {
@@ -3774,13 +3761,9 @@
 			return withProviders([
 				// The account comes from the contact, so a deal created here
 				// is attached to both the person and their organization.
-				// service_interest rides along from the person: it is what they
-				// asked about on the contact form, and a deal opened for them
-				// is almost always about that.
 				{ id: 'opportunities', label: 'Opportunities', object: 'opportunities', newLabel: 'New Opportunity',
 					prefill: { account_id: record.account_id || 0, _account_id_name: record._account_id_name || record._account_name,
 						primary_contact_id: record.id, _primary_contact_id_name: contactName,
-						service_interest: record.service_interest || '',
 						stage_name: firstStage, close_date: closeDate } },
 				{ id: 'activities', label: 'Activities', object: 'activities', newLabel: 'New Activity',
 					prefill: activity({ who_id: record.id,

@@ -122,37 +122,3 @@ function pcm_crm_activity_statuses() {
 function pcm_crm_priorities() {
 	return apply_filters( 'pcm_crm_priorities', array( 'Low', 'Normal', 'High' ) );
 }
-
-/**
- * The contact form's interest options.
- *
- * The offerings live in the theme (inc/offerings.php), where they also drive
- * the services cards — they are site content, not CRM data. The plugin reads
- * them when the theme is active and falls back to its own list when it is not,
- * so the form never renders an empty dropdown.
- */
-function pcm_crm_interest_options() {
-	if ( function_exists( 'pcm_interest_options' ) ) {
-		$pcm_options = pcm_interest_options();
-	} else {
-		$pcm_options = array(
-			'salesforce-managed-support' => 'Salesforce Managed Support',
-			'ai-enablement'              => 'AI Enablement',
-			'custom-development'         => 'Custom Development',
-			'something-else'             => 'Something else',
-		);
-	}
-
-	return apply_filters( 'pcm_crm_interest_options', $pcm_options );
-}
-
-/**
- * The interest options as bare labels.
- *
- * The form posts a label rather than a slug — that value goes straight into the
- * notification email — so the CRM stores and filters on the same thing, and the
- * two cannot disagree about what someone asked for.
- */
-function pcm_crm_interest_labels() {
-	return array_values( pcm_crm_interest_options() );
-}

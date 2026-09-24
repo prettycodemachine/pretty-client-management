@@ -253,7 +253,6 @@ class PCM_CRM_Sample_Data {
 					'phone'       => sprintf( '(802) %03d-%04d', mt_rand( 200, 899 ), mt_rand( 1000, 9999 ) ),
 					'mobile_phone' => mt_rand( 0, 1 ) ? sprintf( '(802) %03d-%04d', mt_rand( 200, 899 ), mt_rand( 1000, 9999 ) ) : '',
 					'lead_source' => $this->pick( $sources ),
-					'service_interest' => $this->pick( pcm_crm_interest_labels() ),
 					'do_not_contact' => $dnc ? 1 : 0,
 					'do_not_contact_reason' => $dnc ? $this->pick( array(
 						'Asked to be removed from all mailings.',
@@ -286,7 +285,7 @@ class PCM_CRM_Sample_Data {
 		$srcs   = pcm_crm_lead_sources();
 
 		$work = array(
-			'Salesforce Managed Support', 'NPSP Implementation', 'AI Enablement Pilot',
+			'Managed Support Retainer', 'CRM Implementation', 'AI Enablement Pilot',
 			'Data Migration', 'Reporting & Dashboards', 'Custom Portal Build',
 			'Workflow Automation', 'Integration Project', 'Admin Retainer',
 			'Volunteer Portal', 'Grants Module Rollout', 'Website & CRM Integration',
@@ -344,7 +343,6 @@ class PCM_CRM_Sample_Data {
 				'name'               => $name,
 				'stage_name'         => $stage_name,
 				'closed_lost_reason' => $lost_reason,
-				'service_interest'   => $this->pick( pcm_crm_interest_labels() ),
 				'amount'             => mt_rand( 3, 90 ) * 500,
 				'close_date'         => $this->days( $close_offset, 'Y-m-d' ),
 				'type'               => $this->pick( $types ),
@@ -477,7 +475,7 @@ class PCM_CRM_Sample_Data {
 			'Meeting'  => array( 'Discovery workshop', 'Requirements review', 'Quarterly review', 'Board presentation', 'Training session' ),
 			'Task'     => array( 'Draft scope of work', 'Prepare dashboard mockups', 'Audit their org', 'Write migration plan', 'Review sandbox config' ),
 			'Note'     => array( 'Budget cycle ends in June', 'Prefers async updates', 'Two admins on staff', 'Currently on Classic', 'Grant-funded project' ),
-			'Web Form' => array( 'Web inquiry — Salesforce Managed Support', 'Web inquiry — AI Enablement', 'Web inquiry — Custom Development' ),
+			'Web Form' => array( 'Web inquiry' ),
 		);
 
 		$activities = array();

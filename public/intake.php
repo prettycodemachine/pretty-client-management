@@ -70,14 +70,8 @@ function pcm_crm_intake( array $pcm_values ) {
 		) );
 	}
 
-	// Subject names the interest where there is one, so the activity list
-	// reads as a log of what people are asking for rather than a column of
-	// identical rows.
-	$pcm_interest = isset( $pcm_mapped['contact']['service_interest'] ) ? $pcm_mapped['contact']['service_interest'] : '';
-	$pcm_subject  = $pcm_interest ? 'Web inquiry — ' . $pcm_interest : 'Web inquiry';
-
 	$pcm_activity_id = pcm_crm_log_activity( array(
-		'subject'       => $pcm_subject,
+		'subject'       => 'Web inquiry',
 		'activity_type' => 'Web Form',
 		'status'        => 'Completed',
 		'priority'      => 'Normal',

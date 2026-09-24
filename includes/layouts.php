@@ -68,14 +68,14 @@ function pcm_crm_default_layouts() {
 			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
 		),
 		'contacts' => array(
-			array( 'title' => '', 'fields' => array( 'first_name', 'last_name', 'title', 'account_id', 'owner_id', 'lead_source', 'service_interest' ) ),
+			array( 'title' => '', 'fields' => array( 'first_name', 'last_name', 'title', 'account_id', 'owner_id', 'lead_source' ) ),
 			array( 'title' => 'Contact details', 'fields' => array( 'email', 'phone', 'mobile_phone', 'do_not_contact', 'do_not_contact_reason' ) ),
 			array( 'title' => 'Mailing address', 'fields' => array( 'mailing_street', 'mailing_city', 'mailing_state', 'mailing_postal_code', 'mailing_country' ) ),
 			array( 'title' => 'Notes', 'fields' => array( 'description' ) ),
 		),
 		'opportunities' => array(
 			array( 'title' => '', 'fields' => array( 'name', 'account_id', 'primary_contact_id', 'owner_id', 'stage_name', 'closed_lost_reason' ) ),
-			array( 'title' => 'Forecast', 'fields' => array( 'amount', 'close_date', 'probability', 'type', 'lead_source', 'service_interest' ) ),
+			array( 'title' => 'Forecast', 'fields' => array( 'amount', 'close_date', 'probability', 'type', 'lead_source' ) ),
 			array( 'title' => 'Notes', 'fields' => array( 'next_step', 'description' ) ),
 		),
 		'activities' => array(
