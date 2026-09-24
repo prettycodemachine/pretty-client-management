@@ -555,7 +555,7 @@ pcm_crm_register_setup_page( 'schedules', array(
 pcm_crm_register_setup_page( 'export', array(
 	'group'       => 'data',
 	'label'       => __( 'Data Export', 'pcm-crm' ),
-	'description' => __( 'CSV extracts shaped for a Salesforce import.', 'pcm-crm' ),
+	'description' => '',
 	'render'      => 'pcm_crm_render_export_tab',
 	'order'       => 10,
 ) );

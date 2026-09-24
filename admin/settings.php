@@ -74,12 +74,6 @@ function pcm_crm_register_settings() {
 		'default'           => array(),
 	) );
 
-	pcm_crm_register_setting( 'pcm_crm_export_settings', 'pcm_crm_npsp_namespace', array(
-		'type'              => 'string',
-		'sanitize_callback' => 'pcm_crm_sanitize_checkbox',
-		'default'           => '',
-	) );
-
 	pcm_crm_register_setting( 'pcm_crm_theme_settings', 'pcm_crm_theme', array(
 		'type'              => 'string',
 		'sanitize_callback' => 'pcm_crm_sanitize_theme',
@@ -257,7 +251,7 @@ function pcm_crm_render_form_tab() {
 	<div class="pcm-crm-card">
 		<h2><?php esc_html_e( 'Put the form on a page', 'pcm-crm' ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'Paste this shortcode into any page or post. The Contact page template already includes it.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Paste this shortcode into any page or post.', 'pcm-crm' ); ?>
 		</p>
 		<div class="pcm-crm-embed">
 			<code>[pcm_contact_form]</code>
@@ -541,12 +535,7 @@ function pcm_crm_render_field_row( $pcm_index, array $pcm_field ) {
    --------------------------------------------------------------------------- */
 
 /**
- * The objects worth exporting, in the order Salesforce needs them loaded.
- *
- * Order matters and is the single most common way a Data Loader run goes
- * wrong: a Contact cannot reference an Account that does not exist yet. It is
- * the object registry's registration order, which is why objects register in
- * dependency order rather than alphabetically.
+ * The objects worth exporting, in the order the object registry lists them.
  */
 function pcm_crm_exportable_objects() {
 	$pcm_out = array();
@@ -554,43 +543,19 @@ function pcm_crm_exportable_objects() {
 	foreach ( pcm_crm_objects_where( 'exportable' ) as $pcm_slug => $pcm_object ) {
 		$pcm_out[ $pcm_slug ] = array(
 			'label' => $pcm_object['plural'],
-			'sf'    => $pcm_object['sf'],
 		);
 	}
 
 	return $pcm_out;
 }
 
-/**
- * Is a header a Salesforce standard field, or one this CRM invented?
- *
- * Custom fields end in __c by Salesforce's own convention, so the test is the
- * convention rather than a list that would need maintaining beside the maps.
- */
-function pcm_crm_is_custom_field( $pcm_api_name ) {
-	return (bool) preg_match( '/__c$/', $pcm_api_name );
-}
-
 function pcm_crm_render_export_tab() {
 	?>
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Two ways out', 'pcm-crm' ); ?></h2>
-		<p class="description">
-			<?php esc_html_e( 'Which one you want depends on the org you are loading into, not on the data. A Sales Cloud org takes one file per object, loaded in order. An org running the Nonprofit Success Pack is better served by NPSP’s own Data Import, which takes a person and their organization on one row and does the matching itself.', 'pcm-crm' ); ?>
-		</p>
-	</div>
-
-	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Sales Cloud — Data Loader', 'pcm-crm' ); ?></h2>
-		<p class="description">
-			<?php esc_html_e( 'One file per object. Column headers use Salesforce API names wherever the value can be loaded as it stands, so Data Loader maps most of them itself.', 'pcm-crm' ); ?>
-		</p>
-
 		<table class="pcm-crm-table pcm-crm-export-table">
 			<thead>
 				<tr>
 					<th><?php esc_html_e( 'Object', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Loads into', 'pcm-crm' ); ?></th>
 					<th><?php esc_html_e( 'Records', 'pcm-crm' ); ?></th>
 					<th></th>
 				</tr>
@@ -600,7 +565,6 @@ function pcm_crm_render_export_tab() {
 					<?php $pcm_model = PCM_CRM_REST::model( $pcm_slug ); ?>
 					<tr>
 						<td class="pcm-crm-strong"><?php echo esc_html( $pcm_meta['label'] ); ?></td>
-						<td><code><?php echo esc_html( $pcm_meta['sf'] ); ?></code></td>
 						<td><?php echo esc_html( number_format_i18n( $pcm_model ? $pcm_model->count() : 0 ) ); ?></td>
 						<td>
 							<a class="button button-primary" href="<?php echo esc_url( pcm_crm_export_url( $pcm_slug ) ); ?>">
@@ -611,118 +575,6 @@ function pcm_crm_render_export_tab() {
 				<?php endforeach; ?>
 			</tbody>
 		</table>
-
-		<ol class="pcm-crm-steps">
-			<li>
-				<strong><?php esc_html_e( 'Create the custom fields first.', 'pcm-crm' ); ?></strong>
-				<?php esc_html_e( 'Every header ending in __c is a field this CRM invented and a new org does not have. Add them under Setup → Object Manager → Fields & Relationships, or Data Loader will have nowhere to put those columns.', 'pcm-crm' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Load in the order above.', 'pcm-crm' ); ?></strong>
-				<?php esc_html_e( 'Accounts, then Contacts, then Opportunities, then Activities. A Contact cannot reference an Account that does not exist yet, which is the usual way one of these runs fails.', 'pcm-crm' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Translate the id columns as you go.', 'pcm-crm' ); ?></strong>
-				<?php esc_html_e( 'PCM_Account_Id__c and PCM_Contact_Id__c hold this CRM’s ids, not Salesforce ones — which is why they are named that way rather than AccountId, where Data Loader would map them automatically and reject every row. Keep each success file, then look the real Salesforce Id up against PCM_Id__c before loading the next object.', 'pcm-crm' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Keep PCM_Id__c as an External ID.', 'pcm-crm' ); ?></strong>
-				<?php esc_html_e( 'Tick External ID when you create the field, and every later load becomes an upsert rather than a fresh set of duplicates. It also makes a failed migration safe to re-run.', 'pcm-crm' ); ?>
-			</li>
-		</ol>
-
-		<p class="description">
-			<?php esc_html_e( 'CreatedDate and LastModifiedDate are read-only unless the org has Set Audit Fields enabled — leave them unmapped otherwise. The owner and audit columns hold WordPress user ids, so they are only useful as a record of who did what here.', 'pcm-crm' ); ?>
-		</p>
-	</div>
-
-	<div class="pcm-crm-card pcm-crm-card-accent">
-		<h2><?php esc_html_e( 'NPSP — Data Import', 'pcm-crm' ); ?></h2>
-		<p class="description">
-			<?php esc_html_e( 'One file, loaded into the NPSP Data Import object, then processed from NPSP Settings → Bulk Data Processes → Data Import. Each row carries a person and their organization together, and NPSP creates the household or organization account, matches existing contacts, and links them — so there are no ids to translate between files.', 'pcm-crm' ); ?>
-		</p>
-
-		<p>
-			<a class="button button-primary" href="<?php echo esc_url( pcm_crm_npsp_export_url( false ) ); ?>">
-				<?php esc_html_e( 'Download contacts and organizations', 'pcm-crm' ); ?>
-			</a>
-			<a class="button" href="<?php echo esc_url( pcm_crm_npsp_export_url( true ) ); ?>">
-				<?php esc_html_e( 'Download with won deals as donations', 'pcm-crm' ); ?>
-			</a>
-		</p>
-
-		<ol class="pcm-crm-steps">
-			<li>
-				<strong><?php esc_html_e( 'Check the field names against your org.', 'pcm-crm' ); ?></strong>
-				<?php esc_html_e( 'NPSP’s Data Import fields are named differently depending on how NPSP was installed. Open the Data Import object in Object Manager and see whether its fields start with npsp__ — then set the box below to match. Getting it wrong means every column fails to map, which is obvious immediately and harmless.', 'pcm-crm' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Load the file into Data Import.', 'pcm-crm' ); ?></strong>
-				<?php esc_html_e( 'Use Data Loader — Insert, object DataImport__c — or the NPSP Data Importer app if your org has it. Nothing is created in the CRM yet at this point; these are staging rows.', 'pcm-crm' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Dry run before you process.', 'pcm-crm' ); ?></strong>
-				<?php esc_html_e( 'NPSP Settings → Bulk Data Processes → Data Import has a dry run that reports what it would match and what it would create, without writing anything. It is the whole reason to prefer this route: you can see the duplicate handling before it happens.', 'pcm-crm' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Process, then check the failures.', 'pcm-crm' ); ?></strong>
-				<?php esc_html_e( 'Rows that fail stay in Data Import with the reason on them, so they can be corrected and re-processed rather than re-loaded from scratch.', 'pcm-crm' ); ?>
-			</li>
-		</ol>
-
-		<p class="description">
-			<?php esc_html_e( 'Only closed-won deals go in the donations file. NPSP creates a received donation per row and has no pipeline stage to carry, so an open deal loaded this way would post as income you have not had.', 'pcm-crm' ); ?>
-		</p>
-
-		<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
-			<?php settings_fields( 'pcm_crm_export_settings' ); ?>
-			<p>
-				<label>
-					<input type="checkbox" name="pcm_crm_npsp_namespace" value="1" <?php checked( (bool) get_option( 'pcm_crm_npsp_namespace', '' ) ); ?>>
-					<?php esc_html_e( 'This org’s Data Import fields are prefixed with npsp__', 'pcm-crm' ); ?>
-				</label>
-			</p>
-			<?php submit_button( __( 'Save export settings', 'pcm-crm' ), 'secondary', 'submit', false ); ?>
-		</form>
-	</div>
-
-	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Column headers', 'pcm-crm' ); ?></h2>
-		<p class="description">
-			<?php esc_html_e( 'What each CRM field is called in the Sales Cloud files. Grey names are Salesforce standard fields and map themselves. Names ending in __c are custom and have to exist in the org first — including the id columns, which deliberately do not use Salesforce’s own names because they hold this CRM’s ids rather than Salesforce ones.', 'pcm-crm' ); ?>
-		</p>
-
-		<?php foreach ( pcm_crm_exportable_objects() as $pcm_slug => $pcm_meta ) : ?>
-			<?php $pcm_model = PCM_CRM_REST::model( $pcm_slug ); ?>
-			<?php if ( ! $pcm_model ) { continue; } ?>
-
-			<h3><?php echo esc_html( $pcm_meta['label'] ); ?> &rarr; <code><?php echo esc_html( $pcm_meta['sf'] ); ?></code></h3>
-			<table class="pcm-crm-table pcm-crm-mapping-table">
-				<thead>
-					<tr>
-						<th><?php esc_html_e( 'CRM field', 'pcm-crm' ); ?></th>
-						<th><?php esc_html_e( 'Column header', 'pcm-crm' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td><?php esc_html_e( 'Record id', 'pcm-crm' ); ?></td>
-						<td><code class="pcm-crm-api-custom">PCM_Id__c</code></td>
-					</tr>
-					<?php $pcm_defs = $pcm_model->fields(); ?>
-					<?php foreach ( $pcm_model->salesforce_map() as $pcm_field => $pcm_api ) : ?>
-						<tr>
-							<td><?php echo esc_html( ! empty( $pcm_defs[ $pcm_field ]['label'] ) ? $pcm_defs[ $pcm_field ]['label'] : $pcm_field ); ?></td>
-							<td>
-								<code class="<?php echo pcm_crm_is_custom_field( $pcm_api ) ? 'pcm-crm-api-custom' : 'pcm-crm-api-standard'; ?>">
-									<?php echo esc_html( $pcm_api ); ?>
-								</code>
-							</td>
-						</tr>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
-		<?php endforeach; ?>
 	</div>
 	<?php
 }
@@ -867,7 +719,7 @@ function pcm_crm_render_pipeline_tab() {
 						name="pcm_crm_stall_days" value="<?php echo esc_attr( pcm_crm_stall_days() ); ?>">
 					<?php esc_html_e( 'days in the same stage', 'pcm-crm' ); ?>
 					<p class="description">
-						<?php esc_html_e( 'How long an open deal may sit in one stage before the board flags it. A judgement about how you sell, not a fact about the software — a long enterprise cycle wants a higher number than a quick retainer.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'How long an open deal may sit in one stage before the board flags it.', 'pcm-crm' ); ?>
 					</p>
 				</td>
 			</tr>

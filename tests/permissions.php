@@ -497,7 +497,7 @@ pcm_crm_pm_register_settings();
 pcm_crm_portal_register_settings();
 
 $pcm_expected_groups = array(
-	'pcm_crm_form_settings', 'pcm_crm_fields_settings', 'pcm_crm_export_settings',
+	'pcm_crm_form_settings', 'pcm_crm_fields_settings',
 	'pcm_crm_theme_settings', 'pcm_crm_modules_settings', 'pcm_crm_pipeline_settings',
 	'pcm_crm_sales_process_settings', 'pcm_crm_pm_time_settings', 'pcm_crm_pm_picklist_settings',
 	'pcm_crm_portal_settings',

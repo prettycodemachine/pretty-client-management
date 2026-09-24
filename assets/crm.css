@@ -1191,17 +1191,12 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-logo-preview img { max-width: 220px; height: auto; }
 
 /* Export tab */
-.pcm-crm-export-table, .pcm-crm-mapping-table {
+.pcm-crm-export-table {
   border: 2px solid var(--pcm-ink);
   border-radius: var(--radius);
   margin-bottom: 18px;
   max-width: 720px;
 }
-.pcm-crm-mapping-table code { background: none; font-size: 0.85rem; }
-/* Standard fields map themselves; custom ones have to be created first, so the
-   difference is worth seeing at a glance rather than reading for. */
-.pcm-crm-api-standard { color: var(--pcm-body); }
-.pcm-crm-api-custom { color: var(--pcm-accent-deep); font-weight: 700; }
 .pcm-crm-steps { max-width: 760px; line-height: 1.7; }
 .pcm-crm-steps li { margin-bottom: 10px; }
 

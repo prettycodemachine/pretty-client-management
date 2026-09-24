@@ -20,8 +20,8 @@ Download the plugin zip from the **[latest release](https://github.com/prettycod
 - **Employee Portal** — staff work from the front end of the site (`/staff/` by default) rather than in wp-admin, with a permission model of Profiles (exactly one baseline per person) and Permission Sets (any number of additive extensions) modelled on Salesforce's own.
 - **Client Portal** (optional, requires Projects) — clients get a low-privilege account to see their own project's summary, milestones, project team, and documents.
 - **Email templates & sequences** — merge-field templates generated from each object's own fields, with multi-step sequences and do-not-contact enforcement.
-- **Custom fields & layouts** — a custom field is a real table column, not post meta, so it works everywhere a built-in field does: filtering, sorting, the CSV/Salesforce export, and the report builder.
-- **Data export** — a Salesforce-ready CSV export (standard Sales Cloud objects or an NPSP-shaped import file) with PCM-prefixed custom fields for anything holding a local id.
+- **Custom fields & layouts** — a custom field is a real table column, not post meta, so it works everywhere a built-in field does: filtering, sorting, the CSV export, and the report builder.
+- **Data export** — a CSV download for each object: Accounts, Contacts, Opportunities and Activities.
 - **Themeable admin** — five built-in colour themes, all driven by CSS custom properties, checked against WCAG AA in every theme by an automated contrast test.
 
 ## Development

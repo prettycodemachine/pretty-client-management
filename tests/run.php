@@ -1080,27 +1080,6 @@ check( 'value fields keep their standard names',
 check( 'and so do audit dates, which are values',
 	pcm_crm_accounts()->salesforce_map()['created_date'], 'CreatedDate' );
 
-echo "\n--- NPSP data import ---\n";
-$npsp = pcm_crm_npsp_headers( false );
-check( 'the file leads with our own ids for tracing back',
-	array_slice( $npsp, 0, 2 ), array( 'PCM_Contact_Id__c', 'PCM_Account_Id__c' ) );
-check( 'a person and their organization are on one row',
-	in_array( 'Contact1_First_Name__c', $npsp, true ) && in_array( 'Account1_Name__c', $npsp, true ), true );
-check( 'donations are left out unless asked for',
-	in_array( 'Donation_Amount__c', $npsp, true ), false );
-check( 'and included when they are',
-	in_array( 'Donation_Amount__c', pcm_crm_npsp_headers( true ), true ), true );
-
-// Which spelling an org uses depends on how NPSP was installed, so it is a
-// setting rather than a guess.
-check( 'no namespace by default', pcm_crm_npsp_prefix(), '' );
-update_option( 'pcm_crm_npsp_namespace', '1' );
-check( 'the managed-package prefix is applied to every NPSP column',
-	in_array( 'npsp__Contact1_First_Name__c', pcm_crm_npsp_headers( false ), true ), true );
-check( 'but not to our own id columns, which are not NPSP fields',
-	in_array( 'PCM_Contact_Id__c', pcm_crm_npsp_headers( false ), true ), true );
-delete_option( 'pcm_crm_npsp_namespace' );
-
 echo "\n--- schema ---\n";
 check( 'ten tables defined', count( ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) ), 10 );
 $defs = implode( "\n", ( new ReflectionMethod( 'PCM_CRM_Schema', 'definitions' ) )->invoke( null, '' ) );
@@ -1132,13 +1111,9 @@ check( 'the four customisable objects are unchanged',
 check( 'and still carry their labels',
 	pcm_crm_customisable_objects()['opportunities'], 'Opportunities' );
 
-// Export order is the order a Data Loader run needs: a Contact cannot reference
-// an Account that does not exist yet.
-check( 'the exportable objects keep their dependency order',
+check( 'the exportable objects keep their registry order',
 	array_keys( pcm_crm_exportable_objects() ),
 	array( 'accounts', 'contacts', 'opportunities', 'activities' ) );
-
-check( 'and their Salesforce names', pcm_crm_exportable_objects()['activities']['sf'], 'Task' );
 
 // What used to be the skip-list inside PCM_CRM_REST::schema(), inverted: an
 // allow-list, so a new object is invisible to the filter builder until it asks.
