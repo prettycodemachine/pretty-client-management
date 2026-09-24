@@ -2436,6 +2436,17 @@ check( 'inviting a contact succeeds',
 
 $pcm_new_user = get_user_by( 'email', 'client@example.com' );
 check( 'a pcm_client user is created for them', $pcm_new_user->roles, array( 'pcm_client' ) );
+$pcm_portal_page = pcm_crm_portal_url();
+check( 'a client logging in with no destination goes to the portal',
+	pcm_crm_portal_login_redirect( admin_url(), '', $pcm_new_user ), $pcm_portal_page );
+check( 'as does one whose login form pointed at wp-admin',
+	pcm_crm_portal_login_redirect( admin_url(), admin_url(), $pcm_new_user ), $pcm_portal_page );
+check( 'a deep link inside the portal is kept',
+	pcm_crm_portal_login_redirect( admin_url(), $pcm_portal_page . '?project=3', $pcm_new_user ), $pcm_portal_page . '?project=3' );
+check( 'anyone else keeps WordPress\'s own destination',
+	pcm_crm_portal_login_redirect( admin_url(), '', (object) array( 'roles' => array( 'administrator' ) ) ), admin_url() );
+check( 'and a failed login is left alone',
+	pcm_crm_portal_login_redirect( admin_url(), '', new WP_Error( 'x', 'y' ) ), admin_url() );
 check( 'the invite tells them their username',
 	strpos( $GLOBALS['pcm_test_last_mail'][2], $pcm_new_user->user_login ) !== false, true );
 

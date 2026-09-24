@@ -84,6 +84,9 @@ function respond(method, route, body) {
 	if (pathPart === '/schema') { return schema; }
 
 	if (method === 'PUT' && pathPart === '/contacts/5') { Object.assign(contact, body); return contact; }
+	if (method === 'POST' && pathPart === '/opportunities') {
+		return Object.assign({ id: 44 }, body);
+	}
 	if (method === 'POST' && pathPart === '/contacts') {
 		return Object.assign({ id: 31, first_name: '', account_id: 0 }, body);
 	}
@@ -314,6 +317,22 @@ async function main() {
 	check('Create posts the new contact, at the account that narrowed the search', created && [created.payload.last_name, created.payload.account_id], ['Babbage', 3]);
 	check('and selects it in the lookup', (within(fieldWrap(form, 'primary_contact_id'), '.pcm-crm-lookup-pill', 'a') || {}).textContent, 'Babbage');
 	check('the quick create closes', quick.hidden, true);
+
+	/* Creating from a related list opens what was created, not the parent. */
+	if (!drawer().hidden) { drawer().querySelector('[data-role="close"]') ? drawer().querySelector('[data-role="close"]').click() : null; }
+	location.href = '';
+	window.PCM_CRM_App.helpers.openDrawer('opportunities', 0, {
+		prefill: { account_id: 2, _account_id_name: 'Acme', primary_contact_id: 5, name: 'Acme renewal', stage_name: 'Qualification' },
+		returnTo: { object: 'contacts', id: 5, label: 'Ada Lovelace' },
+	});
+	await settle();
+
+	saveButton(drawer().querySelector('.pcm-crm-details.is-editing')).click();
+	await settle();
+
+	check('saving a new deal from a contact goes to the new deal',
+		location.href, '/wp-admin/admin.php?page=pcm-crm-opportunities#id=44');
+	check('not back to the contact it was created from', drawer().hidden, true);
 
 	check('nothing was logged to the console as an error', errors, []);
 

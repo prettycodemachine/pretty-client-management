@@ -34,10 +34,46 @@ function pcm_crm_portal_redirect_from_admin() {
 		return;
 	}
 
-	wp_safe_redirect( home_url( '/' ) );
+	wp_safe_redirect( pcm_crm_portal_home() );
 	exit;
 }
 add_action( 'admin_init', 'pcm_crm_portal_redirect_from_admin' );
+
+/**
+ * Where a client belongs: the portal page, or the site's front page on the
+ * rare install that has not chosen one yet.
+ */
+function pcm_crm_portal_home() {
+	$pcm_portal = pcm_crm_portal_url();
+
+	return $pcm_portal ? $pcm_portal : home_url( '/' );
+}
+
+/**
+ * Send a client to the portal when they log in, whatever the login form was
+ * pointed at.
+ *
+ * WordPress's own password-reset flow ends on "Your password has been reset.
+ * Log in", whose link carries no redirect_to — so the login defaulted to
+ * wp-admin, which a client is bounced out of, and they landed on the site's
+ * homepage instead of the portal. A redirect_to already inside the portal
+ * (a deep link to one project, say) is kept.
+ */
+function pcm_crm_portal_login_redirect( $pcm_redirect, $pcm_requested, $pcm_user ) {
+	// A failed login hands over a WP_Error, which has no roles.
+	if ( ! is_object( $pcm_user ) || empty( $pcm_user->roles ) || ! in_array( 'pcm_client', (array) $pcm_user->roles, true ) ) {
+		return $pcm_redirect;
+	}
+
+	$pcm_portal = pcm_crm_portal_url();
+
+	if ( $pcm_portal && $pcm_requested && 0 === strpos( $pcm_requested, $pcm_portal ) ) {
+		return $pcm_requested;
+	}
+
+	return pcm_crm_portal_home();
+}
+add_filter( 'login_redirect', 'pcm_crm_portal_login_redirect', 10, 3 );
 
 /**
  * Give wp-login.php the CRM's own mark, but only when it is plainly a portal

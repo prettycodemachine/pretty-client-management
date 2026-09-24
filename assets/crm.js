@@ -1718,9 +1718,8 @@
 	 *
 	 * options.prefill seeds a new record's fields — used when creating a child
 	 * from its parent, so the link is already made before the form is shown.
-	 * options.returnTo names the record to go back to afterwards, so creating a
-	 * contact from an account lands you back on the account with the new row
-	 * in its list, rather than on nothing.
+	 * options.returnTo names the record a new one is being created for, which
+	 * the modal's heading says ("Contact for Northfield Historical Society").
 	 */
 	function openDrawer(object, id, options) {
 		options = options || {};
@@ -2242,7 +2241,7 @@
 			el('button.pcm-btn.pcm-btn-primary', {
 				type: 'button',
 				text: isNew ? 'Create' : 'Save',
-				onclick: function (event) { saveRecord(object, record.id, values, event.target, status, options.returnTo); }
+				onclick: function (event) { saveRecord(object, record.id, values, event.target, status); }
 			}),
 			el('button.pcm-btn.pcm-btn-quiet', {
 				type: 'button',
@@ -3645,7 +3644,7 @@
 		if (dom.quickScrim) { dom.quickScrim.hidden = true; }
 	}
 
-	function saveRecord(object, id, values, button, status, returnTo) {
+	function saveRecord(object, id, values, button, status) {
 		button.disabled = true;
 		status.textContent = 'Saving…';
 
@@ -3672,31 +3671,19 @@
 				return;
 			}
 
-			if (current.mode === 'modal' && current.below) {
-				// Created from a related list on a record page: the modal goes,
-				// and the page underneath is drawn again with the new row in it.
-				closeDrawer();
-				reloadRecord();
-				return;
+			// A new record opens as itself, wherever it was created from — a
+			// related list, its own list, or the modal over another record.
+			// It used to return to the parent it was created from, which left
+			// the person hunting for what they had just made.
+			closeDrawer(true);
+
+			if (!recordUrl(object, record.id)) {
+				// It opens in the modal, over whatever is underneath: bring that
+				// up to date first so the new row is there once it closes.
+				if (current.mode === 'page') { reloadRecord(); } else { refreshView(); }
 			}
 
-			if (returnTo) {
-				// Back to the parent it was created from, so the new row is
-				// visible in the list it was created out of.
-				openDrawer(returnTo.object, returnTo.id);
-				return;
-			}
-
-			closeDrawer();
-
-			// A record created from its own list opens as a page, the way it
-			// would have been reached from the list.
-			if (pageMode(state.view) && object === state.view) {
-				openRecord(object, record.id);
-				return;
-			}
-
-			refreshView();
+			openRecord(object, record.id);
 		}).catch(function (error) {
 			status.textContent = error.message;
 			button.disabled = false;
