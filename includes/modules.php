@@ -80,7 +80,7 @@ function pcm_crm_modules() {
 			'portal' => array(
 				'label'       => __( 'Client Portal', 'pcm-crm' ),
 				'description' => __( 'A login for your clients: their project\'s time, RAID log and documents, and Help Tickets they can raise and comment on themselves.', 'pcm-crm' ),
-				'default'     => 0,
+				'default'     => 1,
 				'requires'    => array( 'pm' ),
 				'schema'      => array(),
 				'files'       => array(

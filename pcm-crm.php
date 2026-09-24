@@ -3,7 +3,7 @@
  * Plugin Name: Pretty Client Management
  * Plugin URI:  https://prettycodemachine.com
  * Description: Accounts, Contacts, Opportunities and Activities — modelled on Salesforce's standard objects so the data can be migrated into a real org later. Also owns the site's contact form.
- * Version:     1.2.2
+ * Version:     1.2.3
  * Author:      Pretty Code Machine
  * Author URI:  https://prettycodemachine.com
  * License:     GPL-2.0-or-later
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'PCM_CRM_VERSION', '1.2.2' );
+define( 'PCM_CRM_VERSION', '1.2.3' );
 define( 'PCM_CRM_FILE', __FILE__ );
 define( 'PCM_CRM_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PCM_CRM_URL', plugin_dir_url( __FILE__ ) );
