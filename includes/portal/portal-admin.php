@@ -313,6 +313,23 @@ function pcm_crm_portal_admin_assets( $pcm_hook ) {
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_portal_admin_assets' );
 
+/**
+ * The same button on the front-end host (public/staff.php), which never runs
+ * admin_enqueue_scripts — the twin of pcm_crm_pm_front_assets(). It skips
+ * what the admin hook skips (PCM Settings and the app-backed pages in its
+ * frame) plus My Profile, none of which draws a Contact record.
+ */
+function pcm_crm_portal_front_assets() {
+	$pcm_screen = get_query_var( 'pcm_crm_screen', '' );
+
+	if ( '' === $pcm_screen || 'profile' === $pcm_screen || pcm_crm_front_screen_wants_setup_frame( $pcm_screen ) ) {
+		return;
+	}
+
+	wp_enqueue_script( 'pcm-crm-portal-admin', pcm_crm_asset( 'portal-admin.js' ), array( 'pcm-crm' ), null, true );
+}
+add_action( 'wp_enqueue_scripts', 'pcm_crm_portal_front_assets' );
+
 /* PCM Settings: which page carries the portal -------------------------------- */
 
 function pcm_crm_portal_setup_group( $pcm_groups ) {

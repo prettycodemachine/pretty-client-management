@@ -381,13 +381,21 @@ function is_admin() { return $GLOBALS['pcm_test_is_admin']; }
 function get_theme_mod() { return 0; }
 function wp_get_attachment_image_src() { return false; }
 function get_current_screen() { return null; }
-function wp_enqueue_style() {} function wp_enqueue_script() {}
+function wp_enqueue_style() {}
 function wp_dequeue_style() {} function wp_dequeue_script() {}
 
 /**
+ * Script handles, recorded in order, so a test can assert which screens load
+ * a module's script — the front-end host has no admin_enqueue_scripts, so a
+ * module that only hooks there silently never loads (portal-admin.js did).
+ */
+function wp_enqueue_script( $pcm_handle ) {
+	$GLOBALS['pcm_test_enqueued_scripts'][] = $pcm_handle;
+}
+
+/**
  * Recorded by handle, so a test can inspect exactly what config a caller
- * localized — the enqueue functions above stay no-ops since nothing here
- * asserts what was enqueued, only what a script was configured with.
+ * localized.
  */
 function wp_localize_script( $pcm_handle, $pcm_name, $pcm_data ) {
 	$GLOBALS['pcm_test_localized'][ $pcm_handle ][ $pcm_name ] = $pcm_data;

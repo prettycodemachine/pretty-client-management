@@ -298,6 +298,28 @@ pcm_crm_flush_permissions();
 check( 'delete in both areas can',
 	PCM_CRM_REST::permission( $pcm_req( '/recycle-bin', 'POST' ) ), true );
 
+// Inviting a contact to the portal is a CRM edit, not an administrator-only
+// act — a staff member who may edit contacts may invite them.
+$pcm_invite = function ( $pcm_route ) {
+	return new WP_REST_Request( array( 'pcm_id' => 5 ), array(), '/pcm-crm/v1/contacts/5/' . $pcm_route, 'POST' );
+};
+
+update_option( PCM_CRM_PROFILES_OPTION, array_merge( pcm_crm_profiles(), array(
+	'crm-view' => array( 'label' => 'CRM view only', 'grants' => array( 'crm' => array( 'view' ) ) ),
+) ) );
+
+update_user_meta( get_current_user_id(), PCM_CRM_PROFILE_META, 'crm-delete' );
+pcm_crm_flush_permissions();
+check( 'a non-administrator with CRM edit may invite a contact to the portal',
+	PCM_CRM_REST::permission( $pcm_invite( 'invite-portal' ) ), true );
+check( 'and remove their portal access',
+	PCM_CRM_REST::permission( $pcm_invite( 'revoke-portal' ) ), true );
+
+update_user_meta( get_current_user_id(), PCM_CRM_PROFILE_META, 'crm-view' );
+pcm_crm_flush_permissions();
+check( 'CRM view alone may not invite',
+	PCM_CRM_REST::permission( $pcm_invite( 'invite-portal' ) ), false );
+
 // Called with no request at all — a direct call, as a test or an old caller
 // would make — still answers the question it always answered.
 check( 'a direct call still answers the union',
@@ -815,6 +837,25 @@ unset( $GLOBALS['pcm_test_localized'] );
 pcm_crm_front_assets();
 check( 'templates enqueues the app — crm.js has to mount it',
 	isset( $GLOBALS['pcm_test_localized']['pcm-crm']['PCM_CRM'] ), true );
+
+// Invite to Portal is a record action portal-admin.js adds to the Contact
+// page. It was only ever hooked to admin_enqueue_scripts, so on the front-end
+// host the buttons never appeared — a real bug, found on staging.
+$pcm_portal_front = function ( $pcm_screen ) {
+	pcm_test_set_query_vars( array( 'pcm_crm_screen' => $pcm_screen ) );
+	$GLOBALS['pcm_test_enqueued_scripts'] = array();
+	pcm_crm_portal_front_assets();
+
+	return in_array( 'pcm-crm-portal-admin', $GLOBALS['pcm_test_enqueued_scripts'], true );
+};
+
+check( 'the front-end Contact screen loads the Invite to Portal action', $pcm_portal_front( 'contacts' ), true );
+check( 'and hooks it to the front end’s own enqueue hook',
+	has_filter( 'wp_enqueue_scripts', 'pcm_crm_portal_front_assets' ), true );
+check( 'but not on Settings, where there is no app to register it with', $pcm_portal_front( 'settings' ), false );
+check( 'nor on an app-backed Setup page, matching the admin hook', $pcm_portal_front( 'templates' ), false );
+check( 'nor on My Profile', $pcm_portal_front( 'profile' ), false );
+check( 'nor on a page that is not the staff host at all', $pcm_portal_front( '' ), false );
 
 $GLOBALS['pcm_test_is_admin'] = true;
 pcm_test_set_query_vars( array() );
