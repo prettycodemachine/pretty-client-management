@@ -2261,6 +2261,24 @@ check( 'and tells them they have no projects rather than refusing',
 	pcm_crm_portal_context( true )['project_ids'], array() );
 check( 'a client never sees the admin bar', pcm_crm_portal_hide_admin_bar( true ), false );
 
+// /staff/ used to send every signed-in non-staff visitor to the homepage,
+// which read as the employee portal "redirecting home" to a client whose
+// portal session was still open.
+$pcm_caps_before = isset( $GLOBALS['pcm_test_caps'] ) ? $GLOBALS['pcm_test_caps'] : null;
+$GLOBALS['pcm_test_caps'] = array();
+update_option( 'pcm_crm_portal_page_id', 42 );
+check( 'a client who opens /staff/ is sent to their portal', pcm_crm_front_gate_target(), pcm_crm_portal_url() );
+$pcm_client_user = $GLOBALS['pcm_test_current_user'];
+$GLOBALS['pcm_test_current_user'] = (object) array( 'ID' => 11, 'roles' => array( 'subscriber' ) );
+check( 'anyone else signed in is told the area is for staff', pcm_crm_front_gate_target(), 'deny' );
+$GLOBALS['pcm_test_current_user'] = (object) array( 'ID' => 12, 'roles' => array( PCM_CRM_STAFF_ROLE ) );
+check( 'staff stay', pcm_crm_front_gate_target(), '' );
+$GLOBALS['pcm_test_current_user'] = null;
+check( 'a logged-out visitor is sent to log in', pcm_crm_front_gate_target(), 'login' );
+$GLOBALS['pcm_test_current_user'] = $pcm_client_user;
+if ( null === $pcm_caps_before ) { unset( $GLOBALS['pcm_test_caps'] ); } else { $GLOBALS['pcm_test_caps'] = $pcm_caps_before; }
+delete_option( 'pcm_crm_portal_page_id' );
+
 // A second client role, on a different project — the portal shows both, not
 // a single most-recent one.
 class PCM_Portal_WPDB extends PCM_Ticket_WPDB {

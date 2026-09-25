@@ -115,22 +115,67 @@ function pcm_crm_front_visitor_allowed() {
 }
 
 /**
- * Send away anyone who should not be looking at this host — logged out
- * visitors to wp-login.php the same way the client portal does
- * (public/portal.php), everyone else logged in to the site's own front page.
+ * Where someone who may not use this host goes instead: 'login' when logged
+ * out, the Client Portal page for a client, or 'deny' for anyone else signed
+ * in. '' when they may stay. A plain function so it is checkable without
+ * going through wp_safe_redirect()'s exit.
+ *
+ * Signed-in visitors used to be sent to the site's front page, which read as
+ * /staff/ silently "redirecting to the home page" — most often a client whose
+ * portal session was still open in the same browser.
  */
-function pcm_crm_front_gate() {
+function pcm_crm_front_gate_target() {
 	if ( pcm_crm_front_visitor_allowed() ) {
-		return;
+		return '';
 	}
 
 	if ( ! is_user_logged_in() ) {
+		return 'login';
+	}
+
+	if ( function_exists( 'pcm_crm_portal_is_client' ) && pcm_crm_portal_is_client() && pcm_crm_portal_url() ) {
+		return pcm_crm_portal_url();
+	}
+
+	return 'deny';
+}
+
+/**
+ * Send away anyone who should not be looking at this host — logged out
+ * visitors to wp-login.php the same way the client portal does
+ * (public/portal.php), a client to their portal, and anyone else signed in
+ * to a page that says why, with a way to switch accounts.
+ */
+function pcm_crm_front_gate() {
+	$pcm_target = pcm_crm_front_gate_target();
+
+	if ( '' === $pcm_target ) {
+		return;
+	}
+
+	if ( 'login' === $pcm_target ) {
 		wp_safe_redirect( add_query_arg( 'redirect_to', rawurlencode( home_url( add_query_arg( null, null ) ) ), wp_login_url() ) );
 		exit;
 	}
 
-	wp_safe_redirect( home_url( '/' ) );
-	exit;
+	if ( 'deny' !== $pcm_target ) {
+		wp_safe_redirect( $pcm_target );
+		exit;
+	}
+
+	$pcm_back = home_url( add_query_arg( null, null ) );
+
+	wp_die(
+		'<h1>' . esc_html__( 'This area is for staff', 'pcm-crm' ) . '</h1>' .
+		'<p>' . esc_html( sprintf(
+			/* translators: %s: the signed-in user's name */
+			__( 'You are signed in as %s, which does not have access to the employee portal.', 'pcm-crm' ),
+			pcm_crm_user_label( wp_get_current_user() )
+		) ) . '</p>' .
+		'<p><a href="' . esc_url( wp_logout_url( $pcm_back ) ) . '">' . esc_html__( 'Log out and sign in as someone else', 'pcm-crm' ) . '</a></p>',
+		esc_html__( 'This area is for staff', 'pcm-crm' ),
+		array( 'response' => 403 )
+	);
 }
 
 /**
