@@ -339,7 +339,9 @@
 			}
 
 			if (summary.periods.length) {
-				var list = el('div.pcm-crm-related-rows');
+				var list = el('div.pcm-crm-related-rows', {}, [app.helpers.relatedHead([
+					{ label: 'Period' }, { label: 'Used' }, { label: 'Available' }, { label: 'Remaining', num: true }
+				])]);
 
 				summary.periods.forEach(function (period) {
 					list.appendChild(el('div.pcm-crm-related-row.pcm-crm-period-row', {}, [
@@ -751,47 +753,47 @@
 	 */
 	app.registerRelatedColumns('projects', function (row) {
 		return [
-			{ text: row.name, strong: true },
-			{ badge: row.stage_name, tone: row.is_closed ? 'won' : 'open' },
-			{ text: typeLabel(row.project_type) || '—' },
-			{ text: app.helpers.money(row.budget_amount), num: true }
+			{ label: 'Name', text: row.name, strong: true },
+			{ label: 'Stage', badge: row.stage_name, tone: row.is_closed ? 'won' : 'open' },
+			{ label: 'Type', text: typeLabel(row.project_type) || '—' },
+			{ label: 'Budget', text: app.helpers.money(row.budget_amount), num: true }
 		];
 	});
 
 	app.registerRelatedColumns('tasks', function (row) {
 		return [
-			{ text: row.name, strong: true },
-			{ badge: row.status },
-			{ text: row._assignee_name || '—' },
-			{ text: app.helpers.formatDate(row.due_date) }
+			{ label: 'Name', text: row.name, strong: true },
+			{ label: 'Status', badge: row.status },
+			{ label: 'Assignee', text: row._assignee_name || '—' },
+			{ label: 'Due Date', text: app.helpers.formatDate(row.due_date) }
 		];
 	});
 
 	app.registerRelatedColumns('milestones', function (row) {
 		return [
-			{ text: row.name, strong: true },
-			{ badge: row.status },
-			{ text: app.helpers.formatDate(row.due_date) }
+			{ label: 'Name', text: row.name, strong: true },
+			{ label: 'Status', badge: row.status },
+			{ label: 'Due Date', text: app.helpers.formatDate(row.due_date) }
 		];
 	});
 
 	app.registerRelatedColumns('raid', function (row) {
 		return [
-			{ text: row.title, strong: true },
-			{ badge: row.raid_type },
-			{ text: row.status || '—' },
+			{ label: 'Title', text: row.title, strong: true },
+			{ label: 'Type', badge: row.raid_type },
+			{ label: 'Status', text: row.status || '—' },
 			// Worst first is how the list is ordered, so the score has to be
 			// visible or the ordering looks arbitrary.
-			{ text: row.severity ? String(row.severity) : '—', num: true }
+			{ label: 'Severity', text: row.severity ? String(row.severity) : '—', num: true }
 		];
 	});
 
 	app.registerRelatedColumns('roles', function (row) {
 		return [
-			{ text: row._person_name || '—', strong: true },
-			{ badge: row._party_label || row.party_type },
-			{ text: row.role || '—' },
-			{ text: row._org_name || '—' }
+			{ label: 'Person', text: row._person_name || '—', strong: true },
+			{ label: 'Party', badge: row._party_label || row.party_type },
+			{ label: 'Role', text: row.role || '—' },
+			{ label: 'Organization', text: row._org_name || '—' }
 		];
 	});
 
@@ -799,19 +801,19 @@
 	// side. A Client role here is what puts the project in their portal.
 	app.registerRelatedColumns('contact_roles', function (row) {
 		return [
-			{ text: row._project_name || '—', strong: true },
-			{ badge: row._party_label || row.party_type },
-			{ text: row.role || '—' },
-			{ text: row.start_date ? app.helpers.formatDate(row.start_date) : '—' }
+			{ label: 'Project', text: row._project_name || '—', strong: true },
+			{ label: 'Party', badge: row._party_label || row.party_type },
+			{ label: 'Role', text: row.role || '—' },
+			{ label: 'Start Date', text: row.start_date ? app.helpers.formatDate(row.start_date) : '—' }
 		];
 	});
 
 	app.registerRelatedColumns('time', function (row) {
 		return [
-			{ text: app.helpers.formatDate(row.entry_date), strong: true },
-			{ text: row._user_name || '—' },
-			{ text: String(row.hours), num: true },
-			{ text: row.description || '—' }
+			{ label: 'Date', text: app.helpers.formatDate(row.entry_date), strong: true },
+			{ label: 'Person', text: row._user_name || '—' },
+			{ label: 'Hours', text: String(row.hours), num: true },
+			{ label: 'Description', text: row.description || '—' }
 		];
 	});
 
@@ -1486,6 +1488,8 @@
 				selectedId = 0;
 				return;
 			}
+
+			list.appendChild(app.helpers.relatedHead([{ label: 'Name' }, { label: 'File' }, { label: 'Size' }, {}], false, 'pcm-crm-doc-row'));
 
 			rows.forEach(function (row) {
 				list.appendChild(el('button.pcm-crm-related-row.pcm-crm-doc-row' + (row.id === selectedId ? '.is-active' : ''), {

@@ -128,7 +128,7 @@
 	function attachmentsPanel(attachments) {
 		if (!attachments.length) { return null; }
 
-		var list = el('div.pcm-crm-related-rows');
+		var list = el('div.pcm-crm-related-rows', {}, [app.helpers.relatedHead([{ label: 'Name' }, { label: 'File' }])]);
 		var preview = el('div.pcm-crm-doc-preview');
 
 		function showPreview(row) {
@@ -299,10 +299,10 @@
 
 	app.registerRelatedColumns('tickets', function (row) {
 		return [
-			{ text: row.subject, strong: true },
-			{ badge: row.status },
-			{ text: row._contact_id_name || '—' },
-			{ text: app.helpers.formatDate(row.last_modified_date) }
+			{ label: 'Subject', text: row.subject, strong: true },
+			{ label: 'Status', badge: row.status },
+			{ label: 'Contact', text: row._contact_id_name || '—' },
+			{ label: 'Last Modified', text: app.helpers.formatDate(row.last_modified_date) }
 		];
 	});
 })(window, document);

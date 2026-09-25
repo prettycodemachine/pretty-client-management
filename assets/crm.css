@@ -830,6 +830,10 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   margin-bottom: 12px;
 }
 .pcm-crm-related-rows { display: flex; flex-direction: column; }
+/* The header shares the rows' grid and padding, so each label lands over its
+   column; the rows are separate grids, so it only lines up while both carry
+   the same number of cells. */
+.pcm-crm-related-head,
 .pcm-crm-related-row {
   display: grid;
   grid-template-columns: minmax(0, 2fr) repeat(auto-fit, minmax(0, 1fr)) 18px;
@@ -846,6 +850,17 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   color: var(--pcm-body);
   cursor: pointer;
   border-radius: 8px;
+}
+.pcm-crm-related-head {
+  padding-top: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--pcm-line);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pcm-body);
+  cursor: default;
 }
 .pcm-crm-related-row:last-child { border-bottom: 0; }
 .pcm-crm-related-row:hover,
@@ -1286,6 +1301,9 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   .pcm-crm-tabs { flex-wrap: nowrap; overflow-x: auto; }
   .pcm-crm-tab { white-space: nowrap; }
   .pcm-crm-related-row { grid-template-columns: 1fr auto; }
+  /* Rows reflow into two columns here, so there is no column left for a
+     heading to sit over. */
+  .pcm-crm-related-head { display: none; }
   .pcm-crm:not(.pcm-crm-front) { margin-right: 12px; }
 }
 

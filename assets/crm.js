@@ -3858,7 +3858,7 @@
 					rows: parents,
 					object: '',
 					columns: function (row) {
-						return [{ text: row.label, strong: true }, { badge: row.kind }];
+						return [{ label: 'Record', text: row.label, strong: true }, { label: 'Type', badge: row.kind }];
 					},
 					open: function (row) { openRecord(row.object, row.id); }
 				}));
@@ -3954,9 +3954,9 @@
 		if (kind === 'contacts') {
 			return function (row) {
 				return [
-					{ text: objects.contacts.title(row), strong: true },
-					{ text: row.title || '—' },
-					{ text: row.email || '—' }
+					{ label: 'Name', text: objects.contacts.title(row), strong: true },
+					{ label: 'Title', text: row.title || '—' },
+					{ label: 'Email', text: row.email || '—' }
 				];
 			};
 		}
@@ -3964,20 +3964,20 @@
 		if (kind === 'opportunities') {
 			return function (row) {
 				return [
-					{ text: row.name, strong: true },
-					{ badge: row.stage_name, tone: row.is_won ? 'won' : (row.is_closed ? 'lost' : 'open') },
-					{ text: formatDate(row.close_date) },
-					{ text: money(row.amount), num: true }
+					{ label: 'Name', text: row.name, strong: true },
+					{ label: 'Stage', badge: row.stage_name, tone: row.is_won ? 'won' : (row.is_closed ? 'lost' : 'open') },
+					{ label: 'Close Date', text: formatDate(row.close_date) },
+					{ label: 'Amount', text: money(row.amount), num: true }
 				];
 			};
 		}
 
 		return function (row) {
 			return [
-				{ text: row.subject || row.activity_type, strong: true },
-				{ badge: row.activity_type },
-				{ text: row.status || '—' },
-				{ text: formatDate(row.activity_date) }
+				{ label: 'Subject', text: row.subject || row.activity_type, strong: true },
+				{ label: 'Type', badge: row.activity_type },
+				{ label: 'Status', text: row.status || '—' },
+				{ label: 'Date', text: formatDate(row.activity_date) }
 			];
 		};
 	}
@@ -4262,8 +4262,26 @@
 	}
 
 	/**
+	 * Column headings over a list of related rows, on the rows' own grid so
+	 * each label sits over its column. Takes the same cell descriptions the
+	 * rows are drawn from — `label`, plus `num` to right-align over a figure —
+	 * and `trailing` adds the empty track the rows' › glyph occupies. A list
+	 * whose rows carry their own grid (a document row) passes that row class
+	 * as `variant`, so the header lays out on the same tracks.
+	 */
+	function relatedHead(cols, trailing, variant) {
+		var cells = cols.map(function (col) {
+			return el('span.pcm-crm-cell' + (col.num ? '.pcm-crm-num' : ''), { text: col.label || '' });
+		});
+
+		if (trailing) { cells.push(el('span')); }
+
+		return el('div.pcm-crm-related-head' + (variant ? '.' + variant : ''), {}, cells);
+	}
+
+	/**
 	 * A Salesforce-style related list: the parent's children as rows that open
-	 * their own record.
+	 * their own record, under a header naming each column.
 	 *
 	 * Rows are buttons rather than divs with a click handler, so they are
 	 * reachable by keyboard and announced as actionable — a related list whose
@@ -4290,6 +4308,11 @@
 		var open = config.open || function (row) { openRecord(config.object, row.id); };
 
 		var list = el('div.pcm-crm-related-rows');
+		var noun = objects[config.object] ? objects[config.object].label : 'record';
+
+		// Headings come from the first row's cells, so a renderer names each
+		// column in the same place it fills it.
+		list.appendChild(relatedHead(config.columns(config.rows[0]), true));
 
 		config.rows.forEach(function (row) {
 			var cells = config.columns(row).map(function (col) {
@@ -4309,7 +4332,7 @@
 
 			list.appendChild(el('button.pcm-crm-related-row', {
 				type: 'button',
-				title: config.object ? 'Open this ' + config.object.replace(/s$/, '') : 'Open this record',
+				title: 'Open this ' + noun,
 				onclick: function () { open(row); }
 			}, cells));
 		});
@@ -5347,6 +5370,7 @@
 			chartCard: chartCard,
 			legend: legend,
 			relatedList: relatedList,
+			relatedHead: relatedHead,
 			applyConditionalFields: applyConditionalFields,
 			fieldDefinition: fieldDefinition,
 			stageIsLost: stageIsLost,

@@ -256,8 +256,11 @@ Object.keys(registered.columns).forEach(kind => {
 
 	cells.forEach((cellDef, i) => {
 		const keys = Object.keys(cellDef);
-		const known = keys.every(k => ['text', 'strong', 'badge', 'tone', 'num'].indexOf(k) !== -1);
+		const known = keys.every(k => ['label', 'text', 'strong', 'badge', 'tone', 'num'].indexOf(k) !== -1);
 		check(`related '${kind}' cell ${i} uses known cell keys`, known, true);
+		// The label is the column's heading; a cell without one leaves a
+		// blank over its column.
+		check(`related '${kind}' cell ${i} names its column`, typeof cellDef.label === 'string' && cellDef.label.length > 0, true);
 
 		if ('text' in cellDef) {
 			check(`related '${kind}' cell ${i} text is a string`, typeof cellDef.text === 'string', true);

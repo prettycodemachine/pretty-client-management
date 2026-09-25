@@ -268,6 +268,15 @@ async function main() {
 		const row = panel && panel.querySelector('.pcm-crm-related-row');
 		check(`the ${key} list has a row to click`, !!row, true);
 
+		// Each heading sits over its column only while the header and the
+		// rows carry the same number of cells.
+		const head = panel && panel.querySelector('.pcm-crm-related-head');
+		check(`the ${key} list has column headings`, !!head, true);
+		if (head && row) {
+			check(`the ${key} headings match its cells one for one`, head.children.length, row.children.length);
+			check(`the ${key} list names its first column`, head.children[0].textContent.length > 0, true);
+		}
+
 		if (row) {
 			let thrown = null;
 			try { row.click(); await settle(); } catch (e) { thrown = e.message; }
