@@ -1360,13 +1360,25 @@
 		return cfg.exportUrl + '?' + query;
 	}
 
+	/**
+	 * The noun a list's count reads in: "21 time entries", not "21 time".
+	 * An object's plural is also its screen and report name ("RAID Log",
+	 * "Time"), which is not always something you can count, so an object may
+	 * declare countNoun: [singular, plural] to say it outright. Written as
+	 * given, since lowercasing "RAID" would make it "raid".
+	 */
+	function countNoun(def, n) {
+		if (def.countNoun) { return def.countNoun[n === 1 ? 0 : 1]; }
+		return (n === 1 ? def.label : def.plural).toLowerCase();
+	}
+
 	function loadList(object) {
 		writeHash();
 
 		var def = objects[object];
 
 		api('/' + object, { query: state.query }).then(function (data) {
-			setCount('<strong>' + data.total + '</strong> ' + (data.total === 1 ? def.label.toLowerCase() : def.plural.toLowerCase()));
+			setCount('<strong>' + data.total + '</strong> ' + countNoun(def, data.total));
 
 			// Keep the export link in step with the filters that were just
 			// applied, or it downloads the previous view.
@@ -1379,7 +1391,7 @@
 				clear(dom.body, el('div.pcm-crm-empty', {}, [
 					el('h3', { text: 'Nothing here yet' }),
 					el('p', { text: filtered
-						? 'No ' + def.plural.toLowerCase() + ' match these filters.'
+						? 'No ' + countNoun(def, 0) + ' match these filters.'
 						: 'Create the first one to get started.' }),
 					// Schedules are made from a report, so that is where this goes.
 					!filtered && object === 'schedules'
@@ -3872,7 +3884,8 @@
 						returnTo: { object: object, id: record.id, label: objects[object].title(record) }
 					});
 				},
-				empty: 'No ' + child.label.toLowerCase() + ' yet.',
+				// emptyNoun is for a label lowercasing would spoil ("RAID").
+				empty: 'No ' + (child.emptyNoun || child.label.toLowerCase()) + ' yet.',
 				columns: relatedColumns(child.id)
 			}));
 		});

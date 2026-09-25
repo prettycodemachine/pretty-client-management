@@ -422,5 +422,14 @@ const contactRoles = contactLists.find(c => c.id === 'contact_roles');
 check('a Contact gets a Project Roles tab', contactRoles && [contactRoles.label, contactRoles.object], ['Project Roles', 'project_roles']);
 check('whose New role is linked to the contact, on the client side', contactRoles && [contactRoles.prefill.contact_id, contactRoles.prefill._contact_id_name, contactRoles.prefill.party_type], [7, 'Ada Lovelace', 'client']);
 
+// A project's tabs read like every other record's — plural, with a New button
+// that names what it makes — rather than "Task" over a bare "New".
+const pmTabs = ['tasks', 'raid', 'milestones', 'roles', 'time', 'activities'];
+const projectLists = (registered.children.projects || []).reduce((all, fn) => all.concat(fn({ id: 3, name: 'Build' }, helpers)), []).filter(c => pmTabs.includes(c.id));
+check('a project\'s tabs are plural', projectLists.map(c => c.label), ['Tasks', 'RAID Log', 'Milestones', 'Project Roles', 'Time Entries', 'Activities']);
+check('and each New button names its record', projectLists.map(c => c.newLabel), ['New Task', 'New RAID Entry', 'New Milestone', 'New Project Role', 'New Time Entry', 'New Activity']);
+check('an empty RAID tab keeps "RAID" in capitals', projectLists.find(c => c.id === 'raid').emptyNoun, 'RAID entries');
+check('lists whose name is not a countable noun count in one', [registered.objects.project_raid.countNoun, registered.objects.time_entries.countNoun], [['RAID entry', 'RAID entries'], ['time entry', 'time entries']]);
+
 console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');
 process.exit(failed ? 1 : 0);

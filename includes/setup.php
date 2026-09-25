@@ -531,7 +531,7 @@ pcm_crm_register_setup_page( 'form', array(
 pcm_crm_register_setup_page( 'templates', array(
 	'group'       => 'automation',
 	'label'       => __( 'Email Templates', 'pcm-crm' ),
-	'description' => __( 'Reusable emails, with contact, account and opportunity variables.', 'pcm-crm' ),
+	'description' => __( 'Reusable emails, with contact and account variables.', 'pcm-crm' ),
 	'page'        => 'pcm-crm-templates',
 	'order'       => 10,
 ) );

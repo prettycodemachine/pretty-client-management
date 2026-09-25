@@ -190,6 +190,8 @@ class PCM_CRM_PM_Sample_Data {
 				'bill_rate'    => $fields['default_bill_rate'],
 				'cost_rate'    => $fields['default_cost_rate'],
 				'retainer'     => $is_retainer ? (float) $fields['retainer_hours'] : 0.0,
+				'rollover'     => $is_retainer ? (int) $fields['retainer_rollover'] : 0,
+				'rollover_cap' => $is_retainer ? (float) $fields['retainer_rollover_cap'] : 0.0,
 			);
 
 			$index++;
@@ -532,7 +534,7 @@ class PCM_CRM_PM_Sample_Data {
 					'period_start'       => $first,
 					'period_end'         => $last,
 					'allotted_hours'     => $project['retainer'],
-					'rollover_cap_hours' => 8,
+					'rollover_cap_hours' => $project['rollover_cap'],
 				) );
 
 				if ( is_wp_error( $id ) ) {
@@ -559,11 +561,15 @@ class PCM_CRM_PM_Sample_Data {
 					array( '%d' )
 				);
 
-				// Next month's carry-in, capped, and never negative: an overrun
-				// is a conversation, not a debt carried forward silently.
+				// Next month's carry-in follows the project's own terms: nothing
+				// unless unused hours roll over, then capped, and never negative —
+				// an overrun is a conversation, not a debt carried forward
+				// silently. This once ignored the project and always carried up
+				// to 8h, so a sample retainer set to not roll over showed carried
+				// hours on its Burn-down tab.
 				$used    = $project['retainer'] * ( mt_rand( 60, 130 ) / 100 );
 				$left    = ( $project['retainer'] + $carried ) - $used;
-				$carried = max( 0, min( 8, $left ) );
+				$carried = $project['rollover'] ? max( 0, min( $project['rollover_cap'], $left ) ) : 0.0;
 
 				$count++;
 			}

@@ -469,6 +469,7 @@
 	app.registerObject('project_raid', {
 		label: 'RAID Entry',
 		plural: 'RAID Log',
+		countNoun: ['RAID entry', 'RAID entries'],
 		title: function (row) { return row.title || 'RAID entry'; },
 		kicker: function (row) { return row.raid_type || 'RAID'; },
 		kickerLink: projectLink,
@@ -555,6 +556,7 @@
 	app.registerObject('time_entries', {
 		label: 'Time Entry',
 		plural: 'Time',
+		countNoun: ['time entry', 'time entries'],
 		title: function (row) {
 			return (row._project_name || 'Time') + ' — ' + app.helpers.formatDate(row.entry_date);
 		},
@@ -820,37 +822,44 @@
 		return [
 			{
 				id: 'tasks',
-				label: 'Task',
+				label: 'Tasks',
+				newLabel: 'New Task',
 				object: 'project_tasks',
 				prefill: { project_id: record.id, _project_id_name: record.name, status: 'Not Started' }
 			},
 			{
 				id: 'raid',
-				label: 'RAID Entry',
+				label: 'RAID Log',
+				newLabel: 'New RAID Entry',
+				emptyNoun: 'RAID entries',
 				object: 'project_raid',
 				prefill: { project_id: record.id, _project_id_name: record.name, raid_type: 'Risk', status: 'Open', probability: 'Medium', impact: 'Medium' }
 			},
 			{
 				id: 'milestones',
-				label: 'Milestone',
+				label: 'Milestones',
+				newLabel: 'New Milestone',
 				object: 'project_milestones',
 				prefill: { project_id: record.id, _project_id_name: record.name, status: 'Planned' }
 			},
 			{
 				id: 'roles',
-				label: 'Project Role',
+				label: 'Project Roles',
+				newLabel: 'New Project Role',
 				object: 'project_roles',
 				prefill: { project_id: record.id, _project_id_name: record.name, party_type: 'internal' }
 			},
 			{
 				id: 'time',
-				label: 'Time Entry',
+				label: 'Time Entries',
+				newLabel: 'New Time Entry',
 				object: 'time_entries',
 				prefill: { project_id: record.id, _project_id_name: record.name, is_billable: 1, entry_date: app.helpers.today() }
 			},
 			{
 				id: 'activities',
-				label: 'Activity',
+				label: 'Activities',
+				newLabel: 'New Activity',
 				object: 'activities',
 				prefill: helpers.activity({ what_type: 'project', what_id: record.id })
 			}
