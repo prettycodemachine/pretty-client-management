@@ -17,7 +17,7 @@ Download the plugin zip from the **[latest release](https://github.com/prettycod
 
 - **CRM** — Accounts, Contacts, Opportunities (with a pipeline board and stage history), Activities, and a report builder with drill-downs and scheduled email delivery.
 - **Projects** (optional module) — Projects, Tasks, a weekly Timesheet, Time Entries, a RAID Log, Help Tickets, and project documents. Project types follow one of four process archetypes (retainer, fixed scope, time & materials, internal), each with its own stages and time rules.
-- **Employee Portal** — staff work from the front end of the site (`/staff/` by default) rather than in wp-admin, with a permission model of Profiles (exactly one baseline per person) and Permission Sets (any number of additive extensions) modelled on Salesforce's own.
+- **Employee Portal** — staff work from the front end of the site (`/staff/` by default) rather than in wp-admin, with a permission model of Profiles (exactly one baseline per person) and Permission Sets (any number of additive extensions).
 - **Client Portal** (on by default, requires Projects) — clients get a low-privilege account to see their own project's summary, milestones, project team, and documents.
 - **Email templates & sequences** — merge-field templates generated from each object's own fields, with multi-step sequences and do-not-contact enforcement.
 - **Custom fields & layouts** — a custom field is a real table column, not post meta, so it works everywhere a built-in field does: filtering, sorting, the CSV export, and the report builder.
