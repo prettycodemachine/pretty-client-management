@@ -1948,7 +1948,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-modal-head { align-items: center; }
 .pcm-crm-modal-heading { flex: 1 1 auto; }
 .pcm-crm-modal-head .pcm-crm-test-badge { margin-left: 0; }
-.pcm-crm-record-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pcm-crm-record-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pcm-crm-record-actions[hidden] { display: none !important; }
 
 .pcm-crm .pcm-crm-crumb { color: var(--pcm-accent-deep); text-decoration: none; }
