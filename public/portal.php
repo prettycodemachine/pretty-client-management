@@ -130,22 +130,6 @@ function pcm_crm_portal_dequeue_theme_assets() {
 		return;
 	}
 
-	$pcm_theme_dirs = array_unique( array( get_template_directory_uri(), get_stylesheet_directory_uri() ) );
-
-	foreach ( array( wp_styles(), wp_scripts() ) as $pcm_deps ) {
-		foreach ( (array) $pcm_deps->queue as $pcm_handle ) {
-			$pcm_src = isset( $pcm_deps->registered[ $pcm_handle ] ) ? (string) $pcm_deps->registered[ $pcm_handle ]->src : '';
-
-			foreach ( $pcm_theme_dirs as $pcm_dir ) {
-				if ( $pcm_src && 0 === strpos( set_url_scheme( $pcm_src ), set_url_scheme( $pcm_dir ) ) ) {
-					$pcm_deps->dequeue( $pcm_handle );
-				}
-			}
-		}
-	}
-
-	wp_dequeue_style( 'global-styles' );
-	wp_dequeue_style( 'classic-theme-styles' );
-	wp_dequeue_style( 'wp-block-library-theme' );
+	pcm_crm_dequeue_theme_assets();
 }
 add_action( 'wp_enqueue_scripts', 'pcm_crm_portal_dequeue_theme_assets', 999 );

@@ -276,8 +276,42 @@ function pcm_crm_front_dequeue_theme() {
 	wp_dequeue_style( 'pcm-style' );
 	wp_dequeue_style( 'pcm-fonts' );
 	wp_dequeue_script( 'pcm-nav' );
+
+	// Any other theme is unknown by handle, so its assets go by where they
+	// are served from. Newfane's theme made <body> a flex column and capped
+	// every .wrap at its page width, which squeezed record pages into a
+	// narrow column (the CRM shell carries .wrap too).
+	pcm_crm_dequeue_theme_assets();
 }
-add_action( 'wp_enqueue_scripts', 'pcm_crm_front_dequeue_theme', 20 );
+// 999, after the theme's own wp_enqueue_scripts callback, whatever priority it used.
+add_action( 'wp_enqueue_scripts', 'pcm_crm_front_dequeue_theme', 999 );
+
+/**
+ * Drop every style and script the active theme serves from its own
+ * directories, plus block-theme global styles. Used on the plugin's own
+ * front-end documents — the employee portal and the Client Portal — which
+ * never render the theme's markup, so its CSS can only restyle theirs.
+ * Plugins' assets are left alone.
+ */
+function pcm_crm_dequeue_theme_assets() {
+	$pcm_theme_dirs = array_unique( array( get_template_directory_uri(), get_stylesheet_directory_uri() ) );
+
+	foreach ( array( wp_styles(), wp_scripts() ) as $pcm_deps ) {
+		foreach ( (array) $pcm_deps->queue as $pcm_handle ) {
+			$pcm_src = isset( $pcm_deps->registered[ $pcm_handle ] ) ? (string) $pcm_deps->registered[ $pcm_handle ]->src : '';
+
+			foreach ( $pcm_theme_dirs as $pcm_dir ) {
+				if ( $pcm_src && 0 === strpos( set_url_scheme( $pcm_src ), set_url_scheme( $pcm_dir ) ) ) {
+					$pcm_deps->dequeue( $pcm_handle );
+				}
+			}
+		}
+	}
+
+	wp_dequeue_style( 'global-styles' );
+	wp_dequeue_style( 'classic-theme-styles' );
+	wp_dequeue_style( 'wp-block-library-theme' );
+}
 
 /**
  * No wp-admin bar on a CRM screen. pcm_crm_prune_admin_bar() (includes/roles.php)
