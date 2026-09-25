@@ -159,10 +159,28 @@ function pcm_crm_pm_related_tickets_for_contact( $pcm_id ) {
 	);
 }
 
+/**
+ * Every project a contact holds a role on, from the contact's record page —
+ * which is also the list that decides what they see in the Client Portal.
+ * Keyed contact_roles, not roles: a project's own Project Role tab lists
+ * people, this one lists projects, and they carry different columns.
+ */
+function pcm_crm_pm_related_roles_for_contact( $pcm_id ) {
+	return array(
+		'contact_roles' => PCM_CRM_REST::expand( 'project_role', pcm_crm_project_roles()->find( array(
+			'filters'  => array( 'contact_id' => $pcm_id ),
+			'orderby'  => 'start_date',
+			'order'    => 'DESC',
+			'per_page' => 200,
+		) ) ),
+	);
+}
+
 pcm_crm_register_related( 'accounts', 'pcm_crm_pm_related_projects_for_account' );
 pcm_crm_register_related( 'accounts', 'pcm_crm_pm_related_tickets_for_account' );
 pcm_crm_register_related( 'opportunities', 'pcm_crm_pm_related_projects_for_opportunity' );
 pcm_crm_register_related( 'contacts', 'pcm_crm_pm_related_tickets_for_contact' );
+pcm_crm_register_related( 'contacts', 'pcm_crm_pm_related_roles_for_contact' );
 pcm_crm_register_related( 'projects', 'pcm_crm_pm_related_project' );
 
 // Activities already reach a project without any registration: what_type is a

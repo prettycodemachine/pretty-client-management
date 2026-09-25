@@ -417,5 +417,10 @@ check('and asks for the task where the process needs one', pm.describeContext({
 }), 'Custom Development · Choose the task this was for');
 check('the timesheet is a registered view', typeof registered.views.timesheet.render, 'function');
 
+const contactLists = (registered.children.contacts || []).reduce((all, fn) => all.concat(fn({ id: 7, first_name: 'Ada', last_name: 'Lovelace' }, helpers)), []);
+const contactRoles = contactLists.find(c => c.id === 'contact_roles');
+check('a Contact gets a Project Roles tab', contactRoles && [contactRoles.label, contactRoles.object], ['Project Roles', 'project_roles']);
+check('whose New role is linked to the contact, on the client side', contactRoles && [contactRoles.prefill.contact_id, contactRoles.prefill._contact_id_name, contactRoles.prefill.party_type], [7, 'Ada Lovelace', 'client']);
+
 console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');
 process.exit(failed ? 1 : 0);

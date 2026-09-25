@@ -698,6 +698,19 @@
 		}];
 	});
 
+	app.registerChildTypes('contacts', function (record) {
+		var contactName = ((record.first_name || '') + ' ' + (record.last_name || '')).trim() || record.email || '';
+		return [{
+			id: 'contact_roles',
+			label: 'Project Roles',
+			object: 'project_roles',
+			newLabel: 'New Project Role',
+			// Client by default: a contact is usually on the client's side, and
+			// a Client role is what gives them the project in the portal.
+			prefill: { contact_id: record.id, _contact_id_name: contactName, party_type: 'client' }
+		}];
+	});
+
 	app.registerChildTypes('opportunities', function (record) {
 		return [{
 			id: 'projects',
@@ -777,6 +790,17 @@
 			{ badge: row._party_label || row.party_type },
 			{ text: row.role || '—' },
 			{ text: row._org_name || '—' }
+		];
+	});
+
+	// A contact's roles, from the contact's own page: which project, on which
+	// side. A Client role here is what puts the project in their portal.
+	app.registerRelatedColumns('contact_roles', function (row) {
+		return [
+			{ text: row._project_name || '—', strong: true },
+			{ badge: row._party_label || row.party_type },
+			{ text: row.role || '—' },
+			{ text: row.start_date ? app.helpers.formatDate(row.start_date) : '—' }
 		];
 	});
 
