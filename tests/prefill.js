@@ -41,6 +41,17 @@ const childProviders = {};
 const childTypes = new Function('state', 'childProviders',
 	src.slice(start, end) + '; return childTypes;')(state, childProviders);
 
+// afterCreate() is lifted the same way: where a saved new record lands.
+const acStart = src.indexOf('function afterCreate(');
+if (acStart === -1) { throw new Error('afterCreate() not found in crm.js'); }
+let acDepth = 0, acEnd = acStart;
+for (let i = src.indexOf('{', acStart); i < src.length; i++) {
+	if (src[i] === '{') { acDepth++; }
+	else if (src[i] === '}') { acDepth--; if (acDepth === 0) { acEnd = i + 1; break; } }
+}
+// eslint-disable-next-line no-new-func
+const afterCreate = new Function(src.slice(acStart, acEnd) + '; return afterCreate;')();
+
 let failed = 0;
 function check(label, got, want) {
 	const ok = JSON.stringify(got) === JSON.stringify(want);
@@ -147,6 +158,10 @@ delete childProviders.accounts;
 check('another object is untouched by a provider',
 	childTypes('contacts', { id: 7, account_id: 42 }).map(c => c.id), ['opportunities', 'activities']);
 check('an unregistered object still has no children', childTypes('nothing', { id: 1 }), []);
+
+check('a Project Role added from its project returns to the project, modal closed', afterCreate(false, true), 'parent');
+check('a Contact added from an Account opens on its own page', afterCreate(true, true), 'open');
+check('a record with no page made from a list opens so it can be seen', afterCreate(false, false), 'open');
 
 console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');
 process.exit(failed ? 1 : 0);

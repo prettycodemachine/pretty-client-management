@@ -3671,23 +3671,41 @@
 				return;
 			}
 
-			// A new record opens as itself, wherever it was created from — a
-			// related list, its own list, or the modal over another record.
-			// It used to return to the parent it was created from, which left
-			// the person hunting for what they had just made.
 			closeDrawer(true);
 
-			if (!recordUrl(object, record.id)) {
-				// It opens in the modal, over whatever is underneath: bring that
-				// up to date first so the new row is there once it closes.
-				if (current.mode === 'page') { reloadRecord(); } else { refreshView(); }
+			var hasPage = !!recordUrl(object, record.id);
+
+			if (afterCreate(hasPage, current.mode === 'page') === 'parent') {
+				// Back on the record it was created from, with the new row in
+				// the related list it was added to.
+				reloadRecord();
+				return;
 			}
+
+			// Bring whatever is underneath up to date before opening the new
+			// record over it in the modal.
+			if (!hasPage) { refreshView(); }
 
 			openRecord(object, record.id);
 		}).catch(function (error) {
 			status.textContent = error.message;
 			button.disabled = false;
 		});
+	}
+
+	/**
+	 * Where a newly created record lands: 'open' to open it, 'parent' to stay
+	 * on the record page it was created from.
+	 *
+	 * A record with its own page (a Contact made from an Account) opens on
+	 * that page, so the person is not left hunting for what they made. One
+	 * with no page — a Project Role, a Milestone — would only open in the
+	 * modal again, which then had to be closed by hand; made from a record
+	 * page's related list, it returns to that record instead, the new row
+	 * visible in the list it was added to.
+	 */
+	function afterCreate(hasOwnPage, fromRecordPage) {
+		return !hasOwnPage && fromRecordPage ? 'parent' : 'open';
 	}
 
 	/**
