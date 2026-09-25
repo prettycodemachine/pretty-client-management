@@ -159,9 +159,10 @@ check('another object is untouched by a provider',
 	childTypes('contacts', { id: 7, account_id: 42 }).map(c => c.id), ['opportunities', 'activities']);
 check('an unregistered object still has no children', childTypes('nothing', { id: 1 }), []);
 
-check('a Project Role added from its project returns to the project, modal closed', afterCreate(false, true), 'parent');
-check('a Contact added from an Account opens on its own page', afterCreate(true, true), 'open');
-check('a record with no page made from a list opens so it can be seen', afterCreate(false, false), 'open');
+check('a Project Role added from a project page returns to the project, modal closed', afterCreate(false, true, true), 'parent');
+check('one added from a project open in the modal reopens that project', afterCreate(false, false, true), 'return');
+check('a Contact added from an Account opens on its own page', afterCreate(true, true, true), 'open');
+check('a record with no page made from its own list opens so it can be seen', afterCreate(false, false, false), 'open');
 
 console.log(failed ? `\n${failed} FAILED` : '\nAll checks passed');
 process.exit(failed ? 1 : 0);

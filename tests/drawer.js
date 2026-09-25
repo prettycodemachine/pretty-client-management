@@ -187,7 +187,10 @@ const window = {
 		requestLog.push({ method: (init && init.method) || 'GET', route: route.split('?')[0], body: init && init.body ? JSON.parse(init.body) : null });
 
 		try {
-			const data = respond(route);
+			const method = (init && init.method) || 'GET';
+			const data = method === 'POST' && route.split('?')[0] === '/project_roles'
+				? Object.assign({ id: 90 }, JSON.parse(init.body))
+				: respond(route);
 			return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
 		} catch (e) {
 			return Promise.resolve({ ok: false, status: e.status || 500, json: () => Promise.resolve({ message: e.message }) });
@@ -278,7 +281,11 @@ async function main() {
 		await settle();
 
 		const panel2 = drawer.querySelector(`.pcm-crm-panel[data-tab="${key}"]`);
-		const newButton = panel2 && panel2.querySelector('.pcm-crm-related-toolbar button');
+		// Two steps: the DOM shim has no descendant combinator, and
+		// '.pcm-crm-related-toolbar button' matched the toolbar itself, so
+		// this used to click nothing and pass anyway.
+		const toolbar = panel2 && panel2.querySelector('.pcm-crm-related-toolbar');
+		const newButton = toolbar && toolbar.querySelector('.pcm-btn');
 		check(`the ${key} list has a New button`, !!newButton, true);
 
 		if (newButton) {
@@ -287,8 +294,22 @@ async function main() {
 
 			check(`New from ${key} does not throw`, thrown, null);
 			check(`New from ${key} opens a form without an error`, drawerError(), null);
+			check(`New from ${key} actually opens its form`, !!drawer.querySelector('.pcm-crm-details.is-editing'), true);
 		}
 	}
+
+	/* Saving a new Project Role from a project in the modal reopens the project. */
+	app.helpers.openDrawer('projects', project.id);
+	await settle();
+	const rolesPanel = drawer.querySelector('.pcm-crm-panel[data-tab="roles"]');
+	const tb = rolesPanel.querySelector('.pcm-crm-related-toolbar');
+	tb.querySelector('.pcm-btn').click();
+	await settle();
+	within(drawer, '.pcm-crm-form-footer', '.pcm-btn-primary').click();
+	await settle();
+
+	check('saving a new Project Role posts it', requestLog.filter(r => r.method === 'POST' && r.route === '/project_roles').length, 1);
+	check('and returns to the project it was added to, not the new role', [drawer.hidden, (drawer.querySelector('h2') || {}).textContent], [false, real ? real.project.name : project.name]);
 
 	/* The timesheet. */
 	const bodyNode = root.querySelector('[data-role="body"]');

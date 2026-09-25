@@ -2241,7 +2241,7 @@
 			el('button.pcm-btn.pcm-btn-primary', {
 				type: 'button',
 				text: isNew ? 'Create' : 'Save',
-				onclick: function (event) { saveRecord(object, record.id, values, event.target, status); }
+				onclick: function (event) { saveRecord(object, record.id, values, event.target, status, options.returnTo); }
 			}),
 			el('button.pcm-btn.pcm-btn-quiet', {
 				type: 'button',
@@ -3644,7 +3644,7 @@
 		if (dom.quickScrim) { dom.quickScrim.hidden = true; }
 	}
 
-	function saveRecord(object, id, values, button, status) {
+	function saveRecord(object, id, values, button, status, returnTo) {
 		button.disabled = true;
 		status.textContent = 'Saving…';
 
@@ -3674,11 +3674,19 @@
 			closeDrawer(true);
 
 			var hasPage = !!recordUrl(object, record.id);
+			var landing = afterCreate(hasPage, current.mode === 'page', !!returnTo);
 
-			if (afterCreate(hasPage, current.mode === 'page') === 'parent') {
-				// Back on the record it was created from, with the new row in
-				// the related list it was added to.
+			if (landing === 'parent') {
+				// Back on the record page it was created from, with the new row
+				// in the related list it was added to.
 				reloadRecord();
+				return;
+			}
+
+			if (landing === 'return') {
+				// The parent was itself in the modal (a project opens there),
+				// so there is no page underneath: reopen the parent instead.
+				openDrawer(returnTo.object, returnTo.id);
 				return;
 			}
 
@@ -3702,10 +3710,14 @@
 	 * with no page — a Project Role, a Milestone — would only open in the
 	 * modal again, which then had to be closed by hand; made from a record
 	 * page's related list, it returns to that record instead, the new row
-	 * visible in the list it was added to.
+	 * visible in the list it was added to: 'parent' when that record is the
+	 * page underneath, 'return' when it was itself in the modal (projects
+	 * open there) and has to be reopened.
 	 */
-	function afterCreate(hasOwnPage, fromRecordPage) {
-		return !hasOwnPage && fromRecordPage ? 'parent' : 'open';
+	function afterCreate(hasOwnPage, fromRecordPage, hasParent) {
+		if (hasOwnPage) { return 'open'; }
+		if (fromRecordPage) { return 'parent'; }
+		return hasParent ? 'return' : 'open';
 	}
 
 	/**
