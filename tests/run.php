@@ -2623,6 +2623,8 @@ $pcm_html = ob_get_clean();
 check( 'a work screen carries the app bar', false !== strpos( $pcm_html, 'class="pcm-crm-appbar"' ), true );
 check( 'with its own screen marked current', (bool) preg_match( '/page=pcm-crm-contacts"\s+class="is-active"/', $pcm_html ), true );
 
+require __DIR__ . '/retainer.php';
+
 // Last, because it reassigns the current user's profile and turns modules on
 // and off — everything above it should run against the untouched defaults.
 require __DIR__ . '/permissions.php';

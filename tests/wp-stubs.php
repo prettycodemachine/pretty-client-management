@@ -110,7 +110,12 @@ function wp_list_pluck( $rows, $key ) {
 		return isset( $r[ $key ] ) ? $r[ $key ] : null;
 	}, $rows );
 }
-function current_time( $t ) { return 'timestamp' === $t ? time() : date( 'Y-m-d H:i:s' ); }
+// $GLOBALS['pcm_test_now'] (a timestamp) pins "now" for a test that walks the
+// calendar; any format other than timestamp/mysql is honoured, as WordPress does.
+function current_time( $t ) {
+	$now = isset( $GLOBALS['pcm_test_now'] ) ? $GLOBALS['pcm_test_now'] : time();
+	return 'timestamp' === $t ? $now : date( 'mysql' === $t ? 'Y-m-d H:i:s' : $t, $now );
+}
 /**
  * Kept in step with wp_get_current_user() below rather than a second,
  * independent "1" — real WordPress never lets these two disagree about who

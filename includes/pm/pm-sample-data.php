@@ -30,18 +30,30 @@ class PCM_CRM_PM_Sample_Data {
 
 		$this->owners = ! empty( $pcm_context['owners'] ) ? $pcm_context['owners'] : array( get_current_user_id() );
 
+		// The retainer lifecycle would otherwise open periods the moment each
+		// project is inserted — before stamp() flags it a sample, so its
+		// periods would survive removal — and close them before any time
+		// existed to carry. Paused until the time is in; seed_periods() then
+		// runs it once, the way a real retainer's history would have built up.
+		pcm_crm_retainer_paused( true );
+
 		$projects = $this->seed_projects( $pcm_context );
 
-		return array(
+		$out = array(
 			'projects'         => count( $projects ),
 			'project_tasks'    => $this->seed_tasks( $projects ),
 			'project_milestones' => $this->seed_milestones( $projects ),
 			'project_raid'     => $this->seed_raid( $projects ),
 			'project_roles'    => $this->seed_roles( $projects, $pcm_context ),
-			'retainer_periods' => $this->seed_periods( $projects ),
 			'time_entries'     => $this->seed_time( $projects ),
-			'allocations'      => $this->seed_allocations( $projects ),
 		);
+
+		pcm_crm_retainer_paused( false );
+
+		$out['retainer_periods'] = $this->seed_periods( $projects );
+		$out['allocations']      = $this->seed_allocations( $projects );
+
+		return $out;
 	}
 
 	/* -------------------------------------------------------------------
@@ -190,8 +202,6 @@ class PCM_CRM_PM_Sample_Data {
 				'bill_rate'    => $fields['default_bill_rate'],
 				'cost_rate'    => $fields['default_cost_rate'],
 				'retainer'     => $is_retainer ? (float) $fields['retainer_hours'] : 0.0,
-				'rollover'     => $is_retainer ? (int) $fields['retainer_rollover'] : 0,
-				'rollover_cap' => $is_retainer ? (float) $fields['retainer_rollover_cap'] : 0.0,
 			);
 
 			$index++;
@@ -511,7 +521,9 @@ class PCM_CRM_PM_Sample_Data {
 	   ------------------------------------------------------------------- */
 
 	private function seed_periods( array $pcm_projects ) {
-		$model = pcm_crm_retainer_periods();
+		global $wpdb;
+
+		$table = pcm_crm_pm_periods_table();
 		$count = 0;
 
 		foreach ( $pcm_projects as $project ) {
@@ -519,60 +531,26 @@ class PCM_CRM_PM_Sample_Data {
 				continue;
 			}
 
-			// Calendar months, back to the project's start or six months,
-			// whichever is shorter — enough for a burn-down to have a history
-			// without seeding a year of bookkeeping nobody looks at.
-			$months  = min( 6, max( 1, (int) floor( abs( $project['start_offset'] ) / 30 ) ) );
-			$carried = 0.0;
+			// The real lifecycle, not a copy of it: every period from the
+			// retainer's start, the seeded time filed under them, and each
+			// carry-in worked from what was actually logged.
+			pcm_crm_retainer_ensure( $project['id'], true );
 
-			for ( $back = $months; $back >= 0; $back-- ) {
-				$first = gmdate( 'Y-m-01', strtotime( "-{$back} months", current_time( 'timestamp' ) ) );
-				$last  = gmdate( 'Y-m-t', strtotime( $first ) );
+			// Backdated like every other sample row, so the Burn-down reads as
+			// history rather than as twelve periods all opened this morning.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE {$table}
+				 SET created_date = CONCAT(period_start, ' 09:00:00'),
+				     last_modified_date = CONCAT(period_start, ' 09:00:00'),
+				     closed_date = IF(is_closed = 1, CONCAT(DATE_ADD(period_end, INTERVAL 1 DAY), ' 00:15:00'), closed_date),
+				     is_test = 1
+				 WHERE project_id = %d",
+				$project['id']
+			) );
 
-				$id = $model->insert( array(
-					'project_id'         => $project['id'],
-					'period_start'       => $first,
-					'period_end'         => $last,
-					'allotted_hours'     => $project['retainer'],
-					'rollover_cap_hours' => $project['rollover_cap'],
-				) );
-
-				if ( is_wp_error( $id ) ) {
-					continue;
-				}
-
-				global $wpdb;
-
-				// carried_in and is_closed are readonly to the model — they are
-				// the closer's business — so the sample history is written the
-				// same way the closer would write it.
-				$wpdb->update(
-					pcm_crm_pm_periods_table(),
-					array(
-						'carried_in_hours' => $carried,
-						'is_closed'        => $back > 0 ? 1 : 0,
-						'closed_date'      => $back > 0 ? $this->days( -$back * 30 ) : '0000-00-00 00:00:00',
-						'created_date'     => $first . ' 09:00:00',
-						'last_modified_date' => $first . ' 09:00:00',
-						'is_test'          => 1,
-					),
-					array( 'id' => $id ),
-					array( '%f', '%d', '%s', '%s', '%s', '%d' ),
-					array( '%d' )
-				);
-
-				// Next month's carry-in follows the project's own terms: nothing
-				// unless unused hours roll over, then capped, and never negative —
-				// an overrun is a conversation, not a debt carried forward
-				// silently. This once ignored the project and always carried up
-				// to 8h, so a sample retainer set to not roll over showed carried
-				// hours on its Burn-down tab.
-				$used    = $project['retainer'] * ( mt_rand( 60, 130 ) / 100 );
-				$left    = ( $project['retainer'] + $carried ) - $used;
-				$carried = $project['rollover'] ? max( 0, min( $project['rollover_cap'], $left ) ) : 0.0;
-
-				$count++;
-			}
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+			$count += (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE project_id = %d", $project['id'] ) );
 		}
 
 		return $count;

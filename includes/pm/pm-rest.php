@@ -481,6 +481,8 @@ function pcm_crm_pm_period_burn( array $pcm_period ) {
  * The retainer period a date falls in, for a project, or null.
  */
 function pcm_crm_pm_period_on( $pcm_project_id, $pcm_date ) {
+	pcm_crm_retainer_ensure( $pcm_project_id );
+
 	$pcm_found = pcm_crm_retainer_periods()->find( array(
 		'filters'  => array(
 			'project_id'   => (int) $pcm_project_id,
@@ -496,6 +498,10 @@ function pcm_crm_pm_period_on( $pcm_project_id, $pcm_date ) {
 }
 
 function pcm_crm_pm_project_summary( $pcm_id ) {
+	// Opens and closes periods first, so the Burn-down tab and the portal's
+	// period bar read today's state rather than whatever the last visit left.
+	pcm_crm_retainer_ensure( $pcm_id );
+
 	$pcm_project = pcm_crm_projects()->get( $pcm_id );
 
 	if ( ! $pcm_project ) {

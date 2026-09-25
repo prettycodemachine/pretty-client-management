@@ -135,6 +135,9 @@ function pcm_crm_pm_apply_time_rules( $pcm_row, $pcm_object, $pcm_id = 0 ) {
 	}
 
 	if ( ! empty( $pcm_rules['resolves_period'] ) && $pcm_project && ! empty( $pcm_merged['entry_date'] ) ) {
+		// The period this entry belongs in may not have been opened yet.
+		pcm_crm_retainer_ensure( $pcm_project['id'] );
+
 		$pcm_periods = pcm_crm_retainer_periods()->find( array(
 			'filters'  => array(
 				'project_id'   => (int) $pcm_project['id'],
@@ -146,10 +149,12 @@ function pcm_crm_pm_apply_time_rules( $pcm_row, $pcm_object, $pcm_id = 0 ) {
 
 		$pcm_items = isset( $pcm_periods['items'] ) ? $pcm_periods['items'] : $pcm_periods;
 
-		if ( $pcm_items ) {
-			$pcm_first = reset( $pcm_items );
-			$pcm_row['retainer_period_id'] = (int) $pcm_first['id'];
-		}
+		// Zero when no period covers the date (before the retainer started, or
+		// ahead of the current period), so an entry moved off a period's
+		// dates does not stay counted against it; ensure() files it once its
+		// period opens.
+		$pcm_first = $pcm_items ? reset( $pcm_items ) : null;
+		$pcm_row['retainer_period_id'] = $pcm_first ? (int) $pcm_first['id'] : 0;
 	}
 
 	return $pcm_row;
