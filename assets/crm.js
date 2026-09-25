@@ -1335,13 +1335,9 @@
 		clear(dom.actions);
 
 		// A schedule with no view behind it would have nothing to send, so it
-		// is created from the Dashboard or a Report rather than from here.
-		if (object === 'schedules') {
-			dom.actions.appendChild(el('span.pcm-crm-muted', {
-				style: 'align-self:center;font-size:0.82rem;max-width:340px;text-align:right',
-				text: 'Create one with the Schedule button on the Dashboard or a Report.'
-			}));
-		} else if (canObject(object, 'edit')) {
+		// is created from a Report (or the Dashboard) rather than from here —
+		// no New button; the empty list links to Reports instead.
+		if (object !== 'schedules' && canObject(object, 'edit')) {
 			dom.actions.appendChild(el('button.pcm-btn.pcm-btn-primary', {
 				type: 'button',
 				text: 'New ' + def.label,
@@ -1378,11 +1374,17 @@
 			if (link) { link.href = exportUrl(object); }
 
 			if (!data.items.length) {
+				var filtered = state.query.search || Object.keys(state.query.filters).length;
+
 				clear(dom.body, el('div.pcm-crm-empty', {}, [
 					el('h3', { text: 'Nothing here yet' }),
-					el('p', { text: state.query.search || Object.keys(state.query.filters).length
+					el('p', { text: filtered
 						? 'No ' + def.plural.toLowerCase() + ' match these filters.'
-						: 'Create the first one to get started.' })
+						: 'Create the first one to get started.' }),
+					// Schedules are made from a report, so that is where this goes.
+					!filtered && object === 'schedules'
+						? el('a.pcm-btn.pcm-btn-primary', { href: screenUrl('pcm-crm-reports'), text: 'Create a Scheduled Report' })
+						: null
 				]));
 				return;
 			}
