@@ -126,7 +126,7 @@ function pcm_crm_pm_rest_create_attachment( WP_REST_Request $pcm_request ) {
 	$pcm_ticket = pcm_crm_help_tickets()->get( $pcm_id );
 
 	if ( ! $pcm_ticket ) {
-		return new WP_Error( 'pcm_crm_ticket_not_found', __( 'That ticket no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+		return new WP_Error( 'pcm_crm_ticket_not_found', __( 'That ticket no longer exists.', 'pretty-client-management' ), array( 'status' => 404 ) );
 	}
 
 	return pcm_crm_pm_handle_ticket_attachment_upload( $pcm_ticket );
@@ -144,7 +144,7 @@ function pcm_crm_pm_rest_create_attachment( WP_REST_Request $pcm_request ) {
  */
 function pcm_crm_pm_handle_ticket_attachment_upload( array $pcm_ticket, $pcm_field = 'file' ) {
 	if ( empty( $_FILES[ $pcm_field ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- REST route, gated by its own permission_callback
-		return new WP_Error( 'pcm_crm_attachment_missing_file', __( 'Choose a file first.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_attachment_missing_file', __( 'Choose a file first.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -200,7 +200,7 @@ function pcm_crm_pm_rest_download_document( WP_REST_Request $pcm_request ) {
 	$pcm_doc = pcm_crm_project_documents()->get( $pcm_id );
 
 	if ( ! $pcm_doc ) {
-		return new WP_Error( 'pcm_crm_document_not_found', __( 'That document no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+		return new WP_Error( 'pcm_crm_document_not_found', __( 'That document no longer exists.', 'pretty-client-management' ), array( 'status' => 404 ) );
 	}
 
 	pcm_crm_stream_document( (int) $pcm_doc['attachment_id'], 'inline' === $pcm_request->get_param( 'disposition' ) );
@@ -222,7 +222,7 @@ function pcm_crm_stream_document( $pcm_attachment_id, $pcm_inline = false ) {
 	$pcm_path = get_attached_file( $pcm_attachment_id );
 
 	if ( ! $pcm_path || ! is_readable( $pcm_path ) ) {
-		wp_die( esc_html__( 'That file is no longer available.', 'pcm-crm' ), 404 );
+		wp_die( esc_html__( 'That file is no longer available.', 'pretty-client-management' ), 404 );
 	}
 
 	$pcm_type = get_post_mime_type( $pcm_attachment_id );

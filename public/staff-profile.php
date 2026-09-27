@@ -31,14 +31,14 @@ function pcm_crm_render_my_profile() {
 	$pcm_result = isset( $_GET['pcm_crm_profile'] ) ? sanitize_key( wp_unslash( $_GET['pcm_crm_profile'] ) ) : '';
 
 	$pcm_messages = array(
-		'saved'              => array( 'success', __( 'Your profile was updated.', 'pcm-crm' ) ),
-		'password-mismatch'  => array( 'error', __( 'The two passwords did not match. Nothing was changed.', 'pcm-crm' ) ),
-		'password-short'     => array( 'error', __( 'Choose a password at least 12 characters long.', 'pcm-crm' ) ),
+		'saved'              => array( 'success', __( 'Your profile was updated.', 'pretty-client-management' ) ),
+		'password-mismatch'  => array( 'error', __( 'The two passwords did not match. Nothing was changed.', 'pretty-client-management' ) ),
+		'password-short'     => array( 'error', __( 'Choose a password at least 12 characters long.', 'pretty-client-management' ) ),
 	);
 	?>
 	<div class="pcm-crm pcm-crm-front pcm-crm-my-profile" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>" data-style="<?php echo esc_attr( pcm_crm_style() ); ?>">
 		<div class="pcm-crm-head">
-			<div><h1><?php esc_html_e( 'My Profile', 'pcm-crm' ); ?></h1></div>
+			<div><h1><?php esc_html_e( 'My Profile', 'pretty-client-management' ); ?></h1></div>
 		</div>
 
 		<?php if ( $pcm_result && isset( $pcm_messages[ $pcm_result ] ) ) : ?>
@@ -51,35 +51,35 @@ function pcm_crm_render_my_profile() {
 			<input type="hidden" name="action" value="pcm_crm_save_my_profile">
 			<?php wp_nonce_field( 'pcm_crm_my_profile', 'pcm_crm_my_profile_nonce' ); ?>
 
-			<h2><?php esc_html_e( 'Name and email', 'pcm-crm' ); ?></h2>
-			<p class="description"><?php esc_html_e( 'Contact an administrator to change your name or email address.', 'pcm-crm' ); ?></p>
+			<h2><?php esc_html_e( 'Name and email', 'pretty-client-management' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Contact an administrator to change your name or email address.', 'pretty-client-management' ); ?></p>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Name', 'pcm-crm' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Name', 'pretty-client-management' ); ?></th>
 					<td><?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?></td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Email', 'pcm-crm' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Email', 'pretty-client-management' ); ?></th>
 					<td><?php echo esc_html( $pcm_user->user_email ); ?></td>
 				</tr>
 			</table>
 
-			<h2><?php esc_html_e( 'Change password', 'pcm-crm' ); ?></h2>
-			<p class="description"><?php esc_html_e( 'Leave both fields blank to keep your current password.', 'pcm-crm' ); ?></p>
+			<h2><?php esc_html_e( 'Change password', 'pretty-client-management' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Leave both fields blank to keep your current password.', 'pretty-client-management' ); ?></p>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><label for="pcm-crm-profile-pass1"><?php esc_html_e( 'New password', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-crm-profile-pass1"><?php esc_html_e( 'New password', 'pretty-client-management' ); ?></label></th>
 					<td><input type="password" class="regular-text" id="pcm-crm-profile-pass1" name="password" autocomplete="new-password"></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="pcm-crm-profile-pass2"><?php esc_html_e( 'Confirm new password', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-crm-profile-pass2"><?php esc_html_e( 'Confirm new password', 'pretty-client-management' ); ?></label></th>
 					<td><input type="password" class="regular-text" id="pcm-crm-profile-pass2" name="password_confirm" autocomplete="new-password"></td>
 				</tr>
 			</table>
 
 			<p class="submit">
-				<?php submit_button( __( 'Save Changes', 'pcm-crm' ), 'primary', 'submit', false ); ?>
-				<a class="button" href="<?php echo esc_url( pcm_crm_front_base_url() ); ?>"><?php esc_html_e( 'Cancel', 'pcm-crm' ); ?></a>
+				<?php submit_button( __( 'Save Changes', 'pretty-client-management' ), 'primary', 'submit', false ); ?>
+				<a class="button" href="<?php echo esc_url( pcm_crm_front_base_url() ); ?>"><?php esc_html_e( 'Cancel', 'pretty-client-management' ); ?></a>
 			</p>
 		</form>
 	</div>
@@ -118,14 +118,14 @@ function pcm_crm_my_profile_validation_error( $pcm_pass1, $pcm_pass2 ) {
 
 function pcm_crm_handle_save_my_profile() {
 	if ( ! is_user_logged_in() ) {
-		wp_die( esc_html__( 'You must be logged in.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You must be logged in.', 'pretty-client-management' ), 403 );
 	}
 
 	if (
 		! isset( $_POST['pcm_crm_my_profile_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_my_profile_nonce'] ), 'pcm_crm_my_profile' )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	// The account being edited is always the one logged in — never a posted

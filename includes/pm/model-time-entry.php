@@ -177,7 +177,7 @@ function pcm_crm_pm_validate_time_entry( $pcm_error, $pcm_object, $pcm_row, $pcm
 	$pcm_settings = pcm_crm_pm_time_settings();
 
 	if ( empty( $pcm_merged['project_id'] ) ) {
-		return new WP_Error( 'pcm_crm_pm_no_project', __( 'Time has to be logged against a project.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_pm_no_project', __( 'Time has to be logged against a project.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	// Null rather than zero is what the parser returns for something it could not
@@ -185,13 +185,13 @@ function pcm_crm_pm_validate_time_entry( $pcm_error, $pcm_object, $pcm_row, $pcm
 	if ( ! isset( $pcm_merged['hours'] ) || null === $pcm_merged['hours'] ) {
 		return new WP_Error(
 			'pcm_crm_pm_no_hours',
-			__( 'How long did it take? Decimal hours (1.5) or h:mm (1:30) both work.', 'pcm-crm' ),
+			__( 'How long did it take? Decimal hours (1.5) or h:mm (1:30) both work.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}
 
 	if ( (float) $pcm_merged['hours'] <= 0 ) {
-		return new WP_Error( 'pcm_crm_pm_no_hours', __( 'An entry of no time is not worth recording.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_pm_no_hours', __( 'An entry of no time is not worth recording.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	// A day longer than a day is always a typo — usually a date typed into the
@@ -202,9 +202,9 @@ function pcm_crm_pm_validate_time_entry( $pcm_error, $pcm_object, $pcm_row, $pcm
 		return new WP_Error(
 			'pcm_crm_pm_too_many_hours',
 			24.0 === $pcm_max
-				? __( 'That is more than a day in one entry. Split it across dates, or check the value.', 'pcm-crm' )
+				? __( 'That is more than a day in one entry. Split it across dates, or check the value.', 'pretty-client-management' )
 				/* translators: %s: the most hours one entry may hold */
-				: sprintf( __( 'One entry can hold at most %s hours. Split it across entries, or check the value.', 'pcm-crm' ), $pcm_max ),
+				: sprintf( __( 'One entry can hold at most %s hours. Split it across entries, or check the value.', 'pretty-client-management' ), $pcm_max ),
 			array( 'status' => 400 )
 		);
 	}
@@ -212,7 +212,7 @@ function pcm_crm_pm_validate_time_entry( $pcm_error, $pcm_object, $pcm_row, $pcm
 	$pcm_today = current_time( 'Y-m-d' );
 
 	if ( empty( $pcm_settings['allow_future'] ) && ! empty( $pcm_merged['entry_date'] ) && $pcm_merged['entry_date'] > $pcm_today ) {
-		return new WP_Error( 'pcm_crm_pm_future_time', __( 'Time is logged for work already done, so the date cannot be in the future.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_pm_future_time', __( 'Time is logged for work already done, so the date cannot be in the future.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	if ( (int) $pcm_settings['lock_after_days'] > 0 && ! empty( $pcm_merged['entry_date'] ) ) {
@@ -222,7 +222,7 @@ function pcm_crm_pm_validate_time_entry( $pcm_error, $pcm_object, $pcm_row, $pcm
 			return new WP_Error(
 				'pcm_crm_pm_time_locked',
 				/* translators: %d: number of days */
-				sprintf( __( 'Entries older than %d days are locked, because they may already have been invoiced.', 'pcm-crm' ), (int) $pcm_settings['lock_after_days'] ),
+				sprintf( __( 'Entries older than %d days are locked, because they may already have been invoiced.', 'pretty-client-management' ), (int) $pcm_settings['lock_after_days'] ),
 				array( 'status' => 400 )
 			);
 		}
@@ -234,7 +234,7 @@ function pcm_crm_pm_validate_time_entry( $pcm_error, $pcm_object, $pcm_row, $pcm
 		return new WP_Error(
 			'pcm_crm_pm_task_required',
 			/* translators: %s: project type */
-			sprintf( __( 'Time on a %s project is logged against a task, so the estimate can be compared with what it took.', 'pcm-crm' ), $pcm_type_label ),
+			sprintf( __( 'Time on a %s project is logged against a task, so the estimate can be compared with what it took.', 'pretty-client-management' ), $pcm_type_label ),
 			array( 'status' => 400 )
 		);
 	}
@@ -243,18 +243,18 @@ function pcm_crm_pm_validate_time_entry( $pcm_error, $pcm_object, $pcm_row, $pcm
 		$pcm_task = pcm_crm_project_tasks()->get( (int) $pcm_merged['task_id'] );
 
 		if ( $pcm_task && (int) $pcm_task['project_id'] !== (int) $pcm_merged['project_id'] ) {
-			return new WP_Error( 'pcm_crm_pm_task_elsewhere', __( 'That task belongs to a different project.', 'pcm-crm' ), array( 'status' => 400 ) );
+			return new WP_Error( 'pcm_crm_pm_task_elsewhere', __( 'That task belongs to a different project.', 'pretty-client-management' ), array( 'status' => 400 ) );
 		}
 	}
 
 	if ( ! empty( $pcm_rules['description_required'] ) && '' === trim( (string) ( isset( $pcm_merged['description'] ) ? $pcm_merged['description'] : '' ) ) ) {
-		return new WP_Error( 'pcm_crm_pm_description_required', __( 'Say what the time was spent on.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_pm_description_required', __( 'Say what the time was spent on.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	if ( ! empty( $pcm_rules['rate_required'] ) && ! empty( $pcm_merged['is_billable'] ) && empty( $pcm_merged['bill_rate'] ) ) {
 		return new WP_Error(
 			'pcm_crm_pm_rate_required',
-			__( 'A billable entry on this project needs a bill rate. Set one on the entry, or a default rate on the project.', 'pcm-crm' ),
+			__( 'A billable entry on this project needs a bill rate. Set one on the entry, or a default rate on the project.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}

@@ -16,24 +16,24 @@ const PCM_CRM_PM_PICKLISTS_OPTION = 'pcm_crm_pm_picklists';
 
 pcm_crm_register_setup_page( 'project-types', array(
 	'group'       => 'projects',
-	'label'       => __( 'Project Types', 'pcm-crm' ),
-	'description' => __( 'What a person picks when creating a project. Each type follows a process, which decides its stages, its fields and how time is logged.', 'pcm-crm' ),
+	'label'       => __( 'Project Types', 'pretty-client-management' ),
+	'description' => __( 'What a person picks when creating a project. Each type follows a process, which decides its stages, its fields and how time is logged.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_pm_render_types_page',
 	'order'       => 10,
 ) );
 
 pcm_crm_register_setup_page( 'time-entry', array(
 	'group'       => 'projects',
-	'label'       => __( 'Time Entry', 'pcm-crm' ),
-	'description' => __( 'Rules that hold for every entry, whatever the project. Per-type rules are on each project type.', 'pcm-crm' ),
+	'label'       => __( 'Time Entry', 'pretty-client-management' ),
+	'description' => __( 'Rules that hold for every entry, whatever the project. Per-type rules are on each project type.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_pm_render_time_page',
 	'order'       => 20,
 ) );
 
 pcm_crm_register_setup_page( 'project-picklists', array(
 	'group'       => 'projects',
-	'label'       => __( 'Picklists', 'pcm-crm' ),
-	'description' => __( 'The choices offered for project roles and RAID entries.', 'pcm-crm' ),
+	'label'       => __( 'Picklists', 'pretty-client-management' ),
+	'description' => __( 'The choices offered for project roles and RAID entries.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_pm_render_picklists_page',
 	'order'       => 40,
 ) );
@@ -109,13 +109,13 @@ function pcm_crm_pm_clean_type( array $pcm_post, $pcm_key ) {
 	$pcm_label = isset( $pcm_post['label'] ) ? trim( sanitize_text_field( $pcm_post['label'] ) ) : '';
 
 	if ( '' === $pcm_label ) {
-		return new WP_Error( 'pcm_crm_pm_type_label', __( 'A project type needs a name.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_pm_type_label', __( 'A project type needs a name.', 'pretty-client-management' ) );
 	}
 
 	$pcm_archetype = isset( $pcm_post['archetype'] ) ? sanitize_key( $pcm_post['archetype'] ) : '';
 
 	if ( ! pcm_crm_pm_archetype( $pcm_archetype ) ) {
-		return new WP_Error( 'pcm_crm_pm_type_archetype', __( 'Choose the process this type follows.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_pm_type_archetype', __( 'Choose the process this type follows.', 'pretty-client-management' ) );
 	}
 
 	$pcm_stages = array();
@@ -157,7 +157,7 @@ function pcm_crm_pm_clean_type( array $pcm_post, $pcm_key ) {
 	}
 
 	if ( $pcm_stages && ! array_filter( wp_list_pluck( $pcm_stages, 'is_closed' ) ) ) {
-		return new WP_Error( 'pcm_crm_pm_type_closing', __( 'At least one stage has to close a project, or nothing would ever finish.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_pm_type_closing', __( 'At least one stage has to close a project, or nothing would ever finish.', 'pretty-client-management' ) );
 	}
 
 	$pcm_time = array();
@@ -224,7 +224,7 @@ function pcm_crm_pm_handle_save_type() {
 		! isset( $_POST['pcm_crm_pm_type_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_pm_type_nonce'] ), 'pcm_crm_pm_type' )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_post  = wp_unslash( $_POST );
@@ -253,7 +253,7 @@ function pcm_crm_pm_handle_save_type() {
 		// it: their stages, their required fields and their time would all be
 		// judged by rules they were never made under.
 		if ( $pcm_usage && $pcm_types[ $pcm_key ]['archetype'] !== $pcm_clean['archetype'] ) {
-			$pcm_clean = new WP_Error( 'pcm_crm_pm_type_locked', __( 'Projects already follow this type, so its process cannot change. Create a new type instead.', 'pcm-crm' ) );
+			$pcm_clean = new WP_Error( 'pcm_crm_pm_type_locked', __( 'Projects already follow this type, so its process cannot change. Create a new type instead.', 'pretty-client-management' ) );
 		}
 
 		// A stage projects are sitting in cannot be removed out from under them.
@@ -266,7 +266,7 @@ function pcm_crm_pm_handle_save_type() {
 				$pcm_clean = new WP_Error(
 					'pcm_crm_pm_type_stage_in_use',
 					/* translators: %s: comma-separated stage names */
-					sprintf( __( 'Projects are still in %s. Move them to another stage before removing it.', 'pcm-crm' ), implode( ', ', $pcm_orphan ) )
+					sprintf( __( 'Projects are still in %s. Move them to another stage before removing it.', 'pretty-client-management' ), implode( ', ', $pcm_orphan ) )
 				);
 			}
 		}
@@ -302,7 +302,7 @@ add_action( 'admin_post_pcm_crm_pm_save_type', 'pcm_crm_pm_handle_save_type' );
  */
 function pcm_crm_pm_handle_delete_type() {
 	if ( ! pcm_crm_can( 'settings', 'edit' ) ) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	check_admin_referer( 'pcm_crm_pm_delete_type' );
@@ -348,11 +348,11 @@ function pcm_crm_pm_render_types_page() {
 	if ( $pcm_error ) {
 		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $pcm_error['message'] ) );
 	} elseif ( 'saved' === $pcm_result ) {
-		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Project type saved.', 'pcm-crm' ) );
+		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Project type saved.', 'pretty-client-management' ) );
 	} elseif ( 'deleted' === $pcm_result ) {
-		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Project type deleted.', 'pcm-crm' ) );
+		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Project type deleted.', 'pretty-client-management' ) );
 	} elseif ( 'in-use' === $pcm_result ) {
-		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html__( 'Projects still follow this type, so it cannot be deleted. Retire it instead, below, to leave it out of the New Project chooser.', 'pcm-crm' ) );
+		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html__( 'Projects still follow this type, so it cannot be deleted. Retire it instead, below, to leave it out of the New Project chooser.', 'pretty-client-management' ) );
 	}
 
 	if ( $pcm_editing ) {
@@ -364,18 +364,18 @@ function pcm_crm_pm_render_types_page() {
 	?>
 	<div class="pcm-crm-card">
 		<div class="pcm-setup-card-head">
-			<h2><?php esc_html_e( 'Types', 'pcm-crm' ); ?></h2>
-			<a class="button button-primary" href="<?php echo esc_url( add_query_arg( 'type', 'new', pcm_crm_setup_url( 'project-types' ) ) ); ?>"><?php esc_html_e( 'New Project Type', 'pcm-crm' ); ?></a>
+			<h2><?php esc_html_e( 'Types', 'pretty-client-management' ); ?></h2>
+			<a class="button button-primary" href="<?php echo esc_url( add_query_arg( 'type', 'new', pcm_crm_setup_url( 'project-types' ) ) ); ?>"><?php esc_html_e( 'New Project Type', 'pretty-client-management' ); ?></a>
 		</div>
 		<table class="widefat striped pcm-setup-table">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'Name', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Process', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Stages', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Projects', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Status', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Layout', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Name', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Process', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Stages', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Projects', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Status', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Layout', 'pretty-client-management' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -393,9 +393,9 @@ function pcm_crm_pm_render_types_page() {
 						</td>
 						<td><?php echo esc_html( implode( ' → ', wp_list_pluck( $pcm_type['stages'], 'name' ) ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( array_sum( pcm_crm_pm_type_usage( $pcm_key ) ) ) ); ?></td>
-						<td><?php echo $pcm_type['active'] ? esc_html__( 'Active', 'pcm-crm' ) : esc_html__( 'Retired', 'pcm-crm' ); ?></td>
+						<td><?php echo $pcm_type['active'] ? esc_html__( 'Active', 'pretty-client-management' ) : esc_html__( 'Retired', 'pretty-client-management' ); ?></td>
 						<td>
-							<a href="<?php echo esc_url( add_query_arg( array( 'module' => 'pm', 'object' => 'projects', 'variant' => $pcm_key ), pcm_crm_setup_url( 'fields' ) ) ); ?>"><?php esc_html_e( 'Edit fields', 'pcm-crm' ); ?></a>
+							<a href="<?php echo esc_url( add_query_arg( array( 'module' => 'pm', 'object' => 'projects', 'variant' => $pcm_key ), pcm_crm_setup_url( 'fields' ) ) ); ?>"><?php esc_html_e( 'Edit fields', 'pretty-client-management' ); ?></a>
 						</td>
 					</tr>
 				<?php endforeach; ?>
@@ -404,8 +404,8 @@ function pcm_crm_pm_render_types_page() {
 	</div>
 
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'The processes', 'pcm-crm' ); ?></h2>
-		<p class="description"><?php esc_html_e( 'Every type follows one of these. The process is what the rest of Projects is built around, so it is chosen when a type is created and fixed once projects use it.', 'pcm-crm' ); ?></p>
+		<h2><?php esc_html_e( 'The processes', 'pretty-client-management' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Every type follows one of these. The process is what the rest of Projects is built around, so it is chosen when a type is created and fixed once projects use it.', 'pretty-client-management' ); ?></p>
 		<div class="pcm-setup-archetypes">
 			<?php foreach ( $pcm_archetypes as $pcm_archetype ) : ?>
 				<div class="pcm-setup-archetype">
@@ -423,12 +423,12 @@ function pcm_crm_pm_render_types_page() {
  */
 function pcm_crm_pm_time_rule_labels() {
 	return array(
-		'task_required'        => array( __( 'Every entry names a task', 'pcm-crm' ), __( 'So estimates can be compared with what the work took.', 'pcm-crm' ) ),
-		'billable_default'     => array( __( 'New entries start billable', 'pcm-crm' ), '' ),
-		'billable_locked'      => array( __( 'Billable cannot be changed on an entry', 'pcm-crm' ), __( 'Entries always take the default above.', 'pcm-crm' ) ),
-		'rate_required'        => array( __( 'Billable entries need a bill rate', 'pcm-crm' ), __( 'Taken from the project’s default rate when the entry has none.', 'pcm-crm' ) ),
-		'description_required' => array( __( 'Every entry says what it was for', 'pcm-crm' ), '' ),
-		'resolves_period'      => array( __( 'File entries under the retainer period', 'pcm-crm' ), __( 'So each period’s burn-down counts the right hours.', 'pcm-crm' ) ),
+		'task_required'        => array( __( 'Every entry names a task', 'pretty-client-management' ), __( 'So estimates can be compared with what the work took.', 'pretty-client-management' ) ),
+		'billable_default'     => array( __( 'New entries start billable', 'pretty-client-management' ), '' ),
+		'billable_locked'      => array( __( 'Billable cannot be changed on an entry', 'pretty-client-management' ), __( 'Entries always take the default above.', 'pretty-client-management' ) ),
+		'rate_required'        => array( __( 'Billable entries need a bill rate', 'pretty-client-management' ), __( 'Taken from the project’s default rate when the entry has none.', 'pretty-client-management' ) ),
+		'description_required' => array( __( 'Every entry says what it was for', 'pretty-client-management' ), '' ),
+		'resolves_period'      => array( __( 'File entries under the retainer period', 'pretty-client-management' ), __( 'So each period’s burn-down counts the right hours.', 'pretty-client-management' ) ),
 	);
 }
 
@@ -437,7 +437,7 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 	$pcm_type   = $pcm_is_new ? null : pcm_crm_pm_type( $pcm_key );
 
 	if ( ! $pcm_is_new && ! $pcm_type ) {
-		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html__( 'That project type does not exist.', 'pcm-crm' ) );
+		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html__( 'That project type does not exist.', 'pretty-client-management' ) );
 		return;
 	}
 
@@ -458,7 +458,7 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 	$pcm_time          = $pcm_type ? $pcm_type['time'] : $pcm_archetypes[ $pcm_archetype_key ]['time'];
 	$pcm_defaults      = $pcm_type ? $pcm_type['defaults'] : array();
 	?>
-	<p><a href="<?php echo esc_url( pcm_crm_setup_url( 'project-types' ) ); ?>">← <?php esc_html_e( 'All project types', 'pcm-crm' ); ?></a></p>
+	<p><a href="<?php echo esc_url( pcm_crm_setup_url( 'project-types' ) ); ?>">← <?php esc_html_e( 'All project types', 'pretty-client-management' ); ?></a></p>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pcm-setup-type-form">
 		<input type="hidden" name="action" value="pcm_crm_pm_save_type">
@@ -466,21 +466,21 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 		<?php wp_nonce_field( 'pcm_crm_pm_type', 'pcm_crm_pm_type_nonce' ); ?>
 
 		<div class="pcm-crm-card">
-			<h2><?php echo $pcm_is_new ? esc_html__( 'New project type', 'pcm-crm' ) : esc_html( $pcm_type['label'] ); ?></h2>
+			<h2><?php echo $pcm_is_new ? esc_html__( 'New project type', 'pretty-client-management' ) : esc_html( $pcm_type['label'] ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><label for="pcm-type-label"><?php esc_html_e( 'Name', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-type-label"><?php esc_html_e( 'Name', 'pretty-client-management' ); ?></label></th>
 					<td><input type="text" class="regular-text" id="pcm-type-label" name="label" required value="<?php echo esc_attr( $pcm_values['label'] ); ?>"></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="pcm-type-description"><?php esc_html_e( 'Description', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-type-description"><?php esc_html_e( 'Description', 'pretty-client-management' ); ?></label></th>
 					<td>
 						<textarea class="large-text" rows="2" id="pcm-type-description" name="description"><?php echo esc_textarea( isset( $pcm_values['description'] ) ? $pcm_values['description'] : '' ); ?></textarea>
-						<p class="description"><?php esc_html_e( 'Shown when someone picks a type for a new project.', 'pcm-crm' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Shown when someone picks a type for a new project.', 'pretty-client-management' ); ?></p>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Process', 'pcm-crm' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Process', 'pretty-client-management' ); ?></th>
 					<td>
 						<fieldset class="pcm-setup-archetype-choice">
 							<?php foreach ( $pcm_archetypes as $pcm_archetype_slug => $pcm_archetype ) : ?>
@@ -494,17 +494,17 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 							<?php endforeach; ?>
 						</fieldset>
 						<?php if ( $pcm_locked ) : ?>
-							<p class="description"><?php esc_html_e( 'Projects already follow this type, so its process is fixed. Create a new type to use a different one.', 'pcm-crm' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Projects already follow this type, so its process is fixed. Create a new type to use a different one.', 'pretty-client-management' ); ?></p>
 						<?php elseif ( $pcm_is_new ) : ?>
-							<p class="description"><?php esc_html_e( 'The stages and time rules below start from the process chosen, and can be changed after saving.', 'pcm-crm' ); ?></p>
+							<p class="description"><?php esc_html_e( 'The stages and time rules below start from the process chosen, and can be changed after saving.', 'pretty-client-management' ); ?></p>
 						<?php endif; ?>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Status', 'pcm-crm' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Status', 'pretty-client-management' ); ?></th>
 					<td>
-						<label><input type="checkbox" name="active" value="1" <?php checked( ! empty( $pcm_values['active'] ) ); ?>> <?php esc_html_e( 'Offered for new projects', 'pcm-crm' ); ?></label>
-						<p class="description"><?php esc_html_e( 'A retired type keeps its projects; it is only left out of the New Project chooser.', 'pcm-crm' ); ?></p>
+						<label><input type="checkbox" name="active" value="1" <?php checked( ! empty( $pcm_values['active'] ) ); ?>> <?php esc_html_e( 'Offered for new projects', 'pretty-client-management' ); ?></label>
+						<p class="description"><?php esc_html_e( 'A retired type keeps its projects; it is only left out of the New Project chooser.', 'pretty-client-management' ); ?></p>
 					</td>
 				</tr>
 			</table>
@@ -512,22 +512,22 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 
 		<?php if ( ! $pcm_is_new ) : ?>
 			<div class="pcm-crm-card">
-				<h2><?php esc_html_e( 'Stages', 'pcm-crm' ); ?></h2>
+				<h2><?php esc_html_e( 'Stages', 'pretty-client-management' ); ?></h2>
 				<p class="description">
-					<?php esc_html_e( 'In order. Active marks where a healthy, running project sits; Closes stops the clock; Renewal is a moment a retainer passes through.', 'pcm-crm' ); ?>
+					<?php esc_html_e( 'In order. Active marks where a healthy, running project sits; Closes stops the clock; Renewal is a moment a retainer passes through.', 'pretty-client-management' ); ?>
 					<?php if ( ! $pcm_type['custom_stages'] ) : ?>
-						<?php esc_html_e( 'These are the process’s own stages until you change them.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'These are the process’s own stages until you change them.', 'pretty-client-management' ); ?>
 					<?php endif; ?>
 				</p>
 				<table class="widefat pcm-setup-stages" data-role="stages">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Stage', 'pcm-crm' ); ?></th>
-							<th><?php esc_html_e( 'Active', 'pcm-crm' ); ?></th>
-							<th><?php esc_html_e( 'Closes', 'pcm-crm' ); ?></th>
-							<th><?php esc_html_e( 'Renewal', 'pcm-crm' ); ?></th>
-							<th><?php esc_html_e( 'Projects', 'pcm-crm' ); ?></th>
-							<th><span class="screen-reader-text"><?php esc_html_e( 'Order', 'pcm-crm' ); ?></span></th>
+							<th><?php esc_html_e( 'Stage', 'pretty-client-management' ); ?></th>
+							<th><?php esc_html_e( 'Active', 'pretty-client-management' ); ?></th>
+							<th><?php esc_html_e( 'Closes', 'pretty-client-management' ); ?></th>
+							<th><?php esc_html_e( 'Renewal', 'pretty-client-management' ); ?></th>
+							<th><?php esc_html_e( 'Projects', 'pretty-client-management' ); ?></th>
+							<th><span class="screen-reader-text"><?php esc_html_e( 'Order', 'pretty-client-management' ); ?></span></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -540,16 +540,16 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 					<?php pcm_crm_pm_render_stage_row( '__i__', array( 'name' => '', 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ), 0 ); ?>
 				</template>
 				<p>
-					<button type="button" class="button" data-role="add-stage"><?php esc_html_e( 'Add stage', 'pcm-crm' ); ?></button>
+					<button type="button" class="button" data-role="add-stage"><?php esc_html_e( 'Add stage', 'pretty-client-management' ); ?></button>
 					<?php if ( $pcm_type['custom_stages'] ) : ?>
-						<label class="pcm-setup-reset"><input type="checkbox" name="reset_stages" value="1"> <?php esc_html_e( 'Reset to the process’s stages on save', 'pcm-crm' ); ?></label>
+						<label class="pcm-setup-reset"><input type="checkbox" name="reset_stages" value="1"> <?php esc_html_e( 'Reset to the process’s stages on save', 'pretty-client-management' ); ?></label>
 					<?php endif; ?>
 				</p>
 			</div>
 
 			<div class="pcm-crm-card">
-				<h2><?php esc_html_e( 'Time entry', 'pcm-crm' ); ?></h2>
-				<p class="description"><?php esc_html_e( 'How time is logged against projects of this type. Each starts from the process, and is applied when an entry is saved.', 'pcm-crm' ); ?></p>
+				<h2><?php esc_html_e( 'Time entry', 'pretty-client-management' ); ?></h2>
+				<p class="description"><?php esc_html_e( 'How time is logged against projects of this type. Each starts from the process, and is applied when an entry is saved.', 'pretty-client-management' ); ?></p>
 				<input type="hidden" name="time_posted" value="1">
 				<table class="form-table" role="presentation">
 					<?php foreach ( pcm_crm_pm_time_rule_labels() as $pcm_rule => $pcm_label ) : ?>
@@ -557,7 +557,7 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 						<tr>
 							<th scope="row"><?php echo esc_html( $pcm_label[0] ); ?></th>
 							<td>
-								<label><input type="checkbox" name="time[<?php echo esc_attr( $pcm_rule ); ?>]" value="1" <?php checked( ! empty( $pcm_time[ $pcm_rule ] ) ); ?>> <?php esc_html_e( 'Yes', 'pcm-crm' ); ?></label>
+								<label><input type="checkbox" name="time[<?php echo esc_attr( $pcm_rule ); ?>]" value="1" <?php checked( ! empty( $pcm_time[ $pcm_rule ] ) ); ?>> <?php esc_html_e( 'Yes', 'pretty-client-management' ); ?></label>
 								<?php if ( $pcm_label[1] ) : ?>
 									<p class="description"><?php echo esc_html( $pcm_label[1] ); ?></p>
 								<?php endif; ?>
@@ -565,18 +565,18 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 						</tr>
 					<?php endforeach; ?>
 				</table>
-				<label class="pcm-setup-reset"><input type="checkbox" name="reset_time" value="1"> <?php esc_html_e( 'Reset to the process’s rules on save', 'pcm-crm' ); ?></label>
+				<label class="pcm-setup-reset"><input type="checkbox" name="reset_time" value="1"> <?php esc_html_e( 'Reset to the process’s rules on save', 'pretty-client-management' ); ?></label>
 			</div>
 
 			<div class="pcm-crm-card">
-				<h2><?php esc_html_e( 'Defaults for new projects', 'pcm-crm' ); ?></h2>
+				<h2><?php esc_html_e( 'Defaults for new projects', 'pretty-client-management' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<?php
 					$pcm_hidden = pcm_crm_pm_type_fields( $pcm_key )['hidden'];
 					$pcm_inputs = array(
-						'default_bill_rate' => __( 'Bill rate', 'pcm-crm' ),
-						'default_cost_rate' => __( 'Cost rate', 'pcm-crm' ),
-						'retainer_hours'    => __( 'Hours per period', 'pcm-crm' ),
+						'default_bill_rate' => __( 'Bill rate', 'pretty-client-management' ),
+						'default_cost_rate' => __( 'Cost rate', 'pretty-client-management' ),
+						'retainer_hours'    => __( 'Hours per period', 'pretty-client-management' ),
 					);
 					foreach ( $pcm_inputs as $pcm_name => $pcm_label ) :
 						if ( in_array( $pcm_name, $pcm_hidden, true ) ) { continue; }
@@ -589,10 +589,10 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 					<?php endforeach; ?>
 					<?php if ( ! in_array( 'retainer_period', $pcm_hidden, true ) ) : ?>
 						<tr>
-							<th scope="row"><label for="pcm-default-period"><?php esc_html_e( 'Retainer period', 'pcm-crm' ); ?></label></th>
+							<th scope="row"><label for="pcm-default-period"><?php esc_html_e( 'Retainer period', 'pretty-client-management' ); ?></label></th>
 							<td>
 								<select id="pcm-default-period" name="defaults[retainer_period]">
-									<option value=""><?php esc_html_e( '—', 'pcm-crm' ); ?></option>
+									<option value=""><?php esc_html_e( '—', 'pretty-client-management' ); ?></option>
 									<?php foreach ( pcm_crm_pm_periods() as $pcm_period => $pcm_period_label ) : ?>
 										<option value="<?php echo esc_attr( $pcm_period ); ?>" <?php selected( isset( $pcm_defaults['retainer_period'] ) ? $pcm_defaults['retainer_period'] : '', $pcm_period ); ?>><?php echo esc_html( $pcm_period_label ); ?></option>
 									<?php endforeach; ?>
@@ -604,22 +604,22 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 			</div>
 		<?php endif; ?>
 
-		<?php submit_button( $pcm_is_new ? __( 'Create Project Type', 'pcm-crm' ) : __( 'Save Project Type', 'pcm-crm' ) ); ?>
+		<?php submit_button( $pcm_is_new ? __( 'Create Project Type', 'pretty-client-management' ) : __( 'Save Project Type', 'pretty-client-management' ) ); ?>
 	</form>
 
 	<?php if ( ! $pcm_is_new ) : ?>
 		<div class="pcm-crm-card pcm-crm-card-accent">
-			<h2><?php esc_html_e( 'Delete this type', 'pcm-crm' ); ?></h2>
+			<h2><?php esc_html_e( 'Delete this type', 'pretty-client-management' ); ?></h2>
 			<?php if ( $pcm_locked ) : ?>
-				<p class="description"><?php esc_html_e( 'Projects still follow this type, so it cannot be deleted. Retire it instead — Status, above — to leave it out of the New Project chooser; its projects keep it.', 'pcm-crm' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Projects still follow this type, so it cannot be deleted. Retire it instead — Status, above — to leave it out of the New Project chooser; its projects keep it.', 'pretty-client-management' ); ?></p>
 			<?php else : ?>
-				<p class="description"><?php esc_html_e( 'Permanent, and only offered while no project follows this type.', 'pcm-crm' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Permanent, and only offered while no project follows this type.', 'pretty-client-management' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
-					onsubmit="return confirm('<?php echo esc_js( __( 'Delete this project type? This cannot be undone.', 'pcm-crm' ) ); ?>');">
+					onsubmit="return confirm('<?php echo esc_js( __( 'Delete this project type? This cannot be undone.', 'pretty-client-management' ) ); ?>');">
 					<input type="hidden" name="action" value="pcm_crm_pm_delete_type">
 					<input type="hidden" name="key" value="<?php echo esc_attr( $pcm_key ); ?>">
 					<?php wp_nonce_field( 'pcm_crm_pm_delete_type' ); ?>
-					<?php submit_button( __( 'Delete Project Type', 'pcm-crm' ), 'delete', 'submit', false ); ?>
+					<?php submit_button( __( 'Delete Project Type', 'pretty-client-management' ), 'delete', 'submit', false ); ?>
 				</form>
 			<?php endif; ?>
 		</div>
@@ -671,16 +671,16 @@ function pcm_crm_pm_render_stage_row( $pcm_i, array $pcm_stage, $pcm_count ) {
 	$pcm_base = 'stages[' . $pcm_i . ']';
 	?>
 	<tr>
-		<td><input type="text" class="regular-text" aria-label="<?php esc_attr_e( 'Stage name', 'pcm-crm' ); ?>" name="<?php echo esc_attr( $pcm_base ); ?>[name]" value="<?php echo esc_attr( $pcm_stage['name'] ); ?>"></td>
-		<td><input type="checkbox" aria-label="<?php esc_attr_e( 'Active', 'pcm-crm' ); ?>" name="<?php echo esc_attr( $pcm_base ); ?>[is_active]" value="1" <?php checked( ! empty( $pcm_stage['is_active'] ) ); ?>></td>
-		<td><input type="checkbox" aria-label="<?php esc_attr_e( 'Closes', 'pcm-crm' ); ?>" name="<?php echo esc_attr( $pcm_base ); ?>[is_closed]" value="1" <?php checked( ! empty( $pcm_stage['is_closed'] ) ); ?>></td>
-		<td><input type="checkbox" aria-label="<?php esc_attr_e( 'Renewal', 'pcm-crm' ); ?>" name="<?php echo esc_attr( $pcm_base ); ?>[is_renewal]" value="1" <?php checked( ! empty( $pcm_stage['is_renewal'] ) ); ?>></td>
+		<td><input type="text" class="regular-text" aria-label="<?php esc_attr_e( 'Stage name', 'pretty-client-management' ); ?>" name="<?php echo esc_attr( $pcm_base ); ?>[name]" value="<?php echo esc_attr( $pcm_stage['name'] ); ?>"></td>
+		<td><input type="checkbox" aria-label="<?php esc_attr_e( 'Active', 'pretty-client-management' ); ?>" name="<?php echo esc_attr( $pcm_base ); ?>[is_active]" value="1" <?php checked( ! empty( $pcm_stage['is_active'] ) ); ?>></td>
+		<td><input type="checkbox" aria-label="<?php esc_attr_e( 'Closes', 'pretty-client-management' ); ?>" name="<?php echo esc_attr( $pcm_base ); ?>[is_closed]" value="1" <?php checked( ! empty( $pcm_stage['is_closed'] ) ); ?>></td>
+		<td><input type="checkbox" aria-label="<?php esc_attr_e( 'Renewal', 'pretty-client-management' ); ?>" name="<?php echo esc_attr( $pcm_base ); ?>[is_renewal]" value="1" <?php checked( ! empty( $pcm_stage['is_renewal'] ) ); ?>></td>
 		<td><?php echo esc_html( number_format_i18n( (int) $pcm_count ) ); ?></td>
 		<td class="pcm-setup-stage-move">
-			<button type="button" class="button-link" data-move="up" aria-label="<?php esc_attr_e( 'Move up', 'pcm-crm' ); ?>">↑</button>
-			<button type="button" class="button-link" data-move="down" aria-label="<?php esc_attr_e( 'Move down', 'pcm-crm' ); ?>">↓</button>
+			<button type="button" class="button-link" data-move="up" aria-label="<?php esc_attr_e( 'Move up', 'pretty-client-management' ); ?>">↑</button>
+			<button type="button" class="button-link" data-move="down" aria-label="<?php esc_attr_e( 'Move down', 'pretty-client-management' ); ?>">↓</button>
 			<?php if ( ! $pcm_count ) : ?>
-				<button type="button" class="button-link button-link-delete" data-move="remove" aria-label="<?php esc_attr_e( 'Remove stage', 'pcm-crm' ); ?>">×</button>
+				<button type="button" class="button-link button-link-delete" data-move="remove" aria-label="<?php esc_attr_e( 'Remove stage', 'pretty-client-management' ); ?>">×</button>
 			<?php endif; ?>
 		</td>
 	</tr>
@@ -695,44 +695,44 @@ function pcm_crm_pm_render_time_page() {
 		<?php settings_fields( 'pcm_crm_pm_time_settings' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="pcm-time-max"><?php esc_html_e( 'Most hours in one entry', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm-time-max"><?php esc_html_e( 'Most hours in one entry', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<input type="number" min="1" max="24" step="0.5" class="small-text" id="pcm-time-max" name="<?php echo esc_attr( $pcm_name ); ?>[max_hours]" value="<?php echo esc_attr( $pcm_settings['max_hours'] ); ?>">
-					<p class="description"><?php esc_html_e( 'An entry above this is refused as a likely typo — usually a date in the hours box.', 'pcm-crm' ); ?></p>
+					<p class="description"><?php esc_html_e( 'An entry above this is refused as a likely typo — usually a date in the hours box.', 'pretty-client-management' ); ?></p>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="pcm-time-increment"><?php esc_html_e( 'Round entries to', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm-time-increment"><?php esc_html_e( 'Round entries to', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<select id="pcm-time-increment" name="<?php echo esc_attr( $pcm_name ); ?>[increment]">
-						<?php foreach ( array( '0' => __( 'No rounding', 'pcm-crm' ), '0.1' => __( 'Six minutes (0.1h)', 'pcm-crm' ), '0.25' => __( 'Quarter hours', 'pcm-crm' ), '0.5' => __( 'Half hours', 'pcm-crm' ) ) as $pcm_value => $pcm_label ) : ?>
+						<?php foreach ( array( '0' => __( 'No rounding', 'pretty-client-management' ), '0.1' => __( 'Six minutes (0.1h)', 'pretty-client-management' ), '0.25' => __( 'Quarter hours', 'pretty-client-management' ), '0.5' => __( 'Half hours', 'pretty-client-management' ) ) as $pcm_value => $pcm_label ) : ?>
 							<option value="<?php echo esc_attr( $pcm_value ); ?>" <?php selected( (string) (float) $pcm_settings['increment'], (string) (float) $pcm_value ); ?>><?php echo esc_html( $pcm_label ); ?></option>
 						<?php endforeach; ?>
 					</select>
-					<p class="description"><?php esc_html_e( 'Applied as hours are typed, rounding up.', 'pcm-crm' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Applied as hours are typed, rounding up.', 'pretty-client-management' ); ?></p>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Future dates', 'pcm-crm' ); ?></th>
-				<td><label><input type="checkbox" name="<?php echo esc_attr( $pcm_name ); ?>[allow_future]" value="1" <?php checked( ! empty( $pcm_settings['allow_future'] ) ); ?>> <?php esc_html_e( 'Allow time to be logged ahead of the day', 'pcm-crm' ); ?></label></td>
+				<th scope="row"><?php esc_html_e( 'Future dates', 'pretty-client-management' ); ?></th>
+				<td><label><input type="checkbox" name="<?php echo esc_attr( $pcm_name ); ?>[allow_future]" value="1" <?php checked( ! empty( $pcm_settings['allow_future'] ) ); ?>> <?php esc_html_e( 'Allow time to be logged ahead of the day', 'pretty-client-management' ); ?></label></td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="pcm-time-lock"><?php esc_html_e( 'Lock entries after', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm-time-lock"><?php esc_html_e( 'Lock entries after', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<input type="number" min="0" step="1" class="small-text" id="pcm-time-lock" name="<?php echo esc_attr( $pcm_name ); ?>[lock_after_days]" value="<?php echo esc_attr( $pcm_settings['lock_after_days'] ); ?>">
-					<?php esc_html_e( 'days', 'pcm-crm' ); ?>
-					<p class="description"><?php esc_html_e( 'Older entries cannot be added or changed, since they may already be invoiced. 0 never locks.', 'pcm-crm' ); ?></p>
+					<?php esc_html_e( 'days', 'pretty-client-management' ); ?>
+					<p class="description"><?php esc_html_e( 'Older entries cannot be added or changed, since they may already be invoiced. 0 never locks.', 'pretty-client-management' ); ?></p>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Weeks start on', 'pcm-crm' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Weeks start on', 'pretty-client-management' ); ?></th>
 				<td>
 					<p class="description">
 						<?php
 						printf(
 							/* translators: %s: link to WordPress's General Settings */
-							esc_html__( 'The timesheet and the resourcing board follow the site’s own setting, under %s.', 'pcm-crm' ),
-							'<a href="' . esc_url( admin_url( 'options-general.php' ) ) . '">' . esc_html__( 'Settings › General', 'pcm-crm' ) . '</a>'
+							esc_html__( 'The timesheet and the resourcing board follow the site’s own setting, under %s.', 'pretty-client-management' ),
+							'<a href="' . esc_url( admin_url( 'options-general.php' ) ) . '">' . esc_html__( 'Settings › General', 'pretty-client-management' ) . '</a>'
 						);
 						?>
 					</p>
@@ -749,14 +749,14 @@ function pcm_crm_pm_render_picklists_page() {
 	?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_pm_picklist_settings' ); ?>
-		<p class="description"><?php esc_html_e( 'One choice per line. Removing a choice does not change records that already use it.', 'pcm-crm' ); ?></p>
+		<p class="description"><?php esc_html_e( 'One choice per line. Removing a choice does not change records that already use it.', 'pretty-client-management' ); ?></p>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="pcm-pick-roles"><?php esc_html_e( 'Project roles', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm-pick-roles"><?php esc_html_e( 'Project roles', 'pretty-client-management' ); ?></label></th>
 				<td><textarea class="large-text" rows="8" id="pcm-pick-roles" name="<?php echo esc_attr( $pcm_name ); ?>[roles]"><?php echo esc_textarea( implode( "\n", pcm_crm_pm_roles() ) ); ?></textarea></td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="pcm-pick-raid"><?php esc_html_e( 'RAID kinds', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm-pick-raid"><?php esc_html_e( 'RAID kinds', 'pretty-client-management' ); ?></label></th>
 				<td><textarea class="large-text" rows="5" id="pcm-pick-raid" name="<?php echo esc_attr( $pcm_name ); ?>[raid_types]"><?php echo esc_textarea( implode( "\n", pcm_crm_pm_raid_types() ) ); ?></textarea></td>
 			</tr>
 		</table>
@@ -764,12 +764,12 @@ function pcm_crm_pm_render_picklists_page() {
 	</form>
 
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Fixed lists', 'pcm-crm' ); ?></h2>
-		<p class="description"><?php esc_html_e( 'These carry meaning the software acts on — Done stamps a task’s completion date, Mitigated, Closed and Accepted close a RAID entry, and health is compared with the numbers — so they are not editable here.', 'pcm-crm' ); ?></p>
+		<h2><?php esc_html_e( 'Fixed lists', 'pretty-client-management' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'These carry meaning the software acts on — Done stamps a task’s completion date, Mitigated, Closed and Accepted close a RAID entry, and health is compared with the numbers — so they are not editable here.', 'pretty-client-management' ); ?></p>
 		<table class="form-table" role="presentation">
-			<tr><th scope="row"><?php esc_html_e( 'Task statuses', 'pcm-crm' ); ?></th><td><?php echo esc_html( implode( ', ', pcm_crm_pm_task_statuses() ) ); ?></td></tr>
-			<tr><th scope="row"><?php esc_html_e( 'RAID statuses', 'pcm-crm' ); ?></th><td><?php echo esc_html( implode( ', ', pcm_crm_pm_raid_statuses() ) ); ?></td></tr>
-			<tr><th scope="row"><?php esc_html_e( 'Health', 'pcm-crm' ); ?></th><td><?php echo esc_html( implode( ', ', pcm_crm_pm_health_options() ) ); ?></td></tr>
+			<tr><th scope="row"><?php esc_html_e( 'Task statuses', 'pretty-client-management' ); ?></th><td><?php echo esc_html( implode( ', ', pcm_crm_pm_task_statuses() ) ); ?></td></tr>
+			<tr><th scope="row"><?php esc_html_e( 'RAID statuses', 'pretty-client-management' ); ?></th><td><?php echo esc_html( implode( ', ', pcm_crm_pm_raid_statuses() ) ); ?></td></tr>
+			<tr><th scope="row"><?php esc_html_e( 'Health', 'pretty-client-management' ); ?></th><td><?php echo esc_html( implode( ', ', pcm_crm_pm_health_options() ) ); ?></td></tr>
 		</table>
 	</div>
 	<?php

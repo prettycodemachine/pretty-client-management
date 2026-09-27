@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 function pcm_crm_sample_templates() {
 	return array(
 		'inbound-first-reply' => array(
-			'name'    => __( 'Inbound inquiry — first reply', 'pcm-crm' ),
+			'name'    => __( 'Inbound inquiry — first reply', 'pretty-client-management' ),
 			'subject' => 'Thanks for reaching out, {{contact.first_name}}',
 			'body'    =>
 				"Hi {{contact.first_name}},\n\n" .
@@ -28,7 +28,7 @@ function pcm_crm_sample_templates() {
 				"Talk soon,\n{{sender.name}}",
 		),
 		'follow-up-one' => array(
-			'name'    => __( 'Follow-up — no reply yet', 'pcm-crm' ),
+			'name'    => __( 'Follow-up — no reply yet', 'pretty-client-management' ),
 			'subject' => 'Following up — {{account.name}}',
 			'body'    =>
 				"Hi {{contact.first_name}},\n\n" .
@@ -37,7 +37,7 @@ function pcm_crm_sample_templates() {
 				"Best,\n{{sender.name}}",
 		),
 		'follow-up-close' => array(
-			'name'    => __( 'Follow-up — closing the loop', 'pcm-crm' ),
+			'name'    => __( 'Follow-up — closing the loop', 'pretty-client-management' ),
 			'subject' => 'Closing the loop',
 			'body'    =>
 				"Hi {{contact.first_name}},\n\n" .
@@ -46,7 +46,7 @@ function pcm_crm_sample_templates() {
 				"All the best,\n{{sender.name}}",
 		),
 		'meeting-recap' => array(
-			'name'    => __( 'After a call — recap and next step', 'pcm-crm' ),
+			'name'    => __( 'After a call — recap and next step', 'pretty-client-management' ),
 			'subject' => 'Notes from our conversation',
 			'body'    =>
 				"Hi {{contact.first_name}},\n\n" .
@@ -57,7 +57,7 @@ function pcm_crm_sample_templates() {
 				"Best,\n{{sender.name}}",
 		),
 		'proposal-follow-up' => array(
-			'name'    => __( 'After a proposal', 'pcm-crm' ),
+			'name'    => __( 'After a proposal', 'pretty-client-management' ),
 			'subject' => 'The proposal for {{account.name}}',
 			'body'    =>
 				"Hi {{contact.first_name}},\n\n" .
@@ -66,7 +66,7 @@ function pcm_crm_sample_templates() {
 				"Best,\n{{sender.name}}",
 		),
 		're-engage' => array(
-			'name'    => __( 'Re-engage a quiet contact', 'pcm-crm' ),
+			'name'    => __( 'Re-engage a quiet contact', 'pretty-client-management' ),
 			'subject' => 'Still worth a conversation?',
 			'body'    =>
 				"Hi {{contact.first_name}},\n\n" .
@@ -87,8 +87,8 @@ function pcm_crm_sample_templates() {
 function pcm_crm_sample_sequences() {
 	return array(
 		'new-inbound-lead' => array(
-			'name'        => __( 'New inbound lead', 'pcm-crm' ),
-			'description' => __( 'For someone who has just come in through the contact form: a reply, one nudge, and a polite close.', 'pcm-crm' ),
+			'name'        => __( 'New inbound lead', 'pretty-client-management' ),
+			'description' => __( 'For someone who has just come in through the contact form: a reply, one nudge, and a polite close.', 'pretty-client-management' ),
 			'steps'       => array(
 				array( 'template' => 'inbound-first-reply', 'delay_days' => 0 ),
 				array( 'template' => 'follow-up-one', 'delay_days' => 3 ),

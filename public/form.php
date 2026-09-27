@@ -102,7 +102,7 @@ function pcm_crm_render_form_field( array $pcm_field ) {
 
 	if ( 'select' === $pcm_field['type'] ) {
 		printf( '<select id="%s" name="%s"%s>', esc_attr( $pcm_name ), esc_attr( $pcm_name ), $pcm_required ); // phpcs:ignore WordPress.Security.EscapeOutput -- literal
-		echo '<option value="">' . esc_html__( 'Choose one…', 'pcm-crm' ) . '</option>';
+		echo '<option value="">' . esc_html__( 'Choose one…', 'pretty-client-management' ) . '</option>';
 
 		foreach ( pcm_crm_field_options( $pcm_field ) as $pcm_option ) {
 			printf( '<option value="%s">%s</option>', esc_attr( $pcm_option ), esc_html( $pcm_option ) );

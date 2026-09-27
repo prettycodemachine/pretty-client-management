@@ -135,7 +135,7 @@ function pcm_crm_validate_opportunity( $pcm_error, $pcm_object, $pcm_row, $pcm_i
 	if ( '' === trim( (string) ( isset( $pcm_merged['closed_lost_reason'] ) ? $pcm_merged['closed_lost_reason'] : '' ) ) ) {
 		return new WP_Error(
 			'pcm_crm_lost_reason_required',
-			__( 'Give a reason before closing this as lost — a column of losses with no reasons teaches nothing.', 'pcm-crm' ),
+			__( 'Give a reason before closing this as lost — a column of losses with no reasons teaches nothing.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}

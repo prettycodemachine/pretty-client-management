@@ -21,8 +21,8 @@ function pcm_crm_menu() {
 
 	/* The work ---------------------------------------------------------- */
 	add_menu_page(
-		__( 'CRM', 'pcm-crm' ),
-		__( 'CRM', 'pcm-crm' ),
+		__( 'CRM', 'pretty-client-management' ),
+		__( 'CRM', 'pretty-client-management' ),
 		$pcm_cap,
 		'pcm-crm',
 		'pcm_crm_render_dashboard',
@@ -31,13 +31,13 @@ function pcm_crm_menu() {
 	);
 
 	$pcm_records = array(
-		'pcm-crm'               => array( __( 'Dashboard', 'pcm-crm' ), 'pcm_crm_render_dashboard' ),
-		'pcm-crm-accounts'      => array( __( 'Accounts', 'pcm-crm' ), 'pcm_crm_render_accounts' ),
-		'pcm-crm-contacts'      => array( __( 'Contacts', 'pcm-crm' ), 'pcm_crm_render_contacts' ),
-		'pcm-crm-opportunities' => array( __( 'Opportunities', 'pcm-crm' ), 'pcm_crm_render_opportunities' ),
-		'pcm-crm-pipeline'      => array( __( 'Pipeline', 'pcm-crm' ), 'pcm_crm_render_pipeline' ),
-		'pcm-crm-activities'    => array( __( 'Activities', 'pcm-crm' ), 'pcm_crm_render_activities' ),
-		'pcm-crm-reports'       => array( __( 'Reports', 'pcm-crm' ), 'pcm_crm_render_reports' ),
+		'pcm-crm'               => array( __( 'Dashboard', 'pretty-client-management' ), 'pcm_crm_render_dashboard' ),
+		'pcm-crm-accounts'      => array( __( 'Accounts', 'pretty-client-management' ), 'pcm_crm_render_accounts' ),
+		'pcm-crm-contacts'      => array( __( 'Contacts', 'pretty-client-management' ), 'pcm_crm_render_contacts' ),
+		'pcm-crm-opportunities' => array( __( 'Opportunities', 'pretty-client-management' ), 'pcm_crm_render_opportunities' ),
+		'pcm-crm-pipeline'      => array( __( 'Pipeline', 'pretty-client-management' ), 'pcm_crm_render_pipeline' ),
+		'pcm-crm-activities'    => array( __( 'Activities', 'pretty-client-management' ), 'pcm_crm_render_activities' ),
+		'pcm-crm-reports'       => array( __( 'Reports', 'pretty-client-management' ), 'pcm_crm_render_reports' ),
 	);
 
 	foreach ( $pcm_records as $pcm_slug => $pcm_page ) {
@@ -62,8 +62,8 @@ function pcm_crm_menu() {
 	   PCM Settings" means for them now.
 	   ------------------------------------------------------------------- */
 	add_menu_page(
-		__( 'PCM Settings', 'pcm-crm' ),
-		__( 'PCM Settings', 'pcm-crm' ),
+		__( 'PCM Settings', 'pretty-client-management' ),
+		__( 'PCM Settings', 'pretty-client-management' ),
 		$pcm_cap,
 		PCM_CRM_SETUP_SLUG,
 		'pcm_crm_render_settings',
@@ -75,7 +75,7 @@ function pcm_crm_menu() {
 	// top-level menu repeats the top-level label — "PCM Settings" under "CRM
 	// Settings" — where the in-frame nav (pcm_crm_setup_open()) already calls
 	// this destination "Home".
-	add_submenu_page( PCM_CRM_SETUP_SLUG, __( 'Home', 'pcm-crm' ), __( 'Home', 'pcm-crm' ), $pcm_cap, PCM_CRM_SETUP_SLUG, 'pcm_crm_render_settings' );
+	add_submenu_page( PCM_CRM_SETUP_SLUG, __( 'Home', 'pretty-client-management' ), __( 'Home', 'pretty-client-management' ), $pcm_cap, PCM_CRM_SETUP_SLUG, 'pcm_crm_render_settings' );
 
 	$pcm_renderers = array(
 		'pcm-crm-templates'   => 'pcm_crm_render_templates',
@@ -319,7 +319,7 @@ function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '', array $pcm_a
 			return;
 		}
 
-		wp_die( esc_html__( 'You do not have access to this part of the CRM.', 'pcm-crm' ) );
+		wp_die( esc_html__( 'You do not have access to this part of the CRM.', 'pretty-client-management' ) );
 	}
 
 	if ( $pcm_setup ) {
@@ -346,7 +346,7 @@ function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '', array $pcm_a
 
 		<div class="pcm-crm-filters" data-role="filters"></div>
 		<div class="pcm-crm-body" data-role="body">
-			<p class="pcm-crm-loading"><?php esc_html_e( 'Loading…', 'pcm-crm' ); ?></p>
+			<p class="pcm-crm-loading"><?php esc_html_e( 'Loading…', 'pretty-client-management' ); ?></p>
 		</div>
 		<div class="pcm-crm-drawer" data-role="drawer" hidden></div>
 		<div class="pcm-crm-scrim" data-role="scrim" hidden></div>
@@ -366,20 +366,20 @@ function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '', array $pcm_a
 function pcm_crm_apps() {
 	return apply_filters( 'pcm_crm_apps', array(
 		'crm' => array(
-			'label' => __( 'CRM', 'pcm-crm' ),
+			'label' => __( 'CRM', 'pretty-client-management' ),
 			// The permission area this app's screens answer to. Declared here
 			// rather than on each item, because an app is the unit somebody is
 			// granted — and the item tuples are read positionally by the app
 			// bar, so a third element would have to be threaded through there.
 			'area'  => 'crm',
 			'items' => array(
-				'pcm-crm'               => array( __( 'Dashboard', 'pcm-crm' ), 'dashboard' ),
-				'pcm-crm-accounts'      => array( __( 'Accounts', 'pcm-crm' ), 'accounts' ),
-				'pcm-crm-contacts'      => array( __( 'Contacts', 'pcm-crm' ), 'contacts' ),
-				'pcm-crm-opportunities' => array( __( 'Opportunities', 'pcm-crm' ), 'opportunities' ),
-				'pcm-crm-pipeline'      => array( __( 'Pipeline', 'pcm-crm' ), 'pipeline' ),
-				'pcm-crm-activities'    => array( __( 'Activities', 'pcm-crm' ), 'activities' ),
-				'pcm-crm-reports'       => array( __( 'Reports', 'pcm-crm' ), 'reports' ),
+				'pcm-crm'               => array( __( 'Dashboard', 'pretty-client-management' ), 'dashboard' ),
+				'pcm-crm-accounts'      => array( __( 'Accounts', 'pretty-client-management' ), 'accounts' ),
+				'pcm-crm-contacts'      => array( __( 'Contacts', 'pretty-client-management' ), 'contacts' ),
+				'pcm-crm-opportunities' => array( __( 'Opportunities', 'pretty-client-management' ), 'opportunities' ),
+				'pcm-crm-pipeline'      => array( __( 'Pipeline', 'pretty-client-management' ), 'pipeline' ),
+				'pcm-crm-activities'    => array( __( 'Activities', 'pretty-client-management' ), 'activities' ),
+				'pcm-crm-reports'       => array( __( 'Reports', 'pretty-client-management' ), 'reports' ),
 			),
 		),
 	) );
@@ -425,7 +425,7 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 						<a href="<?php echo esc_url( pcm_crm_screen_url( key( $pcm_other['items'] ), array(), $pcm_host ) ); ?>">
 							<?php
 							/* translators: %s: app name */
-							echo esc_html( sprintf( __( 'Go to %s', 'pcm-crm' ), $pcm_other['label'] ) );
+							echo esc_html( sprintf( __( 'Go to %s', 'pretty-client-management' ), $pcm_other['label'] ) );
 							?>
 						</a>
 					<?php endif; ?>
@@ -446,7 +446,7 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 		<?php if ( $pcm_settings_reachable ) : ?>
 			<a class="pcm-crm-appbar-setup" href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>">
 				<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
-				<?php esc_html_e( 'PCM Settings', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'PCM Settings', 'pretty-client-management' ); ?>
 			</a>
 		<?php endif; ?>
 		<?php
@@ -492,43 +492,43 @@ function pcm_crm_screen_callbacks() {
 }
 
 function pcm_crm_render_dashboard() {
-	pcm_crm_screen( 'dashboard', __( 'CRM Dashboard', 'pcm-crm' ) );
+	pcm_crm_screen( 'dashboard', __( 'CRM Dashboard', 'pretty-client-management' ) );
 }
 
 function pcm_crm_render_accounts() {
-	pcm_crm_screen( 'accounts', __( 'Accounts', 'pcm-crm' ) );
+	pcm_crm_screen( 'accounts', __( 'Accounts', 'pretty-client-management' ) );
 }
 
 function pcm_crm_render_contacts() {
-	pcm_crm_screen( 'contacts', __( 'Contacts', 'pcm-crm' ) );
+	pcm_crm_screen( 'contacts', __( 'Contacts', 'pretty-client-management' ) );
 }
 
 function pcm_crm_render_opportunities() {
-	pcm_crm_screen( 'opportunities', __( 'Opportunities', 'pcm-crm' ) );
+	pcm_crm_screen( 'opportunities', __( 'Opportunities', 'pretty-client-management' ) );
 }
 
 function pcm_crm_render_pipeline() {
-	pcm_crm_screen( 'pipeline', __( 'Pipeline', 'pcm-crm' ), __( 'Drag a deal to move it between stages.', 'pcm-crm' ) );
+	pcm_crm_screen( 'pipeline', __( 'Pipeline', 'pretty-client-management' ), __( 'Drag a deal to move it between stages.', 'pretty-client-management' ) );
 }
 
 function pcm_crm_render_activities() {
-	pcm_crm_screen( 'activities', __( 'Activities', 'pcm-crm' ) );
+	pcm_crm_screen( 'activities', __( 'Activities', 'pretty-client-management' ) );
 }
 
 function pcm_crm_render_recycle_bin() {
-	pcm_crm_screen( 'recycle', __( 'Recycle Bin', 'pcm-crm' ), '', array( 'setup' => 'recycle' ) );
+	pcm_crm_screen( 'recycle', __( 'Recycle Bin', 'pretty-client-management' ), '', array( 'setup' => 'recycle' ) );
 }
 
 function pcm_crm_render_templates() {
-	pcm_crm_screen( 'templates', __( 'Email Templates', 'pcm-crm' ), '', array( 'setup' => 'templates' ) );
+	pcm_crm_screen( 'templates', __( 'Email Templates', 'pretty-client-management' ), '', array( 'setup' => 'templates' ) );
 }
 
 function pcm_crm_render_sequences() {
-	pcm_crm_screen( 'sequences', __( 'Sequences', 'pcm-crm' ), '', array( 'setup' => 'sequences' ) );
+	pcm_crm_screen( 'sequences', __( 'Sequences', 'pretty-client-management' ), '', array( 'setup' => 'sequences' ) );
 }
 
 function pcm_crm_render_schedules() {
-	pcm_crm_screen( 'schedules', __( 'Scheduled Reports', 'pcm-crm' ), pcm_crm_cron_note(), array( 'setup' => 'schedules' ) );
+	pcm_crm_screen( 'schedules', __( 'Scheduled Reports', 'pretty-client-management' ), pcm_crm_cron_note(), array( 'setup' => 'schedules' ) );
 }
 
 /**
@@ -540,12 +540,12 @@ function pcm_crm_render_schedules() {
  */
 function pcm_crm_cron_note() {
 	if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
-		return __( 'WordPress cron is disabled here, so delivery depends on a server cron calling wp-cron.php.', 'pcm-crm' );
+		return __( 'WordPress cron is disabled here, so delivery depends on a server cron calling wp-cron.php.', 'pretty-client-management' );
 	}
 
-	return __( 'Delivery runs on WordPress cron, which fires on site visits — a quiet site may send a little late.', 'pcm-crm' );
+	return __( 'Delivery runs on WordPress cron, which fires on site visits — a quiet site may send a little late.', 'pretty-client-management' );
 }
 
 function pcm_crm_render_reports() {
-	pcm_crm_screen( 'reports', __( 'Reports', 'pcm-crm' ), __( 'Group and filter any object, then export it.', 'pcm-crm' ) );
+	pcm_crm_screen( 'reports', __( 'Reports', 'pretty-client-management' ), __( 'Group and filter any object, then export it.', 'pretty-client-management' ) );
 }

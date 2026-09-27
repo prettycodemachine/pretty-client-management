@@ -23,25 +23,25 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  */
 function pcm_crm_portal_context( $pcm_allow_no_project = false ) {
 	if ( ! is_user_logged_in() ) {
-		return new WP_Error( 'pcm_crm_portal_login_required', __( 'Please log in.', 'pcm-crm' ), array( 'status' => 401 ) );
+		return new WP_Error( 'pcm_crm_portal_login_required', __( 'Please log in.', 'pretty-client-management' ), array( 'status' => 401 ) );
 	}
 
 	$pcm_user = wp_get_current_user();
 
 	if ( ! in_array( 'pcm_client', (array) $pcm_user->roles, true ) ) {
-		return new WP_Error( 'pcm_crm_portal_wrong_role', __( 'This area is for clients only.', 'pcm-crm' ), array( 'status' => 403 ) );
+		return new WP_Error( 'pcm_crm_portal_wrong_role', __( 'This area is for clients only.', 'pretty-client-management' ), array( 'status' => 403 ) );
 	}
 
 	$pcm_contact_id = (int) get_user_meta( $pcm_user->ID, 'pcm_crm_contact_id', true );
 
 	if ( ! $pcm_contact_id || ! pcm_crm_contacts()->get( $pcm_contact_id ) ) {
-		return new WP_Error( 'pcm_crm_portal_unlinked', __( 'Your login is not linked to a contact. Ask whoever set this up to check your invitation.', 'pcm-crm' ), array( 'status' => 403 ) );
+		return new WP_Error( 'pcm_crm_portal_unlinked', __( 'Your login is not linked to a contact. Ask whoever set this up to check your invitation.', 'pretty-client-management' ), array( 'status' => 403 ) );
 	}
 
 	$pcm_project_ids = pcm_crm_portal_projects_for_contact( $pcm_contact_id );
 
 	if ( ! $pcm_project_ids && ! $pcm_allow_no_project ) {
-		return new WP_Error( 'pcm_crm_portal_no_project', __( 'No project is set up for you yet.', 'pcm-crm' ), array( 'status' => 404 ) );
+		return new WP_Error( 'pcm_crm_portal_no_project', __( 'No project is set up for you yet.', 'pretty-client-management' ), array( 'status' => 404 ) );
 	}
 
 	return array(
@@ -136,7 +136,7 @@ function pcm_crm_portal_permission_project( WP_REST_Request $pcm_request ) {
 	$pcm_project_id = pcm_crm_portal_requested_project( $pcm_request );
 
 	if ( ! $pcm_project_id || ! in_array( $pcm_project_id, $pcm_context['project_ids'], true ) ) {
-		return new WP_Error( 'pcm_crm_portal_not_your_project', __( 'That is not one of your projects.', 'pcm-crm' ), array( 'status' => 403 ) );
+		return new WP_Error( 'pcm_crm_portal_not_your_project', __( 'That is not one of your projects.', 'pretty-client-management' ), array( 'status' => 403 ) );
 	}
 
 	return true;
@@ -158,7 +158,7 @@ function pcm_crm_portal_permission_ticket( WP_REST_Request $pcm_request ) {
 	$pcm_ticket    = $pcm_ticket_id ? pcm_crm_help_tickets()->get( $pcm_ticket_id ) : null;
 
 	if ( ! $pcm_ticket || ! in_array( (int) $pcm_ticket['project_id'], $pcm_context['project_ids'], true ) ) {
-		return new WP_Error( 'pcm_crm_portal_not_your_ticket', __( 'That ticket is not yours to see.', 'pcm-crm' ), array( 'status' => 403 ) );
+		return new WP_Error( 'pcm_crm_portal_not_your_ticket', __( 'That ticket is not yours to see.', 'pretty-client-management' ), array( 'status' => 403 ) );
 	}
 
 	return true;
@@ -179,7 +179,7 @@ function pcm_crm_portal_permission_document( WP_REST_Request $pcm_request ) {
 	$pcm_doc    = $pcm_doc_id ? pcm_crm_project_documents()->get( $pcm_doc_id ) : null;
 
 	if ( ! $pcm_doc || ! in_array( (int) $pcm_doc['project_id'], $pcm_context['project_ids'], true ) ) {
-		return new WP_Error( 'pcm_crm_portal_not_your_document', __( 'That file is not yours to see.', 'pcm-crm' ), array( 'status' => 403 ) );
+		return new WP_Error( 'pcm_crm_portal_not_your_document', __( 'That file is not yours to see.', 'pretty-client-management' ), array( 'status' => 403 ) );
 	}
 
 	return true;

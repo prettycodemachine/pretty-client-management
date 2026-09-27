@@ -29,14 +29,14 @@ function pcm_crm_handle_export() {
 		! isset( $_GET['pcm_crm_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_GET['pcm_crm_nonce'] ), 'pcm_crm_export' )
 	) {
-		wp_die( esc_html__( 'You are not allowed to export CRM data.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to export CRM data.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_object = isset( $_GET['object'] ) ? sanitize_key( wp_unslash( $_GET['object'] ) ) : '';
 	$pcm_model  = PCM_CRM_REST::model( $pcm_object );
 
 	if ( ! $pcm_model ) {
-		wp_die( esc_html__( 'Unknown object.', 'pcm-crm' ), 404 );
+		wp_die( esc_html__( 'Unknown object.', 'pretty-client-management' ), 404 );
 	}
 
 	// Authorised only once the object is known: exporting is granted per area,
@@ -44,7 +44,7 @@ function pcm_crm_handle_export() {
 	// Being able to export deals says nothing about being able to export
 	// timesheets.
 	if ( ! pcm_crm_can( pcm_crm_object_area( $pcm_object ), 'export' ) ) {
-		wp_die( esc_html__( 'You are not allowed to export CRM data.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to export CRM data.', 'pretty-client-management' ), 403 );
 	}
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- verified above

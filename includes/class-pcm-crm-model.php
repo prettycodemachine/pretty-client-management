@@ -646,7 +646,7 @@ class PCM_CRM_Model {
 		$pcm_ok = $wpdb->insert( $this->table, $pcm_row, $this->formats( $pcm_row ) );
 
 		if ( ! $pcm_ok ) {
-			return new WP_Error( 'pcm_crm_insert_failed', $wpdb->last_error ? $wpdb->last_error : __( 'Could not save the record.', 'pcm-crm' ) );
+			return new WP_Error( 'pcm_crm_insert_failed', $wpdb->last_error ? $wpdb->last_error : __( 'Could not save the record.', 'pretty-client-management' ) );
 		}
 
 		$pcm_id = (int) $wpdb->insert_id;
@@ -662,7 +662,7 @@ class PCM_CRM_Model {
 		$pcm_id = absint( $pcm_id );
 
 		if ( ! $pcm_id || ! $this->get( $pcm_id ) ) {
-			return new WP_Error( 'pcm_crm_not_found', __( 'That record no longer exists.', 'pcm-crm' ) );
+			return new WP_Error( 'pcm_crm_not_found', __( 'That record no longer exists.', 'pretty-client-management' ) );
 		}
 
 		$pcm_row = $this->sanitize( $pcm_input );
@@ -692,7 +692,7 @@ class PCM_CRM_Model {
 		$pcm_ok = $wpdb->update( $this->table, $pcm_row, array( 'id' => $pcm_id ), $this->formats( $pcm_row ), array( '%d' ) );
 
 		if ( false === $pcm_ok ) {
-			return new WP_Error( 'pcm_crm_update_failed', $wpdb->last_error ? $wpdb->last_error : __( 'Could not save the record.', 'pcm-crm' ) );
+			return new WP_Error( 'pcm_crm_update_failed', $wpdb->last_error ? $wpdb->last_error : __( 'Could not save the record.', 'pretty-client-management' ) );
 		}
 
 		do_action( 'pcm_crm_updated', $this->object, $pcm_id, $pcm_row );

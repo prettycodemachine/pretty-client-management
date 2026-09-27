@@ -199,7 +199,7 @@ function pcm_crm_pm_validate_project( $pcm_error, $pcm_object, $pcm_row, $pcm_id
 	$pcm_merged   = array_merge( is_array( $pcm_existing ) ? $pcm_existing : array(), $pcm_row );
 
 	if ( '' === trim( (string) $pcm_merged['name'] ) ) {
-		return new WP_Error( 'pcm_crm_name_required', __( 'A project needs a name.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_name_required', __( 'A project needs a name.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	$pcm_type = (string) $pcm_merged['project_type'];
@@ -208,7 +208,7 @@ function pcm_crm_pm_validate_project( $pcm_error, $pcm_object, $pcm_row, $pcm_id
 		return new WP_Error(
 			'pcm_crm_pm_unknown_type',
 			/* translators: %s: the project type that was submitted */
-			sprintf( __( '“%s” is not one of the project types.', 'pcm-crm' ), $pcm_type ),
+			sprintf( __( '“%s” is not one of the project types.', 'pretty-client-management' ), $pcm_type ),
 			array( 'status' => 400 )
 		);
 	}
@@ -221,7 +221,7 @@ function pcm_crm_pm_validate_project( $pcm_error, $pcm_object, $pcm_row, $pcm_id
 		return new WP_Error(
 			'pcm_crm_pm_wrong_stage',
 			/* translators: 1: stage name, 2: project type */
-			sprintf( __( '“%1$s” is not a stage a %2$s goes through.', 'pcm-crm' ), $pcm_stage, pcm_crm_pm_type_label( $pcm_type ) ),
+			sprintf( __( '“%1$s” is not a stage a %2$s goes through.', 'pretty-client-management' ), $pcm_stage, pcm_crm_pm_type_label( $pcm_type ) ),
 			array( 'status' => 400 )
 		);
 	}
@@ -239,14 +239,14 @@ function pcm_crm_pm_validate_project( $pcm_error, $pcm_object, $pcm_row, $pcm_id
 			return new WP_Error(
 				'pcm_crm_pm_type_required',
 				/* translators: 1: project type, 2: comma-separated field labels */
-				sprintf( __( 'A %1$s project needs: %2$s.', 'pcm-crm' ), pcm_crm_pm_type_label( $pcm_type ), implode( ', ', $pcm_missing ) ),
+				sprintf( __( 'A %1$s project needs: %2$s.', 'pretty-client-management' ), pcm_crm_pm_type_label( $pcm_type ), implode( ', ', $pcm_missing ) ),
 				array( 'status' => 400 )
 			);
 		}
 	}
 
 	if ( $pcm_merged['start_date'] && $pcm_merged['end_date'] && $pcm_merged['end_date'] < $pcm_merged['start_date'] ) {
-		return new WP_Error( 'pcm_crm_pm_bad_window', __( 'The end date falls before the start date.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_pm_bad_window', __( 'The end date falls before the start date.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	return $pcm_error;

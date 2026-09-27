@@ -41,11 +41,11 @@ function pcm_crm_valid_form_field( $pcm_field ) {
 
 function pcm_crm_form_field_types() {
 	return array(
-		'text'     => __( 'Single line', 'pcm-crm' ),
-		'email'    => __( 'Email address', 'pcm-crm' ),
-		'tel'      => __( 'Phone number', 'pcm-crm' ),
-		'textarea' => __( 'Paragraph', 'pcm-crm' ),
-		'select'   => __( 'Dropdown', 'pcm-crm' ),
+		'text'     => __( 'Single line', 'pretty-client-management' ),
+		'email'    => __( 'Email address', 'pretty-client-management' ),
+		'tel'      => __( 'Phone number', 'pretty-client-management' ),
+		'textarea' => __( 'Paragraph', 'pretty-client-management' ),
+		'select'   => __( 'Dropdown', 'pretty-client-management' ),
 	);
 }
 
@@ -58,17 +58,17 @@ function pcm_crm_form_field_types() {
  */
 function pcm_crm_form_field_targets() {
 	$pcm_targets = array(
-		''                         => __( '— Not stored on a record —', 'pcm-crm' ),
-		'contact.first_name'       => __( 'Contact: First name', 'pcm-crm' ),
-		'contact.last_name'        => __( 'Contact: Last name', 'pcm-crm' ),
-		'contact.email'            => __( 'Contact: Email', 'pcm-crm' ),
-		'contact.phone'            => __( 'Contact: Phone', 'pcm-crm' ),
-		'contact.title'            => __( 'Contact: Job title', 'pcm-crm' ),
-		'contact.description'      => __( 'Contact: Notes', 'pcm-crm' ),
-		'account.name'             => __( 'Account: Organization name', 'pcm-crm' ),
-		'account.website'          => __( 'Account: Website', 'pcm-crm' ),
-		'account.phone'            => __( 'Account: Phone', 'pcm-crm' ),
-		'activity.description'     => __( 'Activity: Message body', 'pcm-crm' ),
+		''                         => __( '— Not stored on a record —', 'pretty-client-management' ),
+		'contact.first_name'       => __( 'Contact: First name', 'pretty-client-management' ),
+		'contact.last_name'        => __( 'Contact: Last name', 'pretty-client-management' ),
+		'contact.email'            => __( 'Contact: Email', 'pretty-client-management' ),
+		'contact.phone'            => __( 'Contact: Phone', 'pretty-client-management' ),
+		'contact.title'            => __( 'Contact: Job title', 'pretty-client-management' ),
+		'contact.description'      => __( 'Contact: Notes', 'pretty-client-management' ),
+		'account.name'             => __( 'Account: Organization name', 'pretty-client-management' ),
+		'account.website'          => __( 'Account: Website', 'pretty-client-management' ),
+		'account.phone'            => __( 'Account: Phone', 'pretty-client-management' ),
+		'activity.description'     => __( 'Activity: Message body', 'pretty-client-management' ),
 	);
 
 	// Custom fields belong here too: a field someone created to capture
@@ -76,9 +76,9 @@ function pcm_crm_form_field_targets() {
 	// land in, and leaving them out would make the builder able to ask a
 	// question it could not store.
 	$pcm_labels = array(
-		'contact'     => __( 'Contact', 'pcm-crm' ),
-		'account'     => __( 'Account', 'pcm-crm' ),
-		'activity'    => __( 'Activity', 'pcm-crm' ),
+		'contact'     => __( 'Contact', 'pretty-client-management' ),
+		'account'     => __( 'Account', 'pretty-client-management' ),
+		'activity'    => __( 'Activity', 'pretty-client-management' ),
 	);
 
 	foreach ( array( 'contacts' => 'contact', 'accounts' => 'account', 'activities' => 'activity' ) as $pcm_object => $pcm_prefix ) {
@@ -110,16 +110,16 @@ function pcm_crm_form_field_targets() {
  */
 function pcm_crm_form_field_target_defaults() {
 	$pcm_defaults = array(
-		'contact.first_name'       => array( 'label' => __( 'First name', 'pcm-crm' ), 'type' => 'text' ),
-		'contact.last_name'        => array( 'label' => __( 'Last name', 'pcm-crm' ), 'type' => 'text' ),
-		'contact.email'            => array( 'label' => __( 'Email', 'pcm-crm' ), 'type' => 'email' ),
-		'contact.phone'            => array( 'label' => __( 'Phone', 'pcm-crm' ), 'type' => 'tel' ),
-		'contact.title'            => array( 'label' => __( 'Job title', 'pcm-crm' ), 'type' => 'text' ),
-		'contact.description'      => array( 'label' => __( 'Notes', 'pcm-crm' ), 'type' => 'textarea' ),
-		'account.name'             => array( 'label' => __( 'Organization', 'pcm-crm' ), 'type' => 'text' ),
-		'account.website'          => array( 'label' => __( 'Website', 'pcm-crm' ), 'type' => 'text' ),
-		'account.phone'            => array( 'label' => __( 'Phone', 'pcm-crm' ), 'type' => 'tel' ),
-		'activity.description'     => array( 'label' => __( 'Message', 'pcm-crm' ), 'type' => 'textarea' ),
+		'contact.first_name'       => array( 'label' => __( 'First name', 'pretty-client-management' ), 'type' => 'text' ),
+		'contact.last_name'        => array( 'label' => __( 'Last name', 'pretty-client-management' ), 'type' => 'text' ),
+		'contact.email'            => array( 'label' => __( 'Email', 'pretty-client-management' ), 'type' => 'email' ),
+		'contact.phone'            => array( 'label' => __( 'Phone', 'pretty-client-management' ), 'type' => 'tel' ),
+		'contact.title'            => array( 'label' => __( 'Job title', 'pretty-client-management' ), 'type' => 'text' ),
+		'contact.description'      => array( 'label' => __( 'Notes', 'pretty-client-management' ), 'type' => 'textarea' ),
+		'account.name'             => array( 'label' => __( 'Organization', 'pretty-client-management' ), 'type' => 'text' ),
+		'account.website'          => array( 'label' => __( 'Website', 'pretty-client-management' ), 'type' => 'text' ),
+		'account.phone'            => array( 'label' => __( 'Phone', 'pretty-client-management' ), 'type' => 'tel' ),
+		'activity.description'     => array( 'label' => __( 'Message', 'pretty-client-management' ), 'type' => 'textarea' ),
 	);
 
 	// A custom field's own type decides the question type it starts as — a
@@ -285,5 +285,5 @@ function pcm_crm_sanitize_form_fields( $pcm_value ) {
 function pcm_crm_form_button_label() {
 	$pcm_label = trim( (string) get_option( 'pcm_crm_form_button', '' ) );
 
-	return '' !== $pcm_label ? $pcm_label : __( 'Send message', 'pcm-crm' );
+	return '' !== $pcm_label ? $pcm_label : __( 'Send message', 'pretty-client-management' );
 }

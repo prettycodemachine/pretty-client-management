@@ -102,28 +102,28 @@ function pcm_crm_settings_option_capability() {
 function pcm_crm_setup_groups() {
 	return apply_filters( 'pcm_crm_setup_groups', array(
 		'crm'        => array(
-			'label'       => __( 'CRM', 'pcm-crm' ),
-			'description' => __( 'How deals move, what a record holds, and the form that feeds it.', 'pcm-crm' ),
+			'label'       => __( 'CRM', 'pretty-client-management' ),
+			'description' => __( 'How deals move, what a record holds, and the form that feeds it.', 'pretty-client-management' ),
 			'module'      => '',
 		),
 		'projects'   => array(
-			'label'       => __( 'Projects', 'pcm-crm' ),
-			'description' => __( 'Project types, the process each one follows, and how time is logged.', 'pcm-crm' ),
+			'label'       => __( 'Projects', 'pretty-client-management' ),
+			'description' => __( 'Project types, the process each one follows, and how time is logged.', 'pretty-client-management' ),
 			'module'      => 'pm',
 		),
 		'automation' => array(
-			'label'       => __( 'Email & Automation', 'pcm-crm' ),
-			'description' => __( 'Templates, sequences and the reports that send themselves.', 'pcm-crm' ),
+			'label'       => __( 'Email & Automation', 'pretty-client-management' ),
+			'description' => __( 'Templates, sequences and the reports that send themselves.', 'pretty-client-management' ),
 			'module'      => '',
 		),
 		'data'       => array(
-			'label'       => __( 'Data', 'pcm-crm' ),
-			'description' => __( 'Getting records out, putting samples in, and bringing deleted ones back.', 'pcm-crm' ),
+			'label'       => __( 'Data', 'pretty-client-management' ),
+			'description' => __( 'Getting records out, putting samples in, and bringing deleted ones back.', 'pretty-client-management' ),
 			'module'      => '',
 		),
 		'platform'   => array(
-			'label'       => __( 'Platform', 'pcm-crm' ),
-			'description' => __( 'How the app looks, and which modules are switched on.', 'pcm-crm' ),
+			'label'       => __( 'Platform', 'pretty-client-management' ),
+			'description' => __( 'How the app looks, and which modules are switched on.', 'pretty-client-management' ),
 			'module'      => '',
 		),
 	) );
@@ -308,47 +308,47 @@ function pcm_crm_setup_open( $pcm_key ) {
 	$pcm_page   = 'home' === $pcm_key ? null : pcm_crm_setup_page( $pcm_key );
 	$pcm_groups = pcm_crm_setup_groups();
 	$pcm_group  = $pcm_page && isset( $pcm_groups[ $pcm_page['group'] ] ) ? $pcm_groups[ $pcm_page['group'] ] : null;
-	$pcm_title  = $pcm_page ? $pcm_page['label'] : __( 'PCM Settings', 'pcm-crm' );
+	$pcm_title  = $pcm_page ? $pcm_page['label'] : __( 'PCM Settings', 'pretty-client-management' );
 	$pcm_host   = pcm_crm_is_front_request() ? 'front' : 'admin';
 	?>
 	<div class="<?php echo esc_attr( ( pcm_crm_wants_wrap( $pcm_host ) ? 'wrap ' : '' ) . 'pcm-crm pcm-setup' ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>" data-style="<?php echo esc_attr( pcm_crm_style() ); ?>">
 		<header class="pcm-setup-band">
 			<div class="pcm-setup-brand">
 				<span class="pcm-setup-mark">
-					<img src="<?php echo esc_url( pcm_crm_asset( 'images/logo.png' ) ); ?>" alt="<?php esc_attr_e( 'Pretty Client Management', 'pcm-crm' ); ?>">
+					<img src="<?php echo esc_url( pcm_crm_asset( 'images/logo.png' ) ); ?>" alt="<?php esc_attr_e( 'Pretty Client Management', 'pretty-client-management' ); ?>">
 				</span>
 				<a class="pcm-setup-credit" href="https://prettycodemachine.com" target="_blank" rel="noopener">
-					<?php esc_html_e( 'Created by Pretty Code Machine', 'pcm-crm' ); ?>
+					<?php esc_html_e( 'Created by Pretty Code Machine', 'pretty-client-management' ); ?>
 				</a>
 			</div>
 			<div class="pcm-setup-heading">
 				<p class="pcm-setup-crumbs">
-					<a href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"><?php esc_html_e( 'Pretty Client Management', 'pcm-crm' ); ?></a>
+					<a href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"><?php esc_html_e( 'Pretty Client Management', 'pretty-client-management' ); ?></a>
 					<?php if ( $pcm_group ) : ?>
 						<span aria-hidden="true">›</span> <?php echo esc_html( $pcm_group['label'] ); ?>
 					<?php endif; ?>
 				</p>
 				<h1><?php echo esc_html( $pcm_title ); ?></h1>
 			</div>
-			<nav class="pcm-setup-exits" aria-label="<?php esc_attr_e( 'Back to the apps', 'pcm-crm' ); ?>">
+			<nav class="pcm-setup-exits" aria-label="<?php esc_attr_e( 'Back to the apps', 'pretty-client-management' ); ?>">
 				<?php // Same courtesy as pcm_crm_app_bar() (admin/menu.php): a door only
 				// shows if pcm_crm_can() says it actually opens. ?>
 				<?php if ( pcm_crm_can( 'crm', 'view' ) ) : ?>
-					<a href="<?php echo esc_url( pcm_crm_screen_url( 'pcm-crm' ) ); ?>">← <?php esc_html_e( 'CRM', 'pcm-crm' ); ?></a>
+					<a href="<?php echo esc_url( pcm_crm_screen_url( 'pcm-crm' ) ); ?>">← <?php esc_html_e( 'CRM', 'pretty-client-management' ); ?></a>
 				<?php endif; ?>
 				<?php if ( function_exists( 'pcm_crm_module_active' ) && pcm_crm_module_active( 'pm' ) && pcm_crm_can( 'pm', 'view' ) ) : ?>
-					<a href="<?php echo esc_url( pcm_crm_screen_url( 'pcm-crm-projects' ) ); ?>">← <?php esc_html_e( 'Projects', 'pcm-crm' ); ?></a>
+					<a href="<?php echo esc_url( pcm_crm_screen_url( 'pcm-crm-projects' ) ); ?>">← <?php esc_html_e( 'Projects', 'pretty-client-management' ); ?></a>
 				<?php endif; ?>
 			</nav>
 		</header>
 
 		<div class="pcm-setup-layout">
-			<nav class="pcm-setup-nav" aria-label="<?php esc_attr_e( 'PCM Settings pages', 'pcm-crm' ); ?>">
-				<input type="search" class="pcm-setup-find" placeholder="<?php esc_attr_e( 'Quick find', 'pcm-crm' ); ?>"
-					aria-label="<?php esc_attr_e( 'Filter PCM Settings pages', 'pcm-crm' ); ?>">
+			<nav class="pcm-setup-nav" aria-label="<?php esc_attr_e( 'PCM Settings pages', 'pretty-client-management' ); ?>">
+				<input type="search" class="pcm-setup-find" placeholder="<?php esc_attr_e( 'Quick find', 'pretty-client-management' ); ?>"
+					aria-label="<?php esc_attr_e( 'Filter PCM Settings pages', 'pretty-client-management' ); ?>">
 				<a class="pcm-setup-nav-home<?php echo 'home' === $pcm_key ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( pcm_crm_setup_url( 'home' ) ); ?>"
-					<?php echo 'home' === $pcm_key ? 'aria-current="page"' : ''; ?>><?php esc_html_e( 'Home', 'pcm-crm' ); ?></a>
+					<?php echo 'home' === $pcm_key ? 'aria-current="page"' : ''; ?>><?php esc_html_e( 'Home', 'pretty-client-management' ); ?></a>
 				<?php foreach ( pcm_crm_setup_nav() as $pcm_group_key => $pcm_items ) : ?>
 					<div class="pcm-setup-nav-group">
 						<h2><?php echo esc_html( $pcm_groups[ $pcm_group_key ]['label'] ); ?></h2>
@@ -411,11 +411,11 @@ function pcm_crm_render_settings() {
 		// (public/staff-template.php) needs the same deny screen every other
 		// front-end area gate uses (pcm_crm_screen(), admin/menu.php).
 		if ( pcm_crm_is_front_request() ) {
-			pcm_crm_front_deny( __( 'You do not have access to PCM Settings.', 'pcm-crm' ) );
+			pcm_crm_front_deny( __( 'You do not have access to PCM Settings.', 'pretty-client-management' ) );
 			return;
 		}
 
-		wp_die( esc_html__( 'You do not have access to PCM Settings.', 'pcm-crm' ) );
+		wp_die( esc_html__( 'You do not have access to PCM Settings.', 'pretty-client-management' ) );
 	}
 
 	$pcm_key  = pcm_crm_current_setup_key();
@@ -455,8 +455,8 @@ function pcm_crm_render_setup_home() {
 				<p><?php echo esc_html( $pcm_group['description'] ); ?></p>
 				<?php if ( $pcm_off ) : ?>
 					<p class="pcm-setup-off">
-						<?php esc_html_e( 'This module is switched off.', 'pcm-crm' ); ?>
-						<a href="<?php echo esc_url( pcm_crm_setup_url( 'modules' ) ); ?>"><?php esc_html_e( 'Turn it on', 'pcm-crm' ); ?></a>
+						<?php esc_html_e( 'This module is switched off.', 'pretty-client-management' ); ?>
+						<a href="<?php echo esc_url( pcm_crm_setup_url( 'modules' ) ); ?>"><?php esc_html_e( 'Turn it on', 'pretty-client-management' ); ?></a>
 					</p>
 				<?php else : ?>
 					<ul>
@@ -498,63 +498,63 @@ add_filter( 'parent_file', 'pcm_crm_setup_parent_file' );
 
 pcm_crm_register_setup_page( 'pipeline', array(
 	'group'       => 'crm',
-	'label'       => __( 'Pipeline', 'pcm-crm' ),
-	'description' => __( 'When an open deal counts as stalled.', 'pcm-crm' ),
+	'label'       => __( 'Pipeline', 'pretty-client-management' ),
+	'description' => __( 'When an open deal counts as stalled.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_pipeline_tab',
 	'order'       => 10,
 ) );
 
 pcm_crm_register_setup_page( 'sales-process', array(
 	'group'       => 'crm',
-	'label'       => __( 'Sales Process', 'pcm-crm' ),
-	'description' => __( 'The probability each stage of the pipeline carries.', 'pcm-crm' ),
+	'label'       => __( 'Sales Process', 'pretty-client-management' ),
+	'description' => __( 'The probability each stage of the pipeline carries.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_sales_process_tab',
 	'order'       => 15,
 ) );
 
 pcm_crm_register_setup_page( 'fields', array(
 	'group'       => 'platform',
-	'label'       => __( 'Fields & Layouts', 'pcm-crm' ),
-	'description' => __( 'Custom fields, and the order a record’s form shows them in — for the CRM and, once switched on, Project Management.', 'pcm-crm' ),
+	'label'       => __( 'Fields & Layouts', 'pretty-client-management' ),
+	'description' => __( 'Custom fields, and the order a record’s form shows them in — for the CRM and, once switched on, Project Management.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_fields_tab',
 	'order'       => 25,
 ) );
 
 pcm_crm_register_setup_page( 'form', array(
 	'group'       => 'crm',
-	'label'       => __( 'Contact Form', 'pcm-crm' ),
-	'description' => __( 'The site’s contact form, where it sends, and the reply it gives.', 'pcm-crm' ),
+	'label'       => __( 'Contact Form', 'pretty-client-management' ),
+	'description' => __( 'The site’s contact form, where it sends, and the reply it gives.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_form_tab',
 	'order'       => 30,
 ) );
 
 pcm_crm_register_setup_page( 'templates', array(
 	'group'       => 'automation',
-	'label'       => __( 'Email Templates', 'pcm-crm' ),
-	'description' => __( 'Reusable emails, with contact and account variables.', 'pcm-crm' ),
+	'label'       => __( 'Email Templates', 'pretty-client-management' ),
+	'description' => __( 'Reusable emails, with contact and account variables.', 'pretty-client-management' ),
 	'page'        => 'pcm-crm-templates',
 	'order'       => 10,
 ) );
 
 pcm_crm_register_setup_page( 'sequences', array(
 	'group'       => 'automation',
-	'label'       => __( 'Sequences', 'pcm-crm' ),
-	'description' => __( 'A short run of templates, spaced out. Any reply logged against the contact stops it.', 'pcm-crm' ),
+	'label'       => __( 'Sequences', 'pretty-client-management' ),
+	'description' => __( 'A short run of templates, spaced out. Any reply logged against the contact stops it.', 'pretty-client-management' ),
 	'page'        => 'pcm-crm-sequences',
 	'order'       => 20,
 ) );
 
 pcm_crm_register_setup_page( 'schedules', array(
 	'group'       => 'automation',
-	'label'       => __( 'Scheduled Reports', 'pcm-crm' ),
-	'description' => __( 'Reports that email themselves on a timetable.', 'pcm-crm' ),
+	'label'       => __( 'Scheduled Reports', 'pretty-client-management' ),
+	'description' => __( 'Reports that email themselves on a timetable.', 'pretty-client-management' ),
 	'page'        => 'pcm-crm-schedules',
 	'order'       => 30,
 ) );
 
 pcm_crm_register_setup_page( 'export', array(
 	'group'       => 'data',
-	'label'       => __( 'Data Export', 'pcm-crm' ),
+	'label'       => __( 'Data Export', 'pretty-client-management' ),
 	'description' => '',
 	'render'      => 'pcm_crm_render_export_tab',
 	'order'       => 10,
@@ -562,32 +562,32 @@ pcm_crm_register_setup_page( 'export', array(
 
 pcm_crm_register_setup_page( 'samples', array(
 	'group'       => 'data',
-	'label'       => __( 'Sample Data', 'pcm-crm' ),
-	'description' => __( 'Demo records to try the app against, flagged so they come out cleanly.', 'pcm-crm' ),
+	'label'       => __( 'Sample Data', 'pretty-client-management' ),
+	'description' => __( 'Demo records to try the app against, flagged so they come out cleanly.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_samples_tab',
 	'order'       => 20,
 ) );
 
 pcm_crm_register_setup_page( 'recycle', array(
 	'group'       => 'data',
-	'label'       => __( 'Recycle Bin', 'pcm-crm' ),
-	'description' => __( 'Deleting a record marks it deleted rather than removing it. This is where those go.', 'pcm-crm' ),
+	'label'       => __( 'Recycle Bin', 'pretty-client-management' ),
+	'description' => __( 'Deleting a record marks it deleted rather than removing it. This is where those go.', 'pretty-client-management' ),
 	'page'        => 'pcm-crm-recycle-bin',
 	'order'       => 30,
 ) );
 
 pcm_crm_register_setup_page( 'theme', array(
 	'group'       => 'platform',
-	'label'       => __( 'Theme', 'pcm-crm' ),
-	'description' => __( 'The style every screen is drawn in, for everyone using the site.', 'pcm-crm' ),
+	'label'       => __( 'Theme', 'pretty-client-management' ),
+	'description' => __( 'The style every screen is drawn in, for everyone using the site.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_theme_tab',
 	'order'       => 10,
 ) );
 
 pcm_crm_register_setup_page( 'modules', array(
 	'group'       => 'platform',
-	'label'       => __( 'Modules', 'pcm-crm' ),
-	'description' => __( 'Extra toolsets that share this CRM’s data.', 'pcm-crm' ),
+	'label'       => __( 'Modules', 'pretty-client-management' ),
+	'description' => __( 'Extra toolsets that share this CRM’s data.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_modules_tab',
 	'order'       => 20,
 ) );

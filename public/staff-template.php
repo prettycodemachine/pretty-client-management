@@ -83,7 +83,7 @@ function pcm_crm_front_route( $pcm_screen, $pcm_id, $pcm_tab ) {
 
 	if ( '' === $pcm_admin_slug || ! isset( $pcm_callbacks[ $pcm_admin_slug ] ) || ! is_callable( $pcm_callbacks[ $pcm_admin_slug ] ) ) {
 		status_header( 404 );
-		pcm_crm_front_deny( __( 'Nothing is here.', 'pcm-crm' ) );
+		pcm_crm_front_deny( __( 'Nothing is here.', 'pretty-client-management' ) );
 		return;
 	}
 
@@ -96,7 +96,7 @@ endif;
 <head>
 <meta charset="<?php bloginfo( 'charset' ); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?php echo esc_html( sprintf( __( '%s — Employee Portal', 'pcm-crm' ), get_bloginfo( 'name' ) ) ); ?></title>
+<title><?php echo esc_html( sprintf( __( '%s — Employee Portal', 'pretty-client-management' ), get_bloginfo( 'name' ) ) ); ?></title>
 <?php wp_head(); ?>
 </head>
 <body <?php body_class( array( 'pcm-crm-front', pcm_crm_color_mode_class(), 'pcm-crm-style-' . pcm_crm_style() ) ); ?>>

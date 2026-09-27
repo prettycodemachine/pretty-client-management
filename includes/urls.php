@@ -57,14 +57,14 @@ function pcm_crm_sanitize_front_base( $pcm_value ) {
 
 	if ( in_array( $pcm_value, pcm_crm_front_base_reserved(), true ) ) {
 		add_settings_error( PCM_CRM_FRONT_BASE_OPTION, 'pcm_crm_front_base_reserved',
-			__( 'That path is reserved by WordPress itself. Choose another.', 'pcm-crm' ) );
+			__( 'That path is reserved by WordPress itself. Choose another.', 'pretty-client-management' ) );
 
 		return pcm_crm_front_base();
 	}
 
 	if ( get_page_by_path( $pcm_value ) ) {
 		add_settings_error( PCM_CRM_FRONT_BASE_OPTION, 'pcm_crm_front_base_page',
-			__( 'A page already exists at that path. Choose another, or change the page’s slug.', 'pcm-crm' ) );
+			__( 'A page already exists at that path. Choose another, or change the page’s slug.', 'pretty-client-management' ) );
 
 		return pcm_crm_front_base();
 	}
@@ -75,7 +75,7 @@ function pcm_crm_sanitize_front_base( $pcm_value ) {
 
 		if ( $pcm_portal_post && $pcm_portal_post->post_name === $pcm_value ) {
 			add_settings_error( PCM_CRM_FRONT_BASE_OPTION, 'pcm_crm_front_base_portal',
-				__( 'That path is the Client Portal’s own page. Choose another.', 'pcm-crm' ) );
+				__( 'That path is the Client Portal’s own page. Choose another.', 'pretty-client-management' ) );
 
 			return pcm_crm_front_base();
 		}
@@ -86,8 +86,8 @@ function pcm_crm_sanitize_front_base( $pcm_value ) {
 
 pcm_crm_register_setup_page( 'employee-portal', array(
 	'group'       => 'platform',
-	'label'       => __( 'Employee Portal Settings', 'pcm-crm' ),
-	'description' => __( 'The front-end address staff work under, and the logo shown in its nav.', 'pcm-crm' ),
+	'label'       => __( 'Employee Portal Settings', 'pretty-client-management' ),
+	'description' => __( 'The front-end address staff work under, and the logo shown in its nav.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_employee_portal_tab',
 	'order'       => 60,
 ) );
@@ -131,11 +131,11 @@ function pcm_crm_render_employee_portal_tab() {
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_front_settings' ); ?>
 		<p class="description">
-			<?php esc_html_e( 'Staff sign in and work from this address rather than wp-admin. Changing it takes effect on the next page load.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Staff sign in and work from this address rather than wp-admin. Changing it takes effect on the next page load.', 'pretty-client-management' ); ?>
 		</p>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="pcm-crm-front-base"><?php esc_html_e( 'Address', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm-crm-front-base"><?php esc_html_e( 'Address', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<code><?php echo esc_html( home_url( '/' ) ); ?></code>
 					<input type="text" id="pcm-crm-front-base" name="<?php echo esc_attr( PCM_CRM_FRONT_BASE_OPTION ); ?>"
@@ -144,29 +144,29 @@ function pcm_crm_render_employee_portal_tab() {
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Logo', 'pcm-crm' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Logo', 'pretty-client-management' ); ?></th>
 				<td>
 					<div class="pcm-crm-logo" data-role="employee-portal-logo">
 						<div class="pcm-crm-logo-preview" data-role="employee-portal-logo-preview">
 							<?php if ( $pcm_logo_id ) : ?>
 								<?php echo wp_get_attachment_image( $pcm_logo_id, 'medium' ); ?>
 							<?php else : ?>
-								<span class="description"><?php esc_html_e( 'No logo chosen — your site’s own logo is used.', 'pcm-crm' ); ?></span>
+								<span class="description"><?php esc_html_e( 'No logo chosen — your site’s own logo is used.', 'pretty-client-management' ); ?></span>
 							<?php endif; ?>
 						</div>
 						<input type="hidden" name="<?php echo esc_attr( PCM_CRM_FRONT_LOGO_OPTION ); ?>"
 							data-role="employee-portal-logo-id" value="<?php echo esc_attr( $pcm_logo_id ); ?>">
 						<p>
 							<button type="button" class="button" data-role="employee-portal-logo-choose">
-								<?php esc_html_e( 'Choose logo', 'pcm-crm' ); ?>
+								<?php esc_html_e( 'Choose logo', 'pretty-client-management' ); ?>
 							</button>
 							<button type="button" class="button-link" data-role="employee-portal-logo-remove"<?php echo $pcm_logo_id ? '' : ' hidden'; ?>>
-								<?php esc_html_e( 'Remove', 'pcm-crm' ); ?>
+								<?php esc_html_e( 'Remove', 'pretty-client-management' ); ?>
 							</button>
 						</p>
 					</div>
 					<p class="description">
-						<?php esc_html_e( 'Shown in the Employee Portal’s nav bar, never clickable. Left unset, your site’s own logo is used.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'Shown in the Employee Portal’s nav bar, never clickable. Left unset, your site’s own logo is used.', 'pretty-client-management' ); ?>
 					</p>
 				</td>
 			</tr>

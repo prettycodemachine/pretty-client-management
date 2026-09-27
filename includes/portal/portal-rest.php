@@ -174,13 +174,13 @@ function pcm_crm_portal_safe_project( array $pcm_project ) {
  */
 function pcm_crm_portal_period_label( array $pcm_project ) {
 	$pcm_labels = array(
-		'monthly'   => __( 'Hours Used This Month', 'pcm-crm' ),
-		'quarterly' => __( 'Hours Used This Quarter', 'pcm-crm' ),
+		'monthly'   => __( 'Hours Used This Month', 'pretty-client-management' ),
+		'quarterly' => __( 'Hours Used This Quarter', 'pretty-client-management' ),
 	);
 
 	$pcm_period = isset( $pcm_project['retainer_period'] ) ? $pcm_project['retainer_period'] : '';
 
-	return isset( $pcm_labels[ $pcm_period ] ) ? $pcm_labels[ $pcm_period ] : __( 'Hours Used This Period', 'pcm-crm' );
+	return isset( $pcm_labels[ $pcm_period ] ) ? $pcm_labels[ $pcm_period ] : __( 'Hours Used This Period', 'pretty-client-management' );
 }
 
 /**
@@ -217,7 +217,7 @@ function pcm_crm_portal_rest_summary( WP_REST_Request $pcm_request ) {
 	$pcm_summary    = pcm_crm_pm_project_summary( $pcm_project_id );
 
 	if ( ! $pcm_summary ) {
-		return new WP_Error( 'pcm_crm_portal_no_summary', __( 'Nothing to show yet.', 'pcm-crm' ), array( 'status' => 404 ) );
+		return new WP_Error( 'pcm_crm_portal_no_summary', __( 'Nothing to show yet.', 'pretty-client-management' ), array( 'status' => 404 ) );
 	}
 
 	$pcm_project = pcm_crm_projects()->get( $pcm_project_id );
@@ -401,7 +401,7 @@ function pcm_crm_portal_rest_documents( WP_REST_Request $pcm_request ) {
  */
 function pcm_crm_portal_rest_create_document( WP_REST_Request $pcm_request ) {
 	if ( empty( $_FILES['file'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- REST route, gated by its own permission_callback
-		return new WP_Error( 'pcm_crm_portal_document_missing_file', __( 'Choose a file first.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_portal_document_missing_file', __( 'Choose a file first.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	require_once ABSPATH . 'wp-admin/includes/image.php';

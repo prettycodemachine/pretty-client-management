@@ -166,14 +166,14 @@ function pcm_crm_front_gate() {
 	$pcm_back = home_url( add_query_arg( null, null ) );
 
 	wp_die(
-		'<h1>' . esc_html__( 'This area is for staff', 'pcm-crm' ) . '</h1>' .
+		'<h1>' . esc_html__( 'This area is for staff', 'pretty-client-management' ) . '</h1>' .
 		'<p>' . esc_html( sprintf(
 			/* translators: %s: the signed-in user's name */
-			__( 'You are signed in as %s, which does not have access to the employee portal.', 'pcm-crm' ),
+			__( 'You are signed in as %s, which does not have access to the employee portal.', 'pretty-client-management' ),
 			pcm_crm_user_label( wp_get_current_user() )
 		) ) . '</p>' .
-		'<p><a href="' . esc_url( wp_logout_url( $pcm_back ) ) . '">' . esc_html__( 'Log out and sign in as someone else', 'pcm-crm' ) . '</a></p>',
-		esc_html__( 'This area is for staff', 'pcm-crm' ),
+		'<p><a href="' . esc_url( wp_logout_url( $pcm_back ) ) . '">' . esc_html__( 'Log out and sign in as someone else', 'pretty-client-management' ) . '</a></p>',
+		esc_html__( 'This area is for staff', 'pretty-client-management' ),
 		array( 'response' => 403 )
 	);
 }
@@ -343,9 +343,9 @@ function pcm_crm_front_deny( $pcm_message = '' ) {
 	status_header( 403 );
 	?>
 	<div class="pcm-crm-front-deny">
-		<h1><?php esc_html_e( 'Not available', 'pcm-crm' ); ?></h1>
-		<p><?php echo wp_kses_post( $pcm_message ? $pcm_message : __( 'You do not have access to this part of the CRM.', 'pcm-crm' ) ); ?></p>
-		<p><a href="<?php echo esc_url( pcm_crm_front_base_url() ); ?>">&larr; <?php esc_html_e( 'Back to the CRM', 'pcm-crm' ); ?></a></p>
+		<h1><?php esc_html_e( 'Not available', 'pretty-client-management' ); ?></h1>
+		<p><?php echo wp_kses_post( $pcm_message ? $pcm_message : __( 'You do not have access to this part of the CRM.', 'pretty-client-management' ) ); ?></p>
+		<p><a href="<?php echo esc_url( pcm_crm_front_base_url() ); ?>">&larr; <?php esc_html_e( 'Back to the CRM', 'pretty-client-management' ); ?></a></p>
 	</div>
 	<?php
 }
@@ -384,7 +384,7 @@ function pcm_crm_front_nav() {
 					<?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?>
 				</a>
 				<a class="pcm-crm-front-logout" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">
-					<?php esc_html_e( 'Log out', 'pcm-crm' ); ?>
+					<?php esc_html_e( 'Log out', 'pretty-client-management' ); ?>
 				</a>
 			</div>
 		</div>

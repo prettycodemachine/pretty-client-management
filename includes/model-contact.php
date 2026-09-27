@@ -160,7 +160,7 @@ function pcm_crm_validate_contact( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) 
 	if ( '' === trim( (string) ( isset( $pcm_merged['do_not_contact_reason'] ) ? $pcm_merged['do_not_contact_reason'] : '' ) ) ) {
 		return new WP_Error(
 			'pcm_crm_dnc_reason_required',
-			__( 'Give a reason for Do Not Contact — someone will need to know why before undoing it.', 'pcm-crm' ),
+			__( 'Give a reason for Do Not Contact — someone will need to know why before undoing it.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}

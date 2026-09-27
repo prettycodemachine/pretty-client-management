@@ -112,11 +112,11 @@ function pcm_crm_validate_outreach( $pcm_error, $pcm_object, $pcm_row, $pcm_id )
 	$pcm_merged   = array_merge( (array) $pcm_existing, $pcm_row );
 
 	if ( '' === trim( (string) ( isset( $pcm_merged['name'] ) ? $pcm_merged['name'] : '' ) ) ) {
-		return new WP_Error( 'pcm_crm_name_required', __( 'Give it a name.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_name_required', __( 'Give it a name.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	if ( 'template' === $pcm_object && '' === trim( (string) ( isset( $pcm_merged['subject'] ) ? $pcm_merged['subject'] : '' ) ) ) {
-		return new WP_Error( 'pcm_crm_subject_required', __( 'A template needs a subject line.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_subject_required', __( 'A template needs a subject line.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	return $pcm_error;
@@ -195,10 +195,10 @@ function pcm_crm_email_variables() {
 	// full name is the sort of thing people give up on.
 	$pcm_groups[] = array(
 		'prefix' => 'other',
-		'label'  => __( 'Other', 'pcm-crm' ),
+		'label'  => __( 'Other', 'pretty-client-management' ),
 		'fields' => array(
-			array( 'token' => '{{contact.full_name}}', 'label' => __( 'Contact full name', 'pcm-crm' ) ),
-			array( 'token' => '{{sender.name}}', 'label' => __( 'Your name', 'pcm-crm' ) ),
+			array( 'token' => '{{contact.full_name}}', 'label' => __( 'Contact full name', 'pretty-client-management' ) ),
+			array( 'token' => '{{sender.name}}', 'label' => __( 'Your name', 'pretty-client-management' ) ),
 		),
 	);
 
@@ -323,7 +323,7 @@ function pcm_crm_send_contact_email( $pcm_contact_id, $pcm_subject, $pcm_body, a
 	$pcm_context = pcm_crm_email_context( $pcm_contact_id );
 
 	if ( ! $pcm_context ) {
-		return new WP_Error( 'pcm_crm_no_contact', __( 'That contact no longer exists.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_no_contact', __( 'That contact no longer exists.', 'pretty-client-management' ) );
 	}
 
 	$pcm_contact = $pcm_context['contact'];
@@ -333,14 +333,14 @@ function pcm_crm_send_contact_email( $pcm_contact_id, $pcm_subject, $pcm_body, a
 			'pcm_crm_do_not_contact',
 			sprintf(
 				/* translators: %s: the recorded reason */
-				__( 'This contact is marked Do Not Contact — %s', 'pcm-crm' ),
-				$pcm_contact['do_not_contact_reason'] ? $pcm_contact['do_not_contact_reason'] : __( 'no reason recorded', 'pcm-crm' )
+				__( 'This contact is marked Do Not Contact — %s', 'pretty-client-management' ),
+				$pcm_contact['do_not_contact_reason'] ? $pcm_contact['do_not_contact_reason'] : __( 'no reason recorded', 'pretty-client-management' )
 			)
 		);
 	}
 
 	if ( ! is_email( $pcm_contact['email'] ) ) {
-		return new WP_Error( 'pcm_crm_no_email', __( 'That contact has no email address.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_no_email', __( 'That contact has no email address.', 'pretty-client-management' ) );
 	}
 
 	if ( $pcm_args['sender'] ) {
@@ -366,7 +366,7 @@ function pcm_crm_send_contact_email( $pcm_contact_id, $pcm_subject, $pcm_body, a
 	remove_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 
 	if ( ! $pcm_sent ) {
-		return new WP_Error( 'pcm_crm_mail_failed', __( 'The server would not send the email.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_mail_failed', __( 'The server would not send the email.', 'pretty-client-management' ) );
 	}
 
 	// Logged whether or not it came from a sequence: an email that left the
@@ -431,27 +431,27 @@ function pcm_crm_enroll_contact( $pcm_contact_id, $pcm_sequence_id, $pcm_opportu
 	$pcm_sequence = pcm_crm_sequences()->get( $pcm_sequence_id );
 
 	if ( ! $pcm_contact || ! $pcm_sequence ) {
-		return new WP_Error( 'pcm_crm_not_found', __( 'That contact or sequence no longer exists.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_not_found', __( 'That contact or sequence no longer exists.', 'pretty-client-management' ) );
 	}
 
 	if ( ! empty( $pcm_contact['do_not_contact'] ) ) {
-		return new WP_Error( 'pcm_crm_do_not_contact', __( 'This contact is marked Do Not Contact and cannot be enrolled.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_do_not_contact', __( 'This contact is marked Do Not Contact and cannot be enrolled.', 'pretty-client-management' ) );
 	}
 
 	if ( ! is_email( $pcm_contact['email'] ) ) {
-		return new WP_Error( 'pcm_crm_no_email', __( 'This contact has no email address.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_no_email', __( 'This contact has no email address.', 'pretty-client-management' ) );
 	}
 
 	$pcm_steps = pcm_crm_sequence_steps( $pcm_sequence );
 
 	if ( ! $pcm_steps ) {
-		return new WP_Error( 'pcm_crm_empty_sequence', __( 'That sequence has no steps yet.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_empty_sequence', __( 'That sequence has no steps yet.', 'pretty-client-management' ) );
 	}
 
 	// Enrolling someone twice in the same sequence would send them everything
 	// twice, offset by however long the second enrollment came later.
 	if ( pcm_crm_active_enrollment( $pcm_contact_id, $pcm_sequence_id ) ) {
-		return new WP_Error( 'pcm_crm_already_enrolled', __( 'This contact is already in that sequence.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_already_enrolled', __( 'This contact is already in that sequence.', 'pretty-client-management' ) );
 	}
 
 	$pcm_id = pcm_crm_enrollments()->insert( array(
@@ -553,7 +553,7 @@ function pcm_crm_watch_for_replies( $pcm_object, $pcm_id, $pcm_row ) {
 		$pcm_activity['who_id'],
 		sprintf(
 			/* translators: %s: activity type, e.g. Call */
-			__( 'A %s was logged against this contact', 'pcm-crm' ),
+			__( 'A %s was logged against this contact', 'pretty-client-management' ),
 			strtolower( $pcm_activity['activity_type'] )
 		)
 	);
@@ -592,7 +592,7 @@ function pcm_crm_advance_enrollment( array $pcm_enrollment ) {
 	$pcm_sequence = pcm_crm_sequences()->get( $pcm_enrollment['sequence_id'] );
 
 	if ( ! $pcm_sequence || empty( $pcm_sequence['is_active'] ) ) {
-		return pcm_crm_stop_enrollment( $pcm_enrollment['id'], __( 'The sequence was switched off', 'pcm-crm' ) );
+		return pcm_crm_stop_enrollment( $pcm_enrollment['id'], __( 'The sequence was switched off', 'pretty-client-management' ) );
 	}
 
 	$pcm_steps = pcm_crm_sequence_steps( $pcm_sequence );
@@ -605,7 +605,7 @@ function pcm_crm_advance_enrollment( array $pcm_enrollment ) {
 	$pcm_template = pcm_crm_templates()->get( $pcm_steps[ $pcm_index ]['template_id'] );
 
 	if ( ! $pcm_template ) {
-		return pcm_crm_stop_enrollment( $pcm_enrollment['id'], __( 'A template in this sequence no longer exists', 'pcm-crm' ) );
+		return pcm_crm_stop_enrollment( $pcm_enrollment['id'], __( 'A template in this sequence no longer exists', 'pretty-client-management' ) );
 	}
 
 	pcm_crm_sending_sequence( true );

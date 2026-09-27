@@ -46,15 +46,15 @@ function pcm_crm_customisable_objects() {
  */
 function pcm_crm_custom_field_types() {
 	return array(
-		'text'         => array( 'label' => __( 'Text', 'pcm-crm' ), 'column' => 'varchar(255) NOT NULL DEFAULT \'\'', 'model' => 'text' ),
-		'number'       => array( 'label' => __( 'Number', 'pcm-crm' ), 'column' => 'decimal(18,4) DEFAULT NULL', 'model' => 'decimal' ),
-		'currency'     => array( 'label' => __( 'Currency', 'pcm-crm' ), 'column' => 'decimal(18,2) DEFAULT NULL', 'model' => 'decimal' ),
-		'date'         => array( 'label' => __( 'Date', 'pcm-crm' ), 'column' => 'date DEFAULT NULL', 'model' => 'date' ),
-		'checkbox'     => array( 'label' => __( 'Checkbox', 'pcm-crm' ), 'column' => 'tinyint(1) NOT NULL DEFAULT 0', 'model' => 'bool' ),
-		'picklist'     => array( 'label' => __( 'Picklist', 'pcm-crm' ), 'column' => 'varchar(160) NOT NULL DEFAULT \'\'', 'model' => 'text' ),
-		'url'          => array( 'label' => __( 'URL', 'pcm-crm' ), 'column' => 'varchar(255) NOT NULL DEFAULT \'\'', 'model' => 'url' ),
-		'textarea'     => array( 'label' => __( 'Long text', 'pcm-crm' ), 'column' => 'longtext', 'model' => 'longtext' ),
-		'relationship' => array( 'label' => __( 'Relationship', 'pcm-crm' ), 'column' => 'bigint(20) unsigned NOT NULL DEFAULT 0', 'model' => 'id' ),
+		'text'         => array( 'label' => __( 'Text', 'pretty-client-management' ), 'column' => 'varchar(255) NOT NULL DEFAULT \'\'', 'model' => 'text' ),
+		'number'       => array( 'label' => __( 'Number', 'pretty-client-management' ), 'column' => 'decimal(18,4) DEFAULT NULL', 'model' => 'decimal' ),
+		'currency'     => array( 'label' => __( 'Currency', 'pretty-client-management' ), 'column' => 'decimal(18,2) DEFAULT NULL', 'model' => 'decimal' ),
+		'date'         => array( 'label' => __( 'Date', 'pretty-client-management' ), 'column' => 'date DEFAULT NULL', 'model' => 'date' ),
+		'checkbox'     => array( 'label' => __( 'Checkbox', 'pretty-client-management' ), 'column' => 'tinyint(1) NOT NULL DEFAULT 0', 'model' => 'bool' ),
+		'picklist'     => array( 'label' => __( 'Picklist', 'pretty-client-management' ), 'column' => 'varchar(160) NOT NULL DEFAULT \'\'', 'model' => 'text' ),
+		'url'          => array( 'label' => __( 'URL', 'pretty-client-management' ), 'column' => 'varchar(255) NOT NULL DEFAULT \'\'', 'model' => 'url' ),
+		'textarea'     => array( 'label' => __( 'Long text', 'pretty-client-management' ), 'column' => 'longtext', 'model' => 'longtext' ),
+		'relationship' => array( 'label' => __( 'Relationship', 'pretty-client-management' ), 'column' => 'bigint(20) unsigned NOT NULL DEFAULT 0', 'model' => 'id' ),
 	);
 }
 
@@ -355,7 +355,7 @@ function pcm_crm_sanitize_custom_fields( $pcm_value ) {
  */
 function pcm_crm_handle_save_custom_field() {
 	if ( ! pcm_crm_can( 'settings', 'edit' ) ) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	check_admin_referer( 'pcm_crm_save_custom_field' );
@@ -365,7 +365,7 @@ function pcm_crm_handle_save_custom_field() {
 	$pcm_back    = add_query_arg( 'object', $pcm_object, pcm_crm_setup_url( 'fields' ) );
 
 	if ( ! isset( $pcm_objects[ $pcm_object ] ) ) {
-		wp_die( esc_html__( 'That is not an object custom fields can be added to.', 'pcm-crm' ), 400 );
+		wp_die( esc_html__( 'That is not an object custom fields can be added to.', 'pretty-client-management' ), 400 );
 	}
 
 	$pcm_existing_key  = isset( $_POST['existing_key'] ) ? sanitize_key( wp_unslash( $_POST['existing_key'] ) ) : '';
@@ -431,7 +431,7 @@ add_action( 'admin_post_pcm_crm_save_custom_field', 'pcm_crm_handle_save_custom_
  */
 function pcm_crm_handle_delete_custom_field() {
 	if ( ! pcm_crm_can( 'settings', 'edit' ) ) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	check_admin_referer( 'pcm_crm_delete_custom_field' );

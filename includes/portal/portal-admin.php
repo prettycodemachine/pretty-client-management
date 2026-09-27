@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  */
 function pcm_crm_portal_ensure_role() {
 	if ( ! get_role( 'pcm_client' ) ) {
-		add_role( 'pcm_client', __( 'Client (Portal)', 'pcm-crm' ), array() );
+		add_role( 'pcm_client', __( 'Client (Portal)', 'pretty-client-management' ), array() );
 	}
 }
 add_action( 'init', 'pcm_crm_portal_ensure_role' );
@@ -136,21 +136,21 @@ add_action( 'login_enqueue_scripts', 'pcm_crm_portal_login_style' );
  */
 function pcm_crm_portal_invite_contact( $pcm_contact_id ) {
 	if ( ! pcm_crm_module_active( 'portal' ) ) {
-		return new WP_Error( 'pcm_crm_portal_off', __( 'The Client Portal module is switched off.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_portal_off', __( 'The Client Portal module is switched off.', 'pretty-client-management' ) );
 	}
 
 	$pcm_contact = pcm_crm_contacts()->get( $pcm_contact_id );
 
 	if ( ! $pcm_contact ) {
-		return new WP_Error( 'pcm_crm_no_contact', __( 'That contact no longer exists.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_no_contact', __( 'That contact no longer exists.', 'pretty-client-management' ) );
 	}
 
 	if ( ! is_email( $pcm_contact['email'] ) ) {
-		return new WP_Error( 'pcm_crm_portal_no_email', __( 'This contact has no email address to invite.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_portal_no_email', __( 'This contact has no email address to invite.', 'pretty-client-management' ) );
 	}
 
 	if ( ! pcm_crm_portal_url() ) {
-		return new WP_Error( 'pcm_crm_portal_no_page', __( 'Choose the portal page under PCM Settings › Client Portal first.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_portal_no_page', __( 'Choose the portal page under PCM Settings › Client Portal first.', 'pretty-client-management' ) );
 	}
 
 	pcm_crm_portal_ensure_role();
@@ -158,7 +158,7 @@ function pcm_crm_portal_invite_contact( $pcm_contact_id ) {
 	$pcm_user = get_user_by( 'email', $pcm_contact['email'] );
 
 	if ( $pcm_user && ! in_array( 'pcm_client', (array) $pcm_user->roles, true ) ) {
-		return new WP_Error( 'pcm_crm_portal_email_taken', __( 'That email already belongs to a different kind of account on this site.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_portal_email_taken', __( 'That email already belongs to a different kind of account on this site.', 'pretty-client-management' ) );
 	}
 
 	if ( ! $pcm_user ) {
@@ -204,18 +204,18 @@ function pcm_crm_portal_invite_contact( $pcm_contact_id ) {
 
 	$pcm_body = pcm_crm_email_wrapper( pcm_crm_format_body( sprintf(
 		/* translators: 1: contact's first name, 2: a set-password link, 3: how to sign in */
-		__( "Hi %1\$s,\n\nYou now have access to your client portal, where you can see your project's time, RAID log and documents, and raise Help Tickets.\n\nSet your password to get started: %2\$s\n\n%3\$s", 'pcm-crm' ),
+		__( "Hi %1\$s,\n\nYou now have access to your client portal, where you can see your project's time, RAID log and documents, and raise Help Tickets.\n\nSet your password to get started: %2\$s\n\n%3\$s", 'pretty-client-management' ),
 		$pcm_contact['first_name'] ? $pcm_contact['first_name'] : $pcm_contact['email'],
 		esc_url_raw( $pcm_url ),
 		pcm_crm_invite_sign_in_line( $pcm_user )
 	) ), pcm_crm_portal_logo_url() );
 
 	add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
-	$pcm_sent = wp_mail( $pcm_contact['email'], __( 'You’re invited to your client portal', 'pcm-crm' ), $pcm_body );
+	$pcm_sent = wp_mail( $pcm_contact['email'], __( 'You’re invited to your client portal', 'pretty-client-management' ), $pcm_body );
 	remove_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 
 	if ( ! $pcm_sent ) {
-		return new WP_Error( 'pcm_crm_mail_failed', __( 'The account was created, but the invitation email could not be sent.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_mail_failed', __( 'The account was created, but the invitation email could not be sent.', 'pretty-client-management' ) );
 	}
 
 	return array( 'invited' => true, 'portal_user_id' => (int) $pcm_user->ID );
@@ -255,17 +255,17 @@ function pcm_crm_portal_rest_invite( WP_REST_Request $pcm_request ) {
  */
 function pcm_crm_portal_revoke_contact( $pcm_contact_id ) {
 	if ( ! pcm_crm_module_active( 'portal' ) ) {
-		return new WP_Error( 'pcm_crm_portal_off', __( 'The Client Portal module is switched off.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_portal_off', __( 'The Client Portal module is switched off.', 'pretty-client-management' ) );
 	}
 
 	$pcm_contact = pcm_crm_contacts()->get( $pcm_contact_id );
 
 	if ( ! $pcm_contact ) {
-		return new WP_Error( 'pcm_crm_no_contact', __( 'That contact no longer exists.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_no_contact', __( 'That contact no longer exists.', 'pretty-client-management' ) );
 	}
 
 	if ( empty( $pcm_contact['portal_user_id'] ) ) {
-		return new WP_Error( 'pcm_crm_portal_not_invited', __( 'This contact has no portal access to remove.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_portal_not_invited', __( 'This contact has no portal access to remove.', 'pretty-client-management' ) );
 	}
 
 	delete_user_meta( $pcm_contact['portal_user_id'], 'pcm_crm_contact_id' );
@@ -334,8 +334,8 @@ add_action( 'wp_enqueue_scripts', 'pcm_crm_portal_front_assets' );
 
 function pcm_crm_portal_setup_group( $pcm_groups ) {
 	$pcm_groups['portal'] = array(
-		'label'       => __( 'Client Portal', 'pcm-crm' ),
-		'description' => __( 'Which page holds the portal, and inviting clients in.', 'pcm-crm' ),
+		'label'       => __( 'Client Portal', 'pretty-client-management' ),
+		'description' => __( 'Which page holds the portal, and inviting clients in.', 'pretty-client-management' ),
 		'module'      => 'portal',
 	);
 
@@ -345,8 +345,8 @@ add_filter( 'pcm_crm_setup_groups', 'pcm_crm_portal_setup_group' );
 
 pcm_crm_register_setup_page( 'portal-page', array(
 	'group'       => 'portal',
-	'label'       => __( 'Client Portal Settings', 'pcm-crm' ),
-	'description' => __( 'The page carrying [pcm_client_portal], and the logo shown in its header.', 'pcm-crm' ),
+	'label'       => __( 'Client Portal Settings', 'pretty-client-management' ),
+	'description' => __( 'The page carrying [pcm_client_portal], and the logo shown in its header.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_portal_render_setup_page',
 	'order'       => 10,
 ) );
@@ -404,10 +404,10 @@ function pcm_crm_portal_render_setup_page() {
 		<?php settings_fields( 'pcm_crm_portal_settings' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="pcm-portal-page"><?php esc_html_e( 'Portal page', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm-portal-page"><?php esc_html_e( 'Portal page', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<select id="pcm-portal-page" name="pcm_crm_portal_page_id">
-						<option value="0"><?php esc_html_e( '— Choose a page —', 'pcm-crm' ); ?></option>
+						<option value="0"><?php esc_html_e( '— Choose a page —', 'pretty-client-management' ); ?></option>
 						<?php foreach ( $pcm_pages as $pcm_page ) : ?>
 							<option value="<?php echo esc_attr( $pcm_page->ID ); ?>" <?php selected( $pcm_page_id, $pcm_page->ID ); ?>>
 								<?php echo esc_html( $pcm_page->post_title ); ?>
@@ -415,39 +415,39 @@ function pcm_crm_portal_render_setup_page() {
 						<?php endforeach; ?>
 					</select>
 					<p class="description">
-						<?php esc_html_e( 'Add [pcm_client_portal] to this page’s content. A blank page with just that shortcode is the usual choice.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'Add [pcm_client_portal] to this page’s content. A blank page with just that shortcode is the usual choice.', 'pretty-client-management' ); ?>
 					</p>
 					<?php if ( ! pcm_crm_portal_url() ) : ?>
 						<p class="description">
-							<strong><?php esc_html_e( 'No portal page is set yet — invitations cannot be sent until one is.', 'pcm-crm' ); ?></strong>
+							<strong><?php esc_html_e( 'No portal page is set yet — invitations cannot be sent until one is.', 'pretty-client-management' ); ?></strong>
 						</p>
 					<?php endif; ?>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Logo', 'pcm-crm' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Logo', 'pretty-client-management' ); ?></th>
 				<td>
 					<div class="pcm-crm-logo" data-role="client-portal-logo">
 						<div class="pcm-crm-logo-preview" data-role="client-portal-logo-preview">
 							<?php if ( $pcm_logo_id ) : ?>
 								<?php echo wp_get_attachment_image( $pcm_logo_id, 'medium' ); ?>
 							<?php else : ?>
-								<span class="description"><?php esc_html_e( 'No logo chosen — your site’s own logo is used.', 'pcm-crm' ); ?></span>
+								<span class="description"><?php esc_html_e( 'No logo chosen — your site’s own logo is used.', 'pretty-client-management' ); ?></span>
 							<?php endif; ?>
 						</div>
 						<input type="hidden" name="<?php echo esc_attr( PCM_CRM_PORTAL_LOGO_OPTION ); ?>"
 							data-role="client-portal-logo-id" value="<?php echo esc_attr( $pcm_logo_id ); ?>">
 						<p>
 							<button type="button" class="button" data-role="client-portal-logo-choose">
-								<?php esc_html_e( 'Choose logo', 'pcm-crm' ); ?>
+								<?php esc_html_e( 'Choose logo', 'pretty-client-management' ); ?>
 							</button>
 							<button type="button" class="button-link" data-role="client-portal-logo-remove"<?php echo $pcm_logo_id ? '' : ' hidden'; ?>>
-								<?php esc_html_e( 'Remove', 'pcm-crm' ); ?>
+								<?php esc_html_e( 'Remove', 'pretty-client-management' ); ?>
 							</button>
 						</p>
 					</div>
 					<p class="description">
-						<?php esc_html_e( 'Shown in the Client Portal’s header, never clickable. Left unset, your site’s own logo is used.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'Shown in the Client Portal’s header, never clickable. Left unset, your site’s own logo is used.', 'pretty-client-management' ); ?>
 					</p>
 				</td>
 			</tr>

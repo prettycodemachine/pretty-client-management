@@ -69,8 +69,8 @@ function pcm_crm_pm_archetypes() {
 
 	return apply_filters( 'pcm_crm_pm_archetypes', array(
 		'retainer' => array(
-			'label'       => __( 'Retainer', 'pcm-crm' ),
-			'description' => __( 'An allotment of hours each month or quarter, burned down as time is logged, with unused hours rolling over if you allow it.', 'pcm-crm' ),
+			'label'       => __( 'Retainer', 'pretty-client-management' ),
+			'description' => __( 'An allotment of hours each month or quarter, burned down as time is logged, with unused hours rolling over if you allow it.', 'pretty-client-management' ),
 			'icon'        => 'backup',
 			'stages'      => $pcm_retainer_stages,
 			'fields'      => array(
@@ -82,8 +82,8 @@ function pcm_crm_pm_archetypes() {
 			'tabs'        => array( 'time', 'tasks', 'raid', 'milestones', 'roles', 'activities' ),
 		),
 		'fixed' => array(
-			'label'       => __( 'Fixed scope', 'pcm-crm' ),
-			'description' => __( 'A budget and a set of milestones, delivered in phases. Time is logged against a task, so estimates can be compared with what it took.', 'pcm-crm' ),
+			'label'       => __( 'Fixed scope', 'pretty-client-management' ),
+			'description' => __( 'A budget and a set of milestones, delivered in phases. Time is logged against a task, so estimates can be compared with what it took.', 'pretty-client-management' ),
 			'icon'        => 'flag',
 			'stages'      => array(
 				array( 'name' => 'Initiation', 'order' => 10, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
@@ -105,8 +105,8 @@ function pcm_crm_pm_archetypes() {
 			'tabs'        => array( 'tasks', 'raid', 'milestones', 'time', 'roles', 'activities' ),
 		),
 		'tm' => array(
-			'label'       => __( 'Time & materials', 'pcm-crm' ),
-			'description' => __( 'Hours billed at a rate as the work happens, with an optional cap. Every billable entry carries a rate.', 'pcm-crm' ),
+			'label'       => __( 'Time & materials', 'pretty-client-management' ),
+			'description' => __( 'Hours billed at a rate as the work happens, with an optional cap. Every billable entry carries a rate.', 'pretty-client-management' ),
 			'icon'        => 'money-alt',
 			'stages'      => array(
 				array( 'name' => 'Initiation', 'order' => 10, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
@@ -118,14 +118,14 @@ function pcm_crm_pm_archetypes() {
 			'fields'      => array(
 				'show'     => array( 'budget', 'rates' ),
 				'required' => array( 'default_bill_rate' ),
-				'labels'   => array( 'budget_amount' => __( 'Not-to-exceed Cap', 'pcm-crm' ) ),
+				'labels'   => array( 'budget_amount' => __( 'Not-to-exceed Cap', 'pretty-client-management' ) ),
 			),
 			'time'        => array_merge( $pcm_time, array( 'rate_required' => 1 ) ),
 			'tabs'        => array( 'time', 'tasks', 'roles', 'raid', 'milestones', 'activities' ),
 		),
 		'internal' => array(
-			'label'       => __( 'Internal', 'pcm-crm' ),
-			'description' => __( 'Work for the business itself. No client, no budget and no rates; time is logged but never billed.', 'pcm-crm' ),
+			'label'       => __( 'Internal', 'pretty-client-management' ),
+			'description' => __( 'Work for the business itself. No client, no budget and no rates; time is logged but never billed.', 'pretty-client-management' ),
 			'icon'        => 'admin-home',
 			'stages'      => array(
 				array( 'name' => 'Planned',     'order' => 10, 'is_active' => 0, 'is_closed' => 0, 'is_renewal' => 0 ),
@@ -158,12 +158,12 @@ function pcm_crm_pm_default_types() {
 		'support-retainer' => array(
 			'label'       => 'Support Retainer',
 			'archetype'   => 'retainer',
-			'description' => __( 'Ongoing support hours for a client, billed against a period allotment.', 'pcm-crm' ),
+			'description' => __( 'Ongoing support hours for a client, billed against a period allotment.', 'pretty-client-management' ),
 		),
 		'custom-development' => array(
 			'label'       => 'Custom Development',
 			'archetype'   => 'fixed',
-			'description' => __( 'A scoped build with a budget and milestones.', 'pcm-crm' ),
+			'description' => __( 'A scoped build with a budget and milestones.', 'pretty-client-management' ),
 		),
 	);
 }

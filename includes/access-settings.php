@@ -18,24 +18,24 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 pcm_crm_register_setup_page( 'access-profiles', array(
 	'group'       => 'platform',
-	'label'       => __( 'Profiles', 'pcm-crm' ),
-	'description' => __( 'The baseline every staff member holds — exactly one each. What Permission Extensions add to.', 'pcm-crm' ),
+	'label'       => __( 'Profiles', 'pretty-client-management' ),
+	'description' => __( 'The baseline every staff member holds — exactly one each. What Permission Extensions add to.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_access_profiles_page',
 	'order'       => 30,
 ) );
 
 pcm_crm_register_setup_page( 'access-permission-sets', array(
 	'group'       => 'platform',
-	'label'       => __( 'Permission Extensions', 'pcm-crm' ),
-	'description' => __( 'Extra access on top of a profile. A set never takes access away, only adds it.', 'pcm-crm' ),
+	'label'       => __( 'Permission Extensions', 'pretty-client-management' ),
+	'description' => __( 'Extra access on top of a profile. A set never takes access away, only adds it.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_access_permission_sets_page',
 	'order'       => 40,
 ) );
 
 pcm_crm_register_setup_page( 'access-users', array(
 	'group'       => 'platform',
-	'label'       => __( 'Staff Access', 'pcm-crm' ),
-	'description' => __( 'Which profile and permission extensions each staff member holds.', 'pcm-crm' ),
+	'label'       => __( 'Staff Access', 'pretty-client-management' ),
+	'description' => __( 'Which profile and permission extensions each staff member holds.', 'pretty-client-management' ),
 	'render'      => 'pcm_crm_render_access_users_page',
 	'order'       => 50,
 ) );
@@ -60,10 +60,10 @@ function pcm_crm_access_kind( $pcm_kind ) {
 			'action'    => 'pcm_crm_save_profile',
 			'del_action' => 'pcm_crm_delete_profile',
 			'query_arg' => 'profile',
-			'singular'  => __( 'Profile', 'pcm-crm' ),
-			'plural'    => __( 'Profiles', 'pcm-crm' ),
-			'new_cta'   => __( 'New Profile', 'pcm-crm' ),
-			'blurb'     => __( 'Every staff member holds exactly one of these as their baseline. Choose the widest access most people in this profile should have — Permission Extensions are for the exceptions.', 'pcm-crm' ),
+			'singular'  => __( 'Profile', 'pretty-client-management' ),
+			'plural'    => __( 'Profiles', 'pretty-client-management' ),
+			'new_cta'   => __( 'New Profile', 'pretty-client-management' ),
+			'blurb'     => __( 'Every staff member holds exactly one of these as their baseline. Choose the widest access most people in this profile should have — Permission Extensions are for the exceptions.', 'pretty-client-management' ),
 		),
 		'set' => array(
 			'option'    => PCM_CRM_SETS_OPTION,
@@ -73,10 +73,10 @@ function pcm_crm_access_kind( $pcm_kind ) {
 			'action'    => 'pcm_crm_save_permission_set',
 			'del_action' => 'pcm_crm_delete_permission_set',
 			'query_arg' => 'set',
-			'singular'  => __( 'Permission Extension', 'pcm-crm' ),
-			'plural'    => __( 'Permission Extensions', 'pcm-crm' ),
-			'new_cta'   => __( 'New Permission Extension', 'pcm-crm' ),
-			'blurb'     => __( 'A named bundle of extra access. Assign one to anybody who needs more than their profile without changing the profile for everybody who holds it.', 'pcm-crm' ),
+			'singular'  => __( 'Permission Extension', 'pretty-client-management' ),
+			'plural'    => __( 'Permission Extensions', 'pretty-client-management' ),
+			'new_cta'   => __( 'New Permission Extension', 'pretty-client-management' ),
+			'blurb'     => __( 'A named bundle of extra access. Assign one to anybody who needs more than their profile without changing the profile for everybody who holds it.', 'pretty-client-management' ),
 		),
 	);
 
@@ -99,7 +99,7 @@ function pcm_crm_clean_access_definition( array $pcm_post ) {
 	$pcm_label = isset( $pcm_post['label'] ) ? sanitize_text_field( $pcm_post['label'] ) : '';
 
 	if ( '' === $pcm_label ) {
-		return new WP_Error( 'pcm_crm_access_label_required', __( 'Give it a name.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_access_label_required', __( 'Give it a name.', 'pretty-client-management' ) );
 	}
 
 	$pcm_grants = array();
@@ -125,7 +125,7 @@ function pcm_crm_handle_save_access_definition( $pcm_kind ) {
 		! isset( $_POST[ $pcm_config['nonce'] . '_nonce' ] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST[ $pcm_config['nonce'] . '_nonce' ] ), $pcm_config['nonce'] )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_post = wp_unslash( $_POST );
@@ -197,7 +197,7 @@ function pcm_crm_handle_delete_access_definition( $pcm_kind ) {
 		! isset( $_POST[ $pcm_config['nonce'] . '_nonce' ] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST[ $pcm_config['nonce'] . '_nonce' ] ), $pcm_config['nonce'] )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_key  = isset( $_POST['key'] ) ? sanitize_key( wp_unslash( $_POST['key'] ) ) : '';
@@ -243,13 +243,13 @@ function pcm_crm_render_access_definitions_page( $pcm_kind ) {
 	} elseif ( 'saved' === $pcm_result ) {
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
 			/* translators: %s: "Profile" or "Permission Extension" */
-			esc_html( sprintf( __( '%s saved.', 'pcm-crm' ), $pcm_config['singular'] ) ) );
+			esc_html( sprintf( __( '%s saved.', 'pretty-client-management' ), $pcm_config['singular'] ) ) );
 	} elseif ( 'deleted' === $pcm_result ) {
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
-			esc_html( sprintf( __( '%s deleted.', 'pcm-crm' ), $pcm_config['singular'] ) ) );
+			esc_html( sprintf( __( '%s deleted.', 'pretty-client-management' ), $pcm_config['singular'] ) ) );
 	} elseif ( 'in-use' === $pcm_result ) {
 		printf( '<div class="notice notice-error"><p>%s</p></div>',
-			esc_html__( 'That profile is still somebody’s baseline. Move them to a different profile first, under Staff Access.', 'pcm-crm' ) );
+			esc_html__( 'That profile is still somebody’s baseline. Move them to a different profile first, under Staff Access.', 'pretty-client-management' ) );
 	}
 
 	if ( $pcm_editing ) {
@@ -271,12 +271,12 @@ function pcm_crm_render_access_definitions_page( $pcm_kind ) {
 			<a class="button button-primary" href="<?php echo esc_url( add_query_arg( $pcm_config['query_arg'], 'new', pcm_crm_setup_url( $pcm_config['setup_key'] ) ) ); ?>"><?php echo esc_html( $pcm_config['new_cta'] ); ?></a>
 		</div>
 		<?php if ( ! $pcm_items ) : ?>
-			<p class="description"><?php esc_html_e( 'None yet.', 'pcm-crm' ); ?></p>
+			<p class="description"><?php esc_html_e( 'None yet.', 'pretty-client-management' ); ?></p>
 		<?php else : ?>
 			<table class="widefat striped pcm-setup-table">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Name', 'pcm-crm' ); ?></th>
+						<th><?php esc_html_e( 'Name', 'pretty-client-management' ); ?></th>
 						<?php foreach ( $pcm_areas as $pcm_area => $pcm_area_def ) : ?>
 							<th><?php echo esc_html( $pcm_area_def['label'] ); ?></th>
 						<?php endforeach; ?>
@@ -317,7 +317,7 @@ function pcm_crm_render_access_definition_form( $pcm_kind, $pcm_key, $pcm_post =
 
 	if ( ! $pcm_is_new && ! $pcm_item ) {
 		printf( '<div class="notice notice-error"><p>%s</p></div>',
-			esc_html( sprintf( __( 'That %s does not exist.', 'pcm-crm' ), strtolower( $pcm_config['singular'] ) ) ) );
+			esc_html( sprintf( __( 'That %s does not exist.', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ) );
 		return;
 	}
 
@@ -335,22 +335,22 @@ function pcm_crm_render_access_definition_form( $pcm_kind, $pcm_key, $pcm_post =
 		<div class="pcm-crm-card">
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><label for="pcm-access-label"><?php esc_html_e( 'Name', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-access-label"><?php esc_html_e( 'Name', 'pretty-client-management' ); ?></label></th>
 					<td><input type="text" id="pcm-access-label" name="label" class="regular-text" value="<?php echo esc_attr( $pcm_values['label'] ); ?>" required></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="pcm-access-description"><?php esc_html_e( 'Description', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-access-description"><?php esc_html_e( 'Description', 'pretty-client-management' ); ?></label></th>
 					<td><input type="text" id="pcm-access-description" name="description" class="regular-text" value="<?php echo esc_attr( isset( $pcm_values['description'] ) ? $pcm_values['description'] : '' ); ?>"></td>
 				</tr>
 			</table>
 		</div>
 
 		<div class="pcm-crm-card">
-			<h2><?php esc_html_e( 'Access', 'pcm-crm' ); ?></h2>
+			<h2><?php esc_html_e( 'Access', 'pretty-client-management' ); ?></h2>
 			<table class="widefat striped pcm-setup-table">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Area', 'pcm-crm' ); ?></th>
+						<th><?php esc_html_e( 'Area', 'pretty-client-management' ); ?></th>
 						<?php foreach ( pcm_crm_permission_actions() as $pcm_action => $pcm_action_def ) : ?>
 							<th><?php echo esc_html( $pcm_action_def['label'] ); ?></th>
 						<?php endforeach; ?>
@@ -367,7 +367,7 @@ function pcm_crm_render_access_definition_form( $pcm_kind, $pcm_key, $pcm_post =
 							<th scope="row">
 								<?php echo esc_html( $pcm_area_def['label'] ); ?>
 								<?php if ( $pcm_off ) : ?>
-									<br><span class="description"><?php esc_html_e( 'Module currently off — the grant is kept, but reaches nothing until it is on.', 'pcm-crm' ); ?></span>
+									<br><span class="description"><?php esc_html_e( 'Module currently off — the grant is kept, but reaches nothing until it is on.', 'pretty-client-management' ); ?></span>
 								<?php endif; ?>
 							</th>
 							<?php foreach ( array_keys( pcm_crm_permission_actions() ) as $pcm_action ) : ?>
@@ -389,18 +389,18 @@ function pcm_crm_render_access_definition_form( $pcm_kind, $pcm_key, $pcm_post =
 					<?php endforeach; ?>
 				</tbody>
 			</table>
-			<p class="description"><?php esc_html_e( 'Edit and Delete each carry View along with them when saved — there is no such thing as changing a record you cannot see.', 'pcm-crm' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Edit and Delete each carry View along with them when saved — there is no such thing as changing a record you cannot see.', 'pretty-client-management' ); ?></p>
 		</div>
 
-		<?php submit_button( $pcm_is_new ? $pcm_config['new_cta'] : __( 'Save', 'pcm-crm' ) ); ?>
+		<?php submit_button( $pcm_is_new ? $pcm_config['new_cta'] : __( 'Save', 'pretty-client-management' ) ); ?>
 	</form>
 
 	<?php if ( ! $pcm_is_new ) : ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.confirm('<?php echo esc_js( sprintf( __( 'Delete this %s?', 'pcm-crm' ), strtolower( $pcm_config['singular'] ) ) ); ?>');">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.confirm('<?php echo esc_js( sprintf( __( 'Delete this %s?', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ); ?>');">
 			<input type="hidden" name="action" value="<?php echo esc_attr( $pcm_config['del_action'] ); ?>">
 			<input type="hidden" name="key" value="<?php echo esc_attr( $pcm_key ); ?>">
 			<?php wp_nonce_field( $pcm_config['nonce'], $pcm_config['nonce'] . '_nonce' ); ?>
-			<button type="submit" class="button button-link-delete"><?php echo esc_html( sprintf( __( 'Delete this %s', 'pcm-crm' ), strtolower( $pcm_config['singular'] ) ) ); ?></button>
+			<button type="submit" class="button button-link-delete"><?php echo esc_html( sprintf( __( 'Delete this %s', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ); ?></button>
 		</form>
 	<?php endif; ?>
 	<?php
@@ -463,11 +463,11 @@ function pcm_crm_clean_user_access( array $pcm_post ) {
  */
 function pcm_crm_invite_staff( $pcm_email, $pcm_first, $pcm_last, $pcm_profile_key, array $pcm_set_keys = array() ) {
 	if ( ! is_email( $pcm_email ) ) {
-		return new WP_Error( 'pcm_crm_staff_bad_email', __( 'Enter a valid email address.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_staff_bad_email', __( 'Enter a valid email address.', 'pretty-client-management' ) );
 	}
 
 	if ( $pcm_profile_key && ! pcm_crm_profile( $pcm_profile_key ) ) {
-		return new WP_Error( 'pcm_crm_staff_bad_profile', __( 'That profile no longer exists.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_staff_bad_profile', __( 'That profile no longer exists.', 'pretty-client-management' ) );
 	}
 
 	pcm_crm_ensure_staff_role();
@@ -475,7 +475,7 @@ function pcm_crm_invite_staff( $pcm_email, $pcm_first, $pcm_last, $pcm_profile_k
 	$pcm_user = get_user_by( 'email', $pcm_email );
 
 	if ( $pcm_user && ! in_array( PCM_CRM_STAFF_ROLE, (array) $pcm_user->roles, true ) ) {
-		return new WP_Error( 'pcm_crm_staff_email_taken', __( 'That email already belongs to a different kind of account on this site.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_staff_email_taken', __( 'That email already belongs to a different kind of account on this site.', 'pretty-client-management' ) );
 	}
 
 	if ( ! $pcm_user ) {
@@ -518,18 +518,18 @@ function pcm_crm_invite_staff( $pcm_email, $pcm_first, $pcm_last, $pcm_profile_k
 
 	$pcm_body = pcm_crm_email_wrapper( pcm_crm_format_body( sprintf(
 		/* translators: 1: the invited person's first name or email, 2: a set-password link, 3: how to sign in */
-		__( "Hi %1\$s,\n\nYou now have access to the employee portal.\n\nSet your password to get started: %2\$s\n\n%3\$s", 'pcm-crm' ),
+		__( "Hi %1\$s,\n\nYou now have access to the employee portal.\n\nSet your password to get started: %2\$s\n\n%3\$s", 'pretty-client-management' ),
 		$pcm_first ? $pcm_first : $pcm_email,
 		esc_url_raw( $pcm_url ),
 		pcm_crm_invite_sign_in_line( $pcm_user )
 	) ), pcm_crm_front_logo_url() );
 
 	add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
-	$pcm_sent = wp_mail( $pcm_email, __( 'You’re invited to the employee portal', 'pcm-crm' ), $pcm_body );
+	$pcm_sent = wp_mail( $pcm_email, __( 'You’re invited to the employee portal', 'pretty-client-management' ), $pcm_body );
 	remove_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 
 	if ( ! $pcm_sent ) {
-		return new WP_Error( 'pcm_crm_mail_failed', __( 'The account was created, but the invitation email could not be sent.', 'pcm-crm' ) );
+		return new WP_Error( 'pcm_crm_mail_failed', __( 'The account was created, but the invitation email could not be sent.', 'pretty-client-management' ) );
 	}
 
 	return array( 'invited' => true, 'user_id' => (int) $pcm_user->ID );
@@ -554,7 +554,7 @@ function pcm_crm_handle_invite_staff() {
 		! isset( $_POST['pcm_crm_invite_staff_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_invite_staff_nonce'] ), 'pcm_crm_invite_staff' )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_back  = pcm_crm_setup_url( 'access-users' );
@@ -591,7 +591,7 @@ function pcm_crm_handle_resend_staff_invite() {
 		! isset( $_POST['pcm_crm_resend_staff_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_resend_staff_nonce'] ), 'pcm_crm_resend_staff' )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_back    = pcm_crm_setup_url( 'access-users' );
@@ -599,7 +599,7 @@ function pcm_crm_handle_resend_staff_invite() {
 	$pcm_user    = $pcm_user_id ? get_userdata( $pcm_user_id ) : null;
 
 	if ( ! $pcm_user || ! in_array( PCM_CRM_STAFF_ROLE, (array) $pcm_user->roles, true ) ) {
-		wp_die( esc_html__( 'That user does not hold the Staff role.', 'pcm-crm' ), 404 );
+		wp_die( esc_html__( 'That user does not hold the Staff role.', 'pretty-client-management' ), 404 );
 	}
 
 	$pcm_result = pcm_crm_invite_staff(
@@ -626,7 +626,7 @@ function pcm_crm_handle_save_user_access() {
 		! isset( $_POST['pcm_crm_user_access_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_user_access_nonce'] ), 'pcm_crm_user_access' )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
@@ -636,7 +636,7 @@ function pcm_crm_handle_save_user_access() {
 	// Refused rather than silently no-opped: writing meta onto a user who
 	// cannot use it would look like it worked and do nothing.
 	if ( ! $pcm_user || ! in_array( PCM_CRM_STAFF_ROLE, (array) $pcm_user->roles, true ) ) {
-		wp_die( esc_html__( 'That user does not hold the Staff role.', 'pcm-crm' ), 404 );
+		wp_die( esc_html__( 'That user does not hold the Staff role.', 'pretty-client-management' ), 404 );
 	}
 
 	$pcm_clean = pcm_crm_clean_user_access( wp_unslash( $_POST ) );
@@ -654,12 +654,12 @@ add_action( 'admin_post_pcm_crm_save_user_access', 'pcm_crm_handle_save_user_acc
  */
 function pcm_crm_invite_result_message( $pcm_result ) {
 	$pcm_messages = array(
-		'sent'                       => array( 'success', __( 'Invitation sent.', 'pcm-crm' ) ),
-		'pcm_crm_staff_bad_email'    => array( 'error', __( 'Enter a valid email address.', 'pcm-crm' ) ),
-		'pcm_crm_staff_bad_profile'  => array( 'error', __( 'That profile no longer exists.', 'pcm-crm' ) ),
-		'pcm_crm_staff_email_taken'  => array( 'error', __( 'That email already belongs to a different kind of account on this site.', 'pcm-crm' ) ),
-		'pcm_crm_mail_failed'        => array( 'error', __( 'The account was created, but the invitation email could not be sent.', 'pcm-crm' ) ),
-		'pcm_crm_staff_failed'       => array( 'error', __( 'Something went wrong and the invitation was not sent.', 'pcm-crm' ) ),
+		'sent'                       => array( 'success', __( 'Invitation sent.', 'pretty-client-management' ) ),
+		'pcm_crm_staff_bad_email'    => array( 'error', __( 'Enter a valid email address.', 'pretty-client-management' ) ),
+		'pcm_crm_staff_bad_profile'  => array( 'error', __( 'That profile no longer exists.', 'pretty-client-management' ) ),
+		'pcm_crm_staff_email_taken'  => array( 'error', __( 'That email already belongs to a different kind of account on this site.', 'pretty-client-management' ) ),
+		'pcm_crm_mail_failed'        => array( 'error', __( 'The account was created, but the invitation email could not be sent.', 'pretty-client-management' ) ),
+		'pcm_crm_staff_failed'       => array( 'error', __( 'Something went wrong and the invitation was not sent.', 'pretty-client-management' ) ),
 	);
 
 	return isset( $pcm_messages[ $pcm_result ] ) ? $pcm_messages[ $pcm_result ] : null;
@@ -674,7 +674,7 @@ function pcm_crm_render_access_users_page() {
 	$pcm_invite_result = isset( $_GET['pcm_crm_invite'] ) ? sanitize_key( wp_unslash( $_GET['pcm_crm_invite'] ) ) : '';
 
 	if ( 'saved' === $pcm_result ) {
-		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Access updated.', 'pcm-crm' ) );
+		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html__( 'Access updated.', 'pretty-client-management' ) );
 	}
 
 	if ( $pcm_invite_result ) {
@@ -693,32 +693,32 @@ function pcm_crm_render_access_users_page() {
 	$pcm_users = pcm_crm_staff_users();
 	?>
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Invite a staff member', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Invite a staff member', 'pretty-client-management' ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'Creates their account if it does not exist yet, and emails them a link to set their own password. Inviting the same address again resends the link — useful if it expired (24 hours) or never arrived.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Creates their account if it does not exist yet, and emails them a link to set their own password. Inviting the same address again resends the link — useful if it expired (24 hours) or never arrived.', 'pretty-client-management' ); ?>
 		</p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pcm-setup-type-form">
 			<input type="hidden" name="action" value="pcm_crm_invite_staff">
 			<?php wp_nonce_field( 'pcm_crm_invite_staff', 'pcm_crm_invite_staff_nonce' ); ?>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><label for="pcm-crm-invite-email"><?php esc_html_e( 'Email', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-crm-invite-email"><?php esc_html_e( 'Email', 'pretty-client-management' ); ?></label></th>
 					<td><input type="email" class="regular-text" id="pcm-crm-invite-email" name="email" required></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="pcm-crm-invite-first"><?php esc_html_e( 'First name', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-crm-invite-first"><?php esc_html_e( 'First name', 'pretty-client-management' ); ?></label></th>
 					<td><input type="text" class="regular-text" id="pcm-crm-invite-first" name="first_name"></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="pcm-crm-invite-last"><?php esc_html_e( 'Last name', 'pcm-crm' ); ?></label></th>
+					<th scope="row"><label for="pcm-crm-invite-last"><?php esc_html_e( 'Last name', 'pretty-client-management' ); ?></label></th>
 					<td><input type="text" class="regular-text" id="pcm-crm-invite-last" name="last_name"></td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Profile', 'pcm-crm' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Profile', 'pretty-client-management' ); ?></th>
 					<td>
 						<label>
 							<input type="radio" name="profile" value="" checked>
-							<?php esc_html_e( 'None — no CRM access', 'pcm-crm' ); ?>
+							<?php esc_html_e( 'None — no CRM access', 'pretty-client-management' ); ?>
 						</label><br>
 						<?php foreach ( pcm_crm_profiles() as $pcm_key => $pcm_profile ) : ?>
 							<label>
@@ -732,7 +732,7 @@ function pcm_crm_render_access_users_page() {
 				<?php $pcm_invite_sets = pcm_crm_permission_sets(); ?>
 				<?php if ( $pcm_invite_sets ) : ?>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Permission Extensions', 'pcm-crm' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Permission Extensions', 'pretty-client-management' ); ?></th>
 						<td>
 							<?php foreach ( $pcm_invite_sets as $pcm_key => $pcm_set ) : ?>
 								<label>
@@ -745,26 +745,26 @@ function pcm_crm_render_access_users_page() {
 					</tr>
 				<?php endif; ?>
 			</table>
-			<?php submit_button( __( 'Send Invitation', 'pcm-crm' ) ); ?>
+			<?php submit_button( __( 'Send Invitation', 'pretty-client-management' ) ); ?>
 		</form>
 	</div>
 
 	<div class="pcm-crm-card">
 		<p class="description">
-			<?php esc_html_e( 'Everyone holding the Staff role — invited here, or added from Users → Add New in the WordPress admin menu and given the Staff role by hand.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Everyone holding the Staff role — invited here, or added from Users → Add New in the WordPress admin menu and given the Staff role by hand.', 'pretty-client-management' ); ?>
 		</p>
 	</div>
 
 	<div class="pcm-crm-card">
 		<?php if ( ! $pcm_users ) : ?>
-			<p class="description"><?php esc_html_e( 'No one holds the Staff role yet.', 'pcm-crm' ); ?></p>
+			<p class="description"><?php esc_html_e( 'No one holds the Staff role yet.', 'pretty-client-management' ); ?></p>
 		<?php else : ?>
 			<table class="widefat striped pcm-setup-table">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Name', 'pcm-crm' ); ?></th>
-						<th><?php esc_html_e( 'Profile', 'pcm-crm' ); ?></th>
-						<th><?php esc_html_e( 'Permission Extensions', 'pcm-crm' ); ?></th>
+						<th><?php esc_html_e( 'Name', 'pretty-client-management' ); ?></th>
+						<th><?php esc_html_e( 'Profile', 'pretty-client-management' ); ?></th>
+						<th><?php esc_html_e( 'Permission Extensions', 'pretty-client-management' ); ?></th>
 						<th></th>
 					</tr>
 				</thead>
@@ -786,16 +786,16 @@ function pcm_crm_render_access_users_page() {
 								<strong><?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?></strong>
 								<br><span class="description"><?php echo esc_html( $pcm_user->user_email ); ?></span>
 							</td>
-							<td><?php echo $pcm_profile ? esc_html( $pcm_profile['label'] ) : esc_html__( 'None — no CRM access', 'pcm-crm' ); ?></td>
+							<td><?php echo $pcm_profile ? esc_html( $pcm_profile['label'] ) : esc_html__( 'None — no CRM access', 'pretty-client-management' ); ?></td>
 							<td><?php echo $pcm_set_labels ? esc_html( implode( ', ', $pcm_set_labels ) ) : '—'; ?></td>
 							<td>
-								<a href="<?php echo esc_url( add_query_arg( 'user', $pcm_user->ID, pcm_crm_setup_url( 'access-users' ) ) ); ?>"><?php esc_html_e( 'Edit access', 'pcm-crm' ); ?></a>
+								<a href="<?php echo esc_url( add_query_arg( 'user', $pcm_user->ID, pcm_crm_setup_url( 'access-users' ) ) ); ?>"><?php esc_html_e( 'Edit access', 'pretty-client-management' ); ?></a>
 								·
 								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
 									<input type="hidden" name="action" value="pcm_crm_resend_staff_invite">
 									<input type="hidden" name="user_id" value="<?php echo esc_attr( $pcm_user->ID ); ?>">
 									<?php wp_nonce_field( 'pcm_crm_resend_staff', 'pcm_crm_resend_staff_nonce' ); ?>
-									<button type="submit" class="button-link"><?php esc_html_e( 'Resend invite', 'pcm-crm' ); ?></button>
+									<button type="submit" class="button-link"><?php esc_html_e( 'Resend invite', 'pretty-client-management' ); ?></button>
 								</form>
 							</td>
 						</tr>
@@ -818,14 +818,14 @@ function pcm_crm_render_access_users_page() {
 function pcm_crm_render_access_fields( $pcm_profile_key, array $pcm_set_keys ) {
 	?>
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Profile', 'pcm-crm' ); ?></h2>
-		<p class="description"><?php esc_html_e( 'Exactly one — the baseline this person’s access starts from.', 'pcm-crm' ); ?></p>
+		<h2><?php esc_html_e( 'Profile', 'pretty-client-management' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Exactly one — the baseline this person’s access starts from.', 'pretty-client-management' ); ?></p>
 		<table class="form-table" role="presentation">
 			<tr>
 				<td>
 					<label>
 						<input type="radio" name="profile" value="" <?php checked( '', $pcm_profile_key ); ?>>
-						<?php esc_html_e( 'None — no CRM access', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'None — no CRM access', 'pretty-client-management' ); ?>
 					</label><br>
 					<?php foreach ( pcm_crm_profiles() as $pcm_key => $pcm_profile ) : ?>
 						<label>
@@ -842,8 +842,8 @@ function pcm_crm_render_access_fields( $pcm_profile_key, array $pcm_set_keys ) {
 	<?php $pcm_sets = pcm_crm_permission_sets(); ?>
 	<?php if ( $pcm_sets ) : ?>
 		<div class="pcm-crm-card">
-			<h2><?php esc_html_e( 'Permission Extensions', 'pcm-crm' ); ?></h2>
-			<p class="description"><?php esc_html_e( 'Any number, each adding to whatever the profile above already gives.', 'pcm-crm' ); ?></p>
+			<h2><?php esc_html_e( 'Permission Extensions', 'pretty-client-management' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Any number, each adding to whatever the profile above already gives.', 'pretty-client-management' ); ?></p>
 			<table class="form-table" role="presentation">
 				<tr>
 					<td>
@@ -866,14 +866,14 @@ function pcm_crm_render_access_user_form( $pcm_user_id ) {
 	$pcm_user = get_userdata( $pcm_user_id );
 
 	if ( ! $pcm_user || ! in_array( PCM_CRM_STAFF_ROLE, (array) $pcm_user->roles, true ) ) {
-		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html__( 'That user does not hold the Staff role.', 'pcm-crm' ) );
+		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html__( 'That user does not hold the Staff role.', 'pretty-client-management' ) );
 		return;
 	}
 
 	$pcm_profile_key = pcm_crm_user_profile_key( $pcm_user_id );
 	$pcm_set_keys    = pcm_crm_user_set_keys( $pcm_user_id );
 	?>
-	<p><a href="<?php echo esc_url( pcm_crm_setup_url( 'access-users' ) ); ?>">← <?php esc_html_e( 'Staff Access', 'pcm-crm' ); ?></a></p>
+	<p><a href="<?php echo esc_url( pcm_crm_setup_url( 'access-users' ) ); ?>">← <?php esc_html_e( 'Staff Access', 'pretty-client-management' ); ?></a></p>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pcm-setup-type-form">
 		<input type="hidden" name="action" value="pcm_crm_save_user_access">
@@ -887,7 +887,7 @@ function pcm_crm_render_access_user_form( $pcm_user_id ) {
 
 		<?php pcm_crm_render_access_fields( $pcm_profile_key, $pcm_set_keys ); ?>
 
-		<?php submit_button( __( 'Save Access', 'pcm-crm' ) ); ?>
+		<?php submit_button( __( 'Save Access', 'pretty-client-management' ) ); ?>
 	</form>
 	<?php
 }

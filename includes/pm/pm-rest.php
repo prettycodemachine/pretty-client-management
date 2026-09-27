@@ -555,7 +555,7 @@ function pcm_crm_pm_rest_summary( WP_REST_Request $pcm_request ) {
 	$pcm_summary = pcm_crm_pm_project_summary( isset( $pcm_params['pcm_id'] ) ? absint( $pcm_params['pcm_id'] ) : 0 );
 
 	if ( ! $pcm_summary ) {
-		return new WP_Error( 'pcm_crm_not_found', __( 'That project no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+		return new WP_Error( 'pcm_crm_not_found', __( 'That project no longer exists.', 'pretty-client-management' ), array( 'status' => 404 ) );
 	}
 
 	return rest_ensure_response( $pcm_summary );
@@ -618,7 +618,7 @@ function pcm_crm_pm_rest_time_context( WP_REST_Request $pcm_request ) {
 	);
 
 	if ( ! $pcm_context ) {
-		return new WP_Error( 'pcm_crm_not_found', __( 'That project no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+		return new WP_Error( 'pcm_crm_not_found', __( 'That project no longer exists.', 'pretty-client-management' ), array( 'status' => 404 ) );
 	}
 
 	return rest_ensure_response( $pcm_context );

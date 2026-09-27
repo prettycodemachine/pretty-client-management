@@ -23,11 +23,11 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 function pcm_crm_themes() {
 	return array(
 		'pcm'  => array(
-			'label' => __( 'Light', 'pcm-crm' ),
+			'label' => __( 'Light', 'pretty-client-management' ),
 			'mode'  => 'light',
 		),
 		'dark' => array(
-			'label' => __( 'Dark', 'pcm-crm' ),
+			'label' => __( 'Dark', 'pretty-client-management' ),
 			'mode'  => 'dark',
 		),
 	);
@@ -83,11 +83,11 @@ function pcm_crm_color_mode_toggle() {
 		<button type="submit" class="pcm-crm-mode-button">
 			<span class="pcm-crm-mode-to-dark">
 				<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><path d="M16.5 12.6A7 7 0 0 1 7.4 3.5a7 7 0 1 0 9.1 9.1z" fill="currentColor"/></svg>
-				<?php esc_html_e( 'Dark mode', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'Dark mode', 'pretty-client-management' ); ?>
 			</span>
 			<span class="pcm-crm-mode-to-light">
 				<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.6" fill="currentColor"/><path d="M10 1.5v2.2M10 16.3v2.2M1.5 10h2.2M16.3 10h2.2M4 4l1.6 1.6M14.4 14.4 16 16M4 16l1.6-1.6M14.4 5.6 16 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-				<?php esc_html_e( 'Light mode', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'Light mode', 'pretty-client-management' ); ?>
 			</span>
 		</button>
 	</form>
@@ -118,7 +118,7 @@ add_filter( 'admin_body_class', 'pcm_crm_color_mode_admin_body_class' );
 function pcm_crm_handle_color_mode() {
 	if ( ! isset( $_POST['pcm_crm_color_mode_nonce'] )
 		|| ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['pcm_crm_color_mode_nonce'] ) ), 'pcm_crm_color_mode' ) ) {
-		wp_die( esc_html__( 'This link has expired. Go back, reload the page and try again.', 'pcm-crm' ), '', array( 'response' => 403 ) );
+		wp_die( esc_html__( 'This link has expired. Go back, reload the page and try again.', 'pretty-client-management' ), '', array( 'response' => 403 ) );
 	}
 
 	$pcm_mode = pcm_crm_sanitize_color_mode( isset( $_POST['mode'] ) ? sanitize_key( wp_unslash( $_POST['mode'] ) ) : '' );
@@ -144,12 +144,12 @@ add_action( 'admin_post_pcm_crm_color_mode', 'pcm_crm_handle_color_mode' );
 function pcm_crm_styles() {
 	return array(
 		'modern'  => array(
-			'label'       => __( 'Modern', 'pcm-crm' ),
-			'description' => __( 'Hairline borders, soft shadows and a tighter layout. Lets the data lead.', 'pcm-crm' ),
+			'label'       => __( 'Modern', 'pretty-client-management' ),
+			'description' => __( 'Hairline borders, soft shadows and a tighter layout. Lets the data lead.', 'pretty-client-management' ),
 		),
 		'classic' => array(
-			'label'       => __( 'Classic', 'pcm-crm' ),
-			'description' => __( 'Bold ink outlines and offset shadows — the original Pretty Client Management look.', 'pcm-crm' ),
+			'label'       => __( 'Classic', 'pretty-client-management' ),
+			'description' => __( 'Bold ink outlines and offset shadows — the original Pretty Client Management look.', 'pretty-client-management' ),
 		),
 	);
 }

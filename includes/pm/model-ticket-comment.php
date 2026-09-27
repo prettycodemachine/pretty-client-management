@@ -76,22 +76,22 @@ function pcm_crm_pm_validate_comment( $pcm_error, $pcm_object, $pcm_row, $pcm_id
 	$pcm_merged   = array_merge( is_array( $pcm_existing ) ? $pcm_existing : array(), $pcm_row );
 
 	if ( empty( $pcm_merged['ticket_id'] ) ) {
-		return new WP_Error( 'pcm_crm_comment_no_ticket', __( 'A comment has to belong to a ticket.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_comment_no_ticket', __( 'A comment has to belong to a ticket.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	if ( '' === trim( wp_strip_all_tags( (string) $pcm_merged['body'] ) ) ) {
-		return new WP_Error( 'pcm_crm_comment_empty', __( 'Say something before posting.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_comment_empty', __( 'Say something before posting.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	if ( ! empty( $pcm_merged['parent_id'] ) ) {
 		$pcm_parent = pcm_crm_ticket_comments()->get( $pcm_merged['parent_id'] );
 
 		if ( ! $pcm_parent || (int) $pcm_parent['ticket_id'] !== (int) $pcm_merged['ticket_id'] ) {
-			return new WP_Error( 'pcm_crm_comment_bad_parent', __( 'That reply does not belong to this ticket.', 'pcm-crm' ), array( 'status' => 400 ) );
+			return new WP_Error( 'pcm_crm_comment_bad_parent', __( 'That reply does not belong to this ticket.', 'pretty-client-management' ), array( 'status' => 400 ) );
 		}
 
 		if ( ! empty( $pcm_parent['parent_id'] ) ) {
-			return new WP_Error( 'pcm_crm_comment_too_deep', __( 'A reply can only go one level deep — reply to the original comment instead.', 'pcm-crm' ), array( 'status' => 400 ) );
+			return new WP_Error( 'pcm_crm_comment_too_deep', __( 'A reply can only go one level deep — reply to the original comment instead.', 'pretty-client-management' ), array( 'status' => 400 ) );
 		}
 	}
 
@@ -151,7 +151,7 @@ function pcm_crm_pm_send_ticket_comment_email( $pcm_comment_id ) {
 	}
 
 	/* translators: %s: the ticket's subject */
-	$pcm_subject = sprintf( __( 'Re: %s', 'pcm-crm' ), $pcm_ticket['subject'] );
+	$pcm_subject = sprintf( __( 'Re: %s', 'pretty-client-management' ), $pcm_ticket['subject'] );
 	$pcm_wrapped = pcm_crm_email_wrapper( pcm_crm_format_body( wp_kses_post( $pcm_comment['body'] ) ), function_exists( 'pcm_crm_portal_logo_url' ) ? pcm_crm_portal_logo_url() : '' );
 	$pcm_from    = pcm_crm_contact_recipient();
 
@@ -165,7 +165,7 @@ function pcm_crm_pm_send_ticket_comment_email( $pcm_comment_id ) {
 	if ( ! empty( $pcm_comment['is_client_comment'] ) ) {
 		add_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 		/* translators: %s: the ticket's subject */
-		wp_mail( $pcm_from, sprintf( __( '[Ticket] %s', 'pcm-crm' ), $pcm_ticket['subject'] ), $pcm_wrapped );
+		wp_mail( $pcm_from, sprintf( __( '[Ticket] %s', 'pretty-client-management' ), $pcm_ticket['subject'] ), $pcm_wrapped );
 		remove_filter( 'wp_mail_content_type', 'pcm_crm_html_content_type' );
 	}
 

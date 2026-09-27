@@ -40,8 +40,8 @@ function pcm_crm_modules() {
 	if ( null === $pcm_modules ) {
 		$pcm_modules = apply_filters( 'pcm_crm_modules', array(
 			'pm' => array(
-				'label'       => __( 'Project Management', 'pcm-crm' ),
-				'description' => __( 'Projects, time, a RAID log and resourcing, hanging off the accounts and opportunities already here.', 'pcm-crm' ),
+				'label'       => __( 'Project Management', 'pretty-client-management' ),
+				'description' => __( 'Projects, time, a RAID log and resourcing, hanging off the accounts and opportunities already here.', 'pretty-client-management' ),
 				'default'     => 1,
 				'schema'      => array(
 					'pm/pm-archetypes.php',
@@ -78,8 +78,8 @@ function pcm_crm_modules() {
 			// anything special-cased to this module — a third module needing
 			// the same guarantee needs no further plumbing.
 			'portal' => array(
-				'label'       => __( 'Client Portal', 'pcm-crm' ),
-				'description' => __( 'A login for your clients: their project\'s time, RAID log and documents, and Help Tickets they can raise and comment on themselves.', 'pcm-crm' ),
+				'label'       => __( 'Client Portal', 'pretty-client-management' ),
+				'description' => __( 'A login for your clients: their project\'s time, RAID log and documents, and Help Tickets they can raise and comment on themselves.', 'pretty-client-management' ),
 				'default'     => 1,
 				'requires'    => array( 'pm' ),
 				'schema'      => array(),

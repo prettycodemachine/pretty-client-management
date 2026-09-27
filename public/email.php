@@ -385,11 +385,11 @@ add_action( 'login_init', 'pcm_crm_remember_login_destination' );
 function pcm_crm_invite_sign_in_line( $pcm_user ) {
 	if ( strtolower( $pcm_user->user_login ) === strtolower( $pcm_user->user_email ) ) {
 		/* translators: %s: the account's email address, which is also its username */
-		return sprintf( __( 'Your username is your email address: %s', 'pcm-crm' ), $pcm_user->user_email );
+		return sprintf( __( 'Your username is your email address: %s', 'pretty-client-management' ), $pcm_user->user_email );
 	}
 
 	/* translators: 1: username, 2: email address */
-	return sprintf( __( "Your username is %1\$s\nYou can also sign in with your email address, %2\$s", 'pcm-crm' ), $pcm_user->user_login, $pcm_user->user_email );
+	return sprintf( __( "Your username is %1\$s\nYou can also sign in with your email address, %2\$s", 'pretty-client-management' ), $pcm_user->user_login, $pcm_user->user_email );
 }
 
 /**

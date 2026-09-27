@@ -34,18 +34,18 @@ define( 'PCM_CRM_SETS_META', 'pcm_crm_permission_sets' );
 function pcm_crm_permission_areas() {
 	return apply_filters( 'pcm_crm_permission_areas', array(
 		'crm'      => array(
-			'label'       => __( 'CRM', 'pcm-crm' ),
-			'description' => __( 'Accounts, Contacts, Opportunities, Activities, the pipeline and reports.', 'pcm-crm' ),
+			'label'       => __( 'CRM', 'pretty-client-management' ),
+			'description' => __( 'Accounts, Contacts, Opportunities, Activities, the pipeline and reports.', 'pretty-client-management' ),
 			'module'      => '',
 		),
 		'pm'       => array(
-			'label'       => __( 'Projects', 'pcm-crm' ),
-			'description' => __( 'Projects, tasks, the timesheet, time entries, the RAID log and help tickets.', 'pcm-crm' ),
+			'label'       => __( 'Projects', 'pretty-client-management' ),
+			'description' => __( 'Projects, tasks, the timesheet, time entries, the RAID log and help tickets.', 'pretty-client-management' ),
 			'module'      => 'pm',
 		),
 		'settings' => array(
-			'label'       => __( 'PCM Settings', 'pcm-crm' ),
-			'description' => __( 'Everything under PCM Settings — the pipeline, fields and layouts, templates, modules.', 'pcm-crm' ),
+			'label'       => __( 'PCM Settings', 'pretty-client-management' ),
+			'description' => __( 'Everything under PCM Settings — the pipeline, fields and layouts, templates, modules.', 'pretty-client-management' ),
 			'module'      => '',
 		),
 	) );
@@ -60,10 +60,10 @@ function pcm_crm_permission_areas() {
  */
 function pcm_crm_permission_actions() {
 	return apply_filters( 'pcm_crm_permission_actions', array(
-		'view'   => array( 'label' => __( 'View', 'pcm-crm' ), 'description' => __( 'Read records and open screens.', 'pcm-crm' ) ),
-		'edit'   => array( 'label' => __( 'Edit', 'pcm-crm' ), 'description' => __( 'Create and change records.', 'pcm-crm' ) ),
-		'delete' => array( 'label' => __( 'Delete', 'pcm-crm' ), 'description' => __( 'Delete records, and empty the recycle bin.', 'pcm-crm' ) ),
-		'export' => array( 'label' => __( 'Export', 'pcm-crm' ), 'description' => __( 'Download records as CSV.', 'pcm-crm' ) ),
+		'view'   => array( 'label' => __( 'View', 'pretty-client-management' ), 'description' => __( 'Read records and open screens.', 'pretty-client-management' ) ),
+		'edit'   => array( 'label' => __( 'Edit', 'pretty-client-management' ), 'description' => __( 'Create and change records.', 'pretty-client-management' ) ),
+		'delete' => array( 'label' => __( 'Delete', 'pretty-client-management' ), 'description' => __( 'Delete records, and empty the recycle bin.', 'pretty-client-management' ) ),
+		'export' => array( 'label' => __( 'Export', 'pretty-client-management' ), 'description' => __( 'Download records as CSV.', 'pretty-client-management' ) ),
 	) );
 }
 
@@ -148,18 +148,18 @@ function pcm_crm_sanitize_permission_definitions( $pcm_defs ) {
 function pcm_crm_default_profiles() {
 	return array(
 		'sales'    => array(
-			'label'       => __( 'Sales', 'pcm-crm' ),
-			'description' => __( 'The CRM only — accounts, contacts, deals and reports.', 'pcm-crm' ),
+			'label'       => __( 'Sales', 'pretty-client-management' ),
+			'description' => __( 'The CRM only — accounts, contacts, deals and reports.', 'pretty-client-management' ),
 			'grants'      => array( 'crm' => array( 'view', 'edit', 'export' ) ),
 		),
 		'delivery' => array(
-			'label'       => __( 'Delivery', 'pcm-crm' ),
-			'description' => __( 'Projects only — no access to the sales pipeline.', 'pcm-crm' ),
+			'label'       => __( 'Delivery', 'pretty-client-management' ),
+			'description' => __( 'Projects only — no access to the sales pipeline.', 'pretty-client-management' ),
 			'grants'      => array( 'pm' => array( 'view', 'edit' ) ),
 		),
 		'full'     => array(
-			'label'       => __( 'Sales and Delivery', 'pcm-crm' ),
-			'description' => __( 'Both apps, without PCM Settings.', 'pcm-crm' ),
+			'label'       => __( 'Sales and Delivery', 'pretty-client-management' ),
+			'description' => __( 'Both apps, without PCM Settings.', 'pretty-client-management' ),
 			'grants'      => array(
 				'crm' => array( 'view', 'edit', 'delete', 'export' ),
 				'pm'  => array( 'view', 'edit', 'delete' ),

@@ -155,7 +155,7 @@ function pcm_crm_validate_schedule( $pcm_error, $pcm_object, $pcm_row, $pcm_id )
 	if ( ! $pcm_to ) {
 		return new WP_Error(
 			'pcm_crm_no_recipients',
-			__( 'Choose at least one person, or add an email address, before saving.', 'pcm-crm' ),
+			__( 'Choose at least one person, or add an email address, before saving.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -177,7 +177,7 @@ add_filter( 'pcm_crm_validate', 'pcm_crm_validate_schedule', 10, 4 );
 function pcm_crm_cron_interval( $pcm_schedules ) {
 	$pcm_schedules['pcm_crm_quarter_hour'] = array(
 		'interval' => 15 * MINUTE_IN_SECONDS,
-		'display'  => __( 'Every 15 minutes (Pretty Client Management)', 'pcm-crm' ),
+		'display'  => __( 'Every 15 minutes (Pretty Client Management)', 'pretty-client-management' ),
 	);
 
 	return $pcm_schedules;
@@ -291,7 +291,7 @@ function pcm_crm_send_schedule( array $pcm_schedule ) {
 		? pcm_crm_dashboard_email( $pcm_schedule, $pcm_args )
 		: pcm_crm_report_email( $pcm_schedule, $pcm_args );
 
-	$pcm_subject = $pcm_schedule['name'] ? $pcm_schedule['name'] : __( 'Your CRM report', 'pcm-crm' );
+	$pcm_subject = $pcm_schedule['name'] ? $pcm_schedule['name'] : __( 'Your CRM report', 'pretty-client-management' );
 	$pcm_subject .= ' — ' . date_i18n( get_option( 'date_format' ) );
 
 	$pcm_attachments = array();
@@ -359,16 +359,16 @@ function pcm_crm_dashboard_email( array $pcm_schedule, array $pcm_args ) {
 	$pcm_out = '<p style="margin:0 0 18px;">Here is the CRM dashboard as of ' . esc_html( date_i18n( get_option( 'date_format' ) ) ) . '.</p>';
 
 	$pcm_out .= pcm_crm_email_table(
-		array( __( 'Measure', 'pcm-crm' ), __( 'Value', 'pcm-crm' ) ),
+		array( __( 'Measure', 'pretty-client-management' ), __( 'Value', 'pretty-client-management' ) ),
 		array(
-			array( __( 'Open pipeline', 'pcm-crm' ), pcm_crm_money( $pcm_tiles['openValue'] ) . ' (' . $pcm_tiles['openCount'] . ')' ),
-			array( __( 'Weighted pipeline', 'pcm-crm' ), pcm_crm_money( $pcm_tiles['weightedValue'] ) ),
-			array( __( 'Won', 'pcm-crm' ), pcm_crm_money( $pcm_tiles['wonValue'] ) . ' (' . $pcm_tiles['wonCount'] . ')' ),
-			array( __( 'Win rate', 'pcm-crm' ), $pcm_tiles['winRate'] . '%' ),
-			array( __( 'Average sales cycle', 'pcm-crm' ), $pcm_tiles['cycleDays'] . ' days' ),
-			array( __( 'Stalled deals', 'pcm-crm' ), $pcm_tiles['stalledCount'] . ' (' . $pcm_tiles['stallDays'] . '+ days)' ),
-			array( __( 'Overdue activities', 'pcm-crm' ), (string) $pcm_tiles['overdueCount'] ),
-			array( __( 'Accounts', 'pcm-crm' ), $pcm_tiles['accountCount'] . ' / ' . $pcm_tiles['contactCount'] . ' contacts' ),
+			array( __( 'Open pipeline', 'pretty-client-management' ), pcm_crm_money( $pcm_tiles['openValue'] ) . ' (' . $pcm_tiles['openCount'] . ')' ),
+			array( __( 'Weighted pipeline', 'pretty-client-management' ), pcm_crm_money( $pcm_tiles['weightedValue'] ) ),
+			array( __( 'Won', 'pretty-client-management' ), pcm_crm_money( $pcm_tiles['wonValue'] ) . ' (' . $pcm_tiles['wonCount'] . ')' ),
+			array( __( 'Win rate', 'pretty-client-management' ), $pcm_tiles['winRate'] . '%' ),
+			array( __( 'Average sales cycle', 'pretty-client-management' ), $pcm_tiles['cycleDays'] . ' days' ),
+			array( __( 'Stalled deals', 'pretty-client-management' ), $pcm_tiles['stalledCount'] . ' (' . $pcm_tiles['stallDays'] . '+ days)' ),
+			array( __( 'Overdue activities', 'pretty-client-management' ), (string) $pcm_tiles['overdueCount'] ),
+			array( __( 'Accounts', 'pretty-client-management' ), $pcm_tiles['accountCount'] . ' / ' . $pcm_tiles['contactCount'] . ' contacts' ),
 		)
 	);
 
@@ -377,8 +377,8 @@ function pcm_crm_dashboard_email( array $pcm_schedule, array $pcm_args ) {
 		$pcm_stage_rows[] = array( $pcm_row['value'], (string) $pcm_row['count'], pcm_crm_money( $pcm_row['total'] ) );
 	}
 
-	$pcm_out .= '<h3 style="font-size:15px;color:#1a1a1d;margin:0 0 10px;">' . esc_html__( 'Pipeline by stage', 'pcm-crm' ) . '</h3>';
-	$pcm_out .= pcm_crm_email_table( array( __( 'Stage', 'pcm-crm' ), __( 'Deals', 'pcm-crm' ), __( 'Value', 'pcm-crm' ) ), $pcm_stage_rows );
+	$pcm_out .= '<h3 style="font-size:15px;color:#1a1a1d;margin:0 0 10px;">' . esc_html__( 'Pipeline by stage', 'pretty-client-management' ) . '</h3>';
+	$pcm_out .= pcm_crm_email_table( array( __( 'Stage', 'pretty-client-management' ), __( 'Deals', 'pretty-client-management' ), __( 'Value', 'pretty-client-management' ) ), $pcm_stage_rows );
 
 	$pcm_conversion = array();
 	foreach ( $pcm_data['charts']['conversion'] as $pcm_row ) {
@@ -386,8 +386,8 @@ function pcm_crm_dashboard_email( array $pcm_schedule, array $pcm_args ) {
 	}
 
 	if ( $pcm_conversion ) {
-		$pcm_out .= '<h3 style="font-size:15px;color:#1a1a1d;margin:0 0 10px;">' . esc_html__( 'Stage conversion', 'pcm-crm' ) . '</h3>';
-		$pcm_out .= pcm_crm_email_table( array( __( 'Step', 'pcm-crm' ), __( 'Reached / moved on', 'pcm-crm' ), __( 'Rate', 'pcm-crm' ) ), $pcm_conversion );
+		$pcm_out .= '<h3 style="font-size:15px;color:#1a1a1d;margin:0 0 10px;">' . esc_html__( 'Stage conversion', 'pretty-client-management' ) . '</h3>';
+		$pcm_out .= pcm_crm_email_table( array( __( 'Step', 'pretty-client-management' ), __( 'Reached / moved on', 'pretty-client-management' ), __( 'Rate', 'pretty-client-management' ) ), $pcm_conversion );
 	}
 
 	return $pcm_out . pcm_crm_email_footer_link( 'pcm-crm' );
@@ -404,7 +404,7 @@ function pcm_crm_report_email( array $pcm_schedule, array $pcm_args ) {
 	$pcm_report = pcm_crm_run_report( $pcm_object, $pcm_schedule['group_by'], $pcm_args );
 
 	$pcm_out = '<p style="margin:0 0 18px;">' .
-		esc_html( sprintf( /* translators: 1: record count, 2: object name */ __( '%1$d %2$s match this report.', 'pcm-crm' ), $pcm_report['total'], $pcm_object ) ) .
+		esc_html( sprintf( /* translators: 1: record count, 2: object name */ __( '%1$d %2$s match this report.', 'pretty-client-management' ), $pcm_report['total'], $pcm_object ) ) .
 		'</p>';
 
 	if ( $pcm_report['groups'] ) {
@@ -412,14 +412,14 @@ function pcm_crm_report_email( array $pcm_schedule, array $pcm_args ) {
 
 		foreach ( $pcm_report['groups'] as $pcm_group ) {
 			$pcm_rows[] = array(
-				'' !== $pcm_group['value'] ? $pcm_group['value'] : __( 'Unspecified', 'pcm-crm' ),
+				'' !== $pcm_group['value'] ? $pcm_group['value'] : __( 'Unspecified', 'pretty-client-management' ),
 				(string) $pcm_group['count'],
 				$pcm_group['total'] ? pcm_crm_money( $pcm_group['total'] ) : '—',
 			);
 		}
 
 		$pcm_out .= pcm_crm_email_table(
-			array( ucfirst( str_replace( '_', ' ', $pcm_schedule['group_by'] ) ), __( 'Records', 'pcm-crm' ), __( 'Value', 'pcm-crm' ) ),
+			array( ucfirst( str_replace( '_', ' ', $pcm_schedule['group_by'] ) ), __( 'Records', 'pretty-client-management' ), __( 'Value', 'pretty-client-management' ) ),
 			$pcm_rows
 		);
 	}
@@ -438,9 +438,9 @@ function pcm_crm_report_email( array $pcm_schedule, array $pcm_args ) {
 
 	if ( $pcm_rows ) {
 		$pcm_out .= '<h3 style="font-size:15px;color:#1a1a1d;margin:0 0 10px;">' .
-			esc_html( count( $pcm_report['rows'] ) > 20 ? __( 'First 20 records', 'pcm-crm' ) : __( 'Records', 'pcm-crm' ) ) .
+			esc_html( count( $pcm_report['rows'] ) > 20 ? __( 'First 20 records', 'pretty-client-management' ) : __( 'Records', 'pretty-client-management' ) ) .
 			'</h3>';
-		$pcm_out .= pcm_crm_email_table( array( __( 'Record', 'pcm-crm' ), __( 'Amount', 'pcm-crm' ) ), $pcm_rows );
+		$pcm_out .= pcm_crm_email_table( array( __( 'Record', 'pretty-client-management' ), __( 'Amount', 'pretty-client-management' ) ), $pcm_rows );
 	}
 
 	return $pcm_out . pcm_crm_email_footer_link( 'pcm-crm-reports' );
@@ -470,7 +470,7 @@ function pcm_crm_email_footer_link( $pcm_page ) {
 	$pcm_url = set_url_scheme( admin_url( 'admin.php?page=' . $pcm_page ), 'https' );
 
 	return '<p style="margin:24px 0 0;"><a href="' . esc_url( $pcm_url ) . '" style="color:#c94040;font-weight:700;">' .
-		esc_html__( 'Open the CRM for the full picture', 'pcm-crm' ) . '</a></p>';
+		esc_html__( 'Open the CRM for the full picture', 'pretty-client-management' ) . '</a></p>';
 }
 
 /**

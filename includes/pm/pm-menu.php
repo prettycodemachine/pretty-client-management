@@ -17,8 +17,8 @@ function pcm_crm_pm_menu() {
 	$pcm_cap = pcm_crm_user_can() ? PCM_CRM_CAP : 'manage_options';
 
 	add_menu_page(
-		__( 'Projects', 'pcm-crm' ),
-		__( 'Projects', 'pcm-crm' ),
+		__( 'Projects', 'pretty-client-management' ),
+		__( 'Projects', 'pretty-client-management' ),
 		$pcm_cap,
 		'pcm-crm-projects',
 		'pcm_crm_pm_render_projects',
@@ -32,13 +32,13 @@ function pcm_crm_pm_menu() {
 	// not exist yet renders the app's "Unknown screen" fallback, which is a worse
 	// answer than not offering it.
 	$pcm_pages = array(
-		'pcm-crm-projects' => array( __( 'All Projects', 'pcm-crm' ), 'pcm_crm_pm_render_projects' ),
-		'pcm-crm-project-tasks' => array( __( 'Tasks', 'pcm-crm' ), 'pcm_crm_pm_render_tasks' ),
-		'pcm-crm-timesheet' => array( __( 'Timesheet', 'pcm-crm' ), 'pcm_crm_pm_render_timesheet' ),
-		'pcm-crm-time'     => array( __( 'Time Entries', 'pcm-crm' ), 'pcm_crm_pm_render_time' ),
-		'pcm-crm-raid'     => array( __( 'RAID Log', 'pcm-crm' ), 'pcm_crm_pm_render_raid' ),
-		'pcm-crm-milestones' => array( __( 'Milestones', 'pcm-crm' ), 'pcm_crm_pm_render_milestones' ),
-		'pcm-crm-help-tickets' => array( __( 'Help Tickets', 'pcm-crm' ), 'pcm_crm_pm_render_help_tickets' ),
+		'pcm-crm-projects' => array( __( 'All Projects', 'pretty-client-management' ), 'pcm_crm_pm_render_projects' ),
+		'pcm-crm-project-tasks' => array( __( 'Tasks', 'pretty-client-management' ), 'pcm_crm_pm_render_tasks' ),
+		'pcm-crm-timesheet' => array( __( 'Timesheet', 'pretty-client-management' ), 'pcm_crm_pm_render_timesheet' ),
+		'pcm-crm-time'     => array( __( 'Time Entries', 'pretty-client-management' ), 'pcm_crm_pm_render_time' ),
+		'pcm-crm-raid'     => array( __( 'RAID Log', 'pretty-client-management' ), 'pcm_crm_pm_render_raid' ),
+		'pcm-crm-milestones' => array( __( 'Milestones', 'pretty-client-management' ), 'pcm_crm_pm_render_milestones' ),
+		'pcm-crm-help-tickets' => array( __( 'Help Tickets', 'pretty-client-management' ), 'pcm_crm_pm_render_help_tickets' ),
 	);
 
 	foreach ( $pcm_pages as $pcm_slug => $pcm_page ) {
@@ -52,31 +52,31 @@ add_action( 'admin_menu', 'pcm_crm_pm_menu' );
    -------------------------------------------------------------------------- */
 
 function pcm_crm_pm_render_projects() {
-	pcm_crm_screen( 'projects', __( 'Projects', 'pcm-crm' ), __( 'Every project, with the account and opportunity behind it.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'projects', __( 'Projects', 'pretty-client-management' ), __( 'Every project, with the account and opportunity behind it.', 'pretty-client-management' ), array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_tasks() {
-	pcm_crm_screen( 'project_tasks', __( 'Tasks', 'pcm-crm' ), __( 'Every task across every project.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'project_tasks', __( 'Tasks', 'pretty-client-management' ), __( 'Every task across every project.', 'pretty-client-management' ), array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_timesheet() {
-	pcm_crm_screen( 'timesheet', __( 'Timesheet', 'pcm-crm' ), __( 'A week of hours, a row per project. Each row follows its project’s rules for time.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'timesheet', __( 'Timesheet', 'pretty-client-management' ), __( 'A week of hours, a row per project. Each row follows its project’s rules for time.', 'pretty-client-management' ), array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_time() {
-	pcm_crm_screen( 'time_entries', __( 'Time Entries', 'pcm-crm' ), '', array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'time_entries', __( 'Time Entries', 'pretty-client-management' ), '', array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_raid() {
-	pcm_crm_screen( 'project_raid', __( 'RAID Log', 'pcm-crm' ), __( 'Risks, assumptions, issues and dependencies, worst first.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'project_raid', __( 'RAID Log', 'pretty-client-management' ), __( 'Risks, assumptions, issues and dependencies, worst first.', 'pretty-client-management' ), array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_milestones() {
-	pcm_crm_screen( 'project_milestones', __( 'Milestones', 'pcm-crm' ), __( 'What a client is waiting on next, across every project.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'project_milestones', __( 'Milestones', 'pretty-client-management' ), __( 'What a client is waiting on next, across every project.', 'pretty-client-management' ), array( 'app' => 'projects' ) );
 }
 
 function pcm_crm_pm_render_help_tickets() {
-	pcm_crm_screen( 'help_tickets', __( 'Help Tickets', 'pcm-crm' ), __( 'Support requests, raised by clients or logged on their behalf.', 'pcm-crm' ), array( 'app' => 'projects' ) );
+	pcm_crm_screen( 'help_tickets', __( 'Help Tickets', 'pretty-client-management' ), __( 'Support requests, raised by clients or logged on their behalf.', 'pretty-client-management' ), array( 'app' => 'projects' ) );
 }
 
 /**
@@ -105,16 +105,16 @@ add_filter( 'pcm_crm_screen_callbacks', 'pcm_crm_pm_screen_callbacks' );
  */
 function pcm_crm_pm_app( $pcm_apps ) {
 	$pcm_apps['projects'] = array(
-		'label' => __( 'Projects', 'pcm-crm' ),
+		'label' => __( 'Projects', 'pretty-client-management' ),
 		'area'  => 'pm',
 		'items' => array(
-			'pcm-crm-projects'      => array( __( 'Projects', 'pcm-crm' ), 'projects' ),
-			'pcm-crm-project-tasks' => array( __( 'Tasks', 'pcm-crm' ), 'project_tasks' ),
-			'pcm-crm-timesheet'     => array( __( 'Timesheet', 'pcm-crm' ), 'timesheet' ),
-			'pcm-crm-time'          => array( __( 'Time Entries', 'pcm-crm' ), 'time_entries' ),
-			'pcm-crm-raid'          => array( __( 'RAID Log', 'pcm-crm' ), 'project_raid' ),
-			'pcm-crm-milestones'   => array( __( 'Milestones', 'pcm-crm' ), 'project_milestones' ),
-			'pcm-crm-help-tickets'  => array( __( 'Help Tickets', 'pcm-crm' ), 'help_tickets' ),
+			'pcm-crm-projects'      => array( __( 'Projects', 'pretty-client-management' ), 'projects' ),
+			'pcm-crm-project-tasks' => array( __( 'Tasks', 'pretty-client-management' ), 'project_tasks' ),
+			'pcm-crm-timesheet'     => array( __( 'Timesheet', 'pretty-client-management' ), 'timesheet' ),
+			'pcm-crm-time'          => array( __( 'Time Entries', 'pretty-client-management' ), 'time_entries' ),
+			'pcm-crm-raid'          => array( __( 'RAID Log', 'pretty-client-management' ), 'project_raid' ),
+			'pcm-crm-milestones'   => array( __( 'Milestones', 'pretty-client-management' ), 'project_milestones' ),
+			'pcm-crm-help-tickets'  => array( __( 'Help Tickets', 'pretty-client-management' ), 'help_tickets' ),
 		),
 	);
 

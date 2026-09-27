@@ -127,22 +127,22 @@ function pcm_crm_pm_validate_ticket( $pcm_error, $pcm_object, $pcm_row, $pcm_id 
 	$pcm_merged   = array_merge( is_array( $pcm_existing ) ? $pcm_existing : array(), $pcm_row );
 
 	if ( '' === trim( (string) $pcm_merged['subject'] ) ) {
-		return new WP_Error( 'pcm_crm_ticket_subject_required', __( 'A ticket needs a subject.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_ticket_subject_required', __( 'A ticket needs a subject.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	if ( ! in_array( (string) $pcm_merged['status'], pcm_crm_pm_ticket_statuses(), true ) ) {
-		return new WP_Error( 'pcm_crm_ticket_bad_status', __( 'That is not a status a ticket can hold.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_ticket_bad_status', __( 'That is not a status a ticket can hold.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	if ( empty( $pcm_merged['contact_id'] ) ) {
-		return new WP_Error( 'pcm_crm_ticket_no_contact', __( 'A ticket needs the contact who raised it.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_ticket_no_contact', __( 'A ticket needs the contact who raised it.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	// The mistake worth catching here: it would save cleanly, and then be
 	// invisible to the portal permission check, which reads project_roles as
 	// the source of truth for "whose project is this."
 	if ( ! pcm_crm_pm_contact_is_client_on( (int) $pcm_merged['contact_id'], (int) $pcm_merged['project_id'] ) ) {
-		return new WP_Error( 'pcm_crm_ticket_contact_not_on_project', __( 'That contact is not on this project as a client.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_ticket_contact_not_on_project', __( 'That contact is not on this project as a client.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	return $pcm_error;

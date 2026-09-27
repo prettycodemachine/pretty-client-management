@@ -382,7 +382,7 @@ class PCM_CRM_REST {
 		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
-			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		$pcm_args  = self::query_args( $pcm_request );
@@ -401,7 +401,7 @@ class PCM_CRM_REST {
 		$pcm_item  = $pcm_model ? $pcm_model->get( self::route_id( $pcm_request ) ) : null;
 
 		if ( ! $pcm_item ) {
-			return new WP_Error( 'pcm_crm_not_found', __( 'Record not found.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_not_found', __( 'Record not found.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		$pcm_expanded = self::expand( $pcm_model->object(), array( $pcm_item ) );
@@ -413,7 +413,7 @@ class PCM_CRM_REST {
 		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
-			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		$pcm_id = $pcm_model->insert( (array) $pcm_request->get_json_params() );
@@ -425,7 +425,7 @@ class PCM_CRM_REST {
 		$pcm_row = $pcm_model->get( $pcm_id );
 
 		if ( ! $pcm_row ) {
-			return new WP_Error( 'pcm_crm_not_found', __( 'The record was saved but could not be read back.', 'pcm-crm' ), array( 'status' => 500 ) );
+			return new WP_Error( 'pcm_crm_not_found', __( 'The record was saved but could not be read back.', 'pretty-client-management' ), array( 'status' => 500 ) );
 		}
 
 		// Indexed rather than assumed: expand() now ends in a filter, so a
@@ -440,7 +440,7 @@ class PCM_CRM_REST {
 		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
-			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		$pcm_result = $pcm_model->update( self::route_id( $pcm_request ), (array) $pcm_request->get_json_params() );
@@ -458,7 +458,7 @@ class PCM_CRM_REST {
 		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
-			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		return rest_ensure_response( array( 'deleted' => $pcm_model->delete( self::route_id( $pcm_request ) ) ) );
@@ -770,7 +770,7 @@ class PCM_CRM_REST {
 		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
-			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		return rest_ensure_response( array( 'restored' => $pcm_model->restore( self::route_id( $pcm_request ) ) ) );
@@ -780,7 +780,7 @@ class PCM_CRM_REST {
 		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
-			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		return rest_ensure_response( array( 'purged' => $pcm_model->purge( self::route_id( $pcm_request ) ) ) );
@@ -790,7 +790,7 @@ class PCM_CRM_REST {
 		$pcm_model = self::model( self::route_object( $pcm_request ) );
 
 		if ( ! $pcm_model ) {
-			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_unknown_object', __( 'Unknown object.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		return rest_ensure_response( array( 'purged' => $pcm_model->purge_all() ) );
@@ -974,7 +974,7 @@ class PCM_CRM_REST {
 		$pcm_schedule = pcm_crm_schedules()->get( self::route_id( $pcm_request ) );
 
 		if ( ! $pcm_schedule ) {
-			return new WP_Error( 'pcm_crm_not_found', __( 'That schedule no longer exists.', 'pcm-crm' ), array( 'status' => 404 ) );
+			return new WP_Error( 'pcm_crm_not_found', __( 'That schedule no longer exists.', 'pretty-client-management' ), array( 'status' => 404 ) );
 		}
 
 		try {
@@ -1028,7 +1028,7 @@ class PCM_CRM_REST {
 
 	public static function stop_enrollment( WP_REST_Request $pcm_request ) {
 		$pcm_body   = (array) $pcm_request->get_json_params();
-		$pcm_reason = ! empty( $pcm_body['reason'] ) ? sanitize_text_field( $pcm_body['reason'] ) : __( 'Stopped by hand', 'pcm-crm' );
+		$pcm_reason = ! empty( $pcm_body['reason'] ) ? sanitize_text_field( $pcm_body['reason'] ) : __( 'Stopped by hand', 'pretty-client-management' );
 
 		pcm_crm_stop_enrollment( self::route_id( $pcm_request ), $pcm_reason );
 

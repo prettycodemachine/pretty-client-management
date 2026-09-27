@@ -69,7 +69,7 @@ function pcm_crm_ensure_staff_role() {
 	$pcm_role = get_role( PCM_CRM_STAFF_ROLE );
 
 	if ( ! $pcm_role ) {
-		add_role( PCM_CRM_STAFF_ROLE, __( 'Staff', 'pcm-crm' ), $pcm_caps );
+		add_role( PCM_CRM_STAFF_ROLE, __( 'Staff', 'pretty-client-management' ), $pcm_caps );
 	} else {
 		foreach ( $pcm_caps as $pcm_cap => $pcm_granted ) {
 			$pcm_role->add_cap( $pcm_cap );

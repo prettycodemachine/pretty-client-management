@@ -49,9 +49,9 @@ if ( ! $pcm_logo && has_custom_logo() ) {
 				<?php echo esc_html( get_bloginfo( 'name' ) ); ?>
 			<?php endif; ?>
 		</span>
-		<nav class="pcm-portal-account" aria-label="<?php esc_attr_e( 'Account', 'pcm-crm' ); ?>">
+		<nav class="pcm-portal-account" aria-label="<?php esc_attr_e( 'Account', 'pretty-client-management' ); ?>">
 			<span class="pcm-portal-account-name"><?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?></span>
-			<a href="<?php echo esc_url( wp_logout_url( pcm_crm_portal_url() ) ); ?>"><?php esc_html_e( 'Log out', 'pcm-crm' ); ?></a>
+			<a href="<?php echo esc_url( wp_logout_url( pcm_crm_portal_url() ) ); ?>"><?php esc_html_e( 'Log out', 'pretty-client-management' ); ?></a>
 		</nav>
 	</div>
 </header>

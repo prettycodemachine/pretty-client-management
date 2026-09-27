@@ -166,7 +166,7 @@ function pcm_crm_sanitize_modules( $pcm_value ) {
 					'pcm_crm_module_requires',
 					sprintf(
 						/* translators: 1: the module that was turned off, 2: the module it needs */
-						__( '“%1$s” needs “%2$s” switched on, so it was left off.', 'pcm-crm' ),
+						__( '“%1$s” needs “%2$s” switched on, so it was left off.', 'pretty-client-management' ),
 						$pcm_module['label'],
 						pcm_crm_modules()[ $pcm_required ]['label']
 					)
@@ -243,7 +243,7 @@ function pcm_crm_render_form_tab() {
 				<?php
 				printf(
 					/* translators: %s: comma-separated list of media IDs */
-					esc_html__( 'These attachments no longer resolve to a file and will be skipped: %s', 'pcm-crm' ),
+					esc_html__( 'These attachments no longer resolve to a file and will be skipped: %s', 'pretty-client-management' ),
 					esc_html( implode( ', ', $pcm_missing ) )
 				);
 				?>
@@ -252,14 +252,14 @@ function pcm_crm_render_form_tab() {
 	<?php endif; ?>
 
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Put the form on a page', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Put the form on a page', 'pretty-client-management' ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'Paste this shortcode into any page or post.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Paste this shortcode into any page or post.', 'pretty-client-management' ); ?>
 		</p>
 		<div class="pcm-crm-embed">
 			<code>[pcm_contact_form]</code>
 			<button type="button" class="button" data-role="copy-shortcode" data-shortcode="[pcm_contact_form]">
-				<?php esc_html_e( 'Copy', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'Copy', 'pretty-client-management' ); ?>
 			</button>
 		</div>
 	</div>
@@ -267,77 +267,77 @@ function pcm_crm_render_form_tab() {
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_form_settings' ); ?>
 
-		<h2><?php esc_html_e( 'Form fields', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Form fields', 'pretty-client-management' ); ?></h2>
 		<p class="description" style="margin-bottom:14px">
-			<?php esc_html_e( 'Use this form builder to create your Contact Form. The data captured on this form is mapped into the CRM database upon form submission. You can relabel fields and move them into the order you wish.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Use this form builder to create your Contact Form. The data captured on this form is mapped into the CRM database upon form submission. You can relabel fields and move them into the order you wish.', 'pretty-client-management' ); ?>
 		</p>
 
 		<?php pcm_crm_render_field_builder(); ?>
 
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="pcm_crm_form_button"><?php esc_html_e( 'Button label', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm_crm_form_button"><?php esc_html_e( 'Button label', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<input type="text" class="regular-text" id="pcm_crm_form_button" name="pcm_crm_form_button"
 						value="<?php echo esc_attr( get_option( 'pcm_crm_form_button', '' ) ); ?>"
-						placeholder="<?php esc_attr_e( 'Send message', 'pcm-crm' ); ?>">
+						placeholder="<?php esc_attr_e( 'Send message', 'pretty-client-management' ); ?>">
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="pcm_contact_recipient"><?php esc_html_e( 'Send submissions to', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm_contact_recipient"><?php esc_html_e( 'Send submissions to', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<input type="email" class="regular-text" id="pcm_contact_recipient" name="pcm_contact_recipient"
 						value="<?php echo esc_attr( pcm_crm_contact_recipient() ); ?>">
-					<p class="description"><?php esc_html_e( 'Every submission is emailed here, and recorded in the CRM either way.', 'pcm-crm' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Every submission is emailed here, and recorded in the CRM either way.', 'pretty-client-management' ); ?></p>
 				</td>
 			</tr>
 		</table>
 
-		<h2><?php esc_html_e( 'The reply it sends', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'The reply it sends', 'pretty-client-management' ); ?></h2>
 
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Autoresponder', 'pcm-crm' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Autoresponder', 'pretty-client-management' ); ?></th>
 				<td>
 					<label>
 						<input type="checkbox" name="pcm_autoresponder_enabled" value="1" <?php checked( pcm_crm_autoresponder_enabled() ); ?>>
-						<?php esc_html_e( 'Send an automatic reply to the person who submitted the form', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'Send an automatic reply to the person who submitted the form', 'pretty-client-management' ); ?>
 					</label>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="pcm_autoresponder_subject"><?php esc_html_e( 'Reply subject', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm_autoresponder_subject"><?php esc_html_e( 'Reply subject', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<input type="text" class="large-text" id="pcm_autoresponder_subject" name="pcm_autoresponder_subject"
 						value="<?php echo esc_attr( pcm_crm_autoresponder_subject() ); ?>">
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Email logo', 'pcm-crm' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Email logo', 'pretty-client-management' ); ?></th>
 				<td>
 					<div class="pcm-crm-logo" data-role="logo">
 						<div class="pcm-crm-logo-preview" data-role="logo-preview">
 							<?php if ( $pcm_logo ) : ?>
 								<?php echo wp_get_attachment_image( $pcm_logo, 'medium' ); ?>
 							<?php else : ?>
-								<span class="description"><?php esc_html_e( 'No logo uploaded — the theme’s logo is used.', 'pcm-crm' ); ?></span>
+								<span class="description"><?php esc_html_e( 'No logo uploaded — the theme’s logo is used.', 'pretty-client-management' ); ?></span>
 							<?php endif; ?>
 						</div>
 						<input type="hidden" name="pcm_crm_email_logo" data-role="logo-id" value="<?php echo esc_attr( $pcm_logo ); ?>">
 						<p>
-							<button type="button" class="button" data-role="logo-choose"><?php esc_html_e( 'Choose logo', 'pcm-crm' ); ?></button>
+							<button type="button" class="button" data-role="logo-choose"><?php esc_html_e( 'Choose logo', 'pretty-client-management' ); ?></button>
 							<button type="button" class="button-link" data-role="logo-remove"<?php echo $pcm_logo ? '' : ' hidden'; ?>>
-								<?php esc_html_e( 'Remove', 'pcm-crm' ); ?>
+								<?php esc_html_e( 'Remove', 'pretty-client-management' ); ?>
 							</button>
 						</p>
 					</div>
 					<p class="description">
-						<?php esc_html_e( 'Centred along the top of every email the CRM sends. Around 300px wide is plenty — it is displayed at 150px, and twice that keeps it sharp on a retina screen.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'Centred along the top of every email the CRM sends. Around 300px wide is plenty — it is displayed at 150px, and twice that keeps it sharp on a retina screen.', 'pretty-client-management' ); ?>
 					</p>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Attachments', 'pcm-crm' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Attachments', 'pretty-client-management' ); ?></th>
 				<td>
 					<div class="pcm-crm-attachments" data-role="attachments">
 						<ul class="pcm-crm-attachment-list" data-role="attachment-list">
@@ -349,26 +349,26 @@ function pcm_crm_render_form_tab() {
 								?>
 								<li class="pcm-crm-attachment<?php echo $pcm_broken ? ' is-broken' : ''; ?>" data-id="<?php echo esc_attr( $pcm_id ); ?>">
 									<span class="pcm-crm-attachment-name">
-										<?php echo esc_html( $pcm_label ? $pcm_label : sprintf( /* translators: %d: media ID */ __( 'Missing file (ID %d)', 'pcm-crm' ), $pcm_id ) ); ?>
+										<?php echo esc_html( $pcm_label ? $pcm_label : sprintf( /* translators: %d: media ID */ __( 'Missing file (ID %d)', 'pretty-client-management' ), $pcm_id ) ); ?>
 									</span>
-									<button type="button" class="button-link pcm-crm-attachment-remove" aria-label="<?php esc_attr_e( 'Remove attachment', 'pcm-crm' ); ?>">&times;</button>
+									<button type="button" class="button-link pcm-crm-attachment-remove" aria-label="<?php esc_attr_e( 'Remove attachment', 'pretty-client-management' ); ?>">&times;</button>
 								</li>
 							<?php endforeach; ?>
 						</ul>
 						<input type="hidden" name="pcm_crm_attachment_ids" data-role="attachment-ids"
 							value="<?php echo esc_attr( implode( ',', pcm_crm_attachment_ids() ) ); ?>">
-						<button type="button" class="button" data-role="attachment-add"><?php esc_html_e( 'Add attachment', 'pcm-crm' ); ?></button>
+						<button type="button" class="button" data-role="attachment-add"><?php esc_html_e( 'Add attachment', 'pretty-client-management' ); ?></button>
 					</div>
 					<p class="description">
-						<?php esc_html_e( 'Attached to every automatic reply, in this order. A file deleted from the media library is skipped rather than breaking the send.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'Attached to every automatic reply, in this order. A file deleted from the media library is skipped rather than breaking the send.', 'pretty-client-management' ); ?>
 					</p>
 				</td>
 			</tr>
 		</table>
 
-		<h3><?php esc_html_e( 'Reply message', 'pcm-crm' ); ?></h3>
+		<h3><?php esc_html_e( 'Reply message', 'pretty-client-management' ); ?></h3>
 		<p class="description" style="margin-bottom:8px">
-			<?php esc_html_e( 'Click a merge field to insert it where the cursor is. They are built from the form’s own fields, so one can never name a question you removed.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Click a merge field to insert it where the cursor is. They are built from the form’s own fields, so one can never name a question you removed.', 'pretty-client-management' ); ?>
 		</p>
 		<div class="pcm-crm-tokens" data-role="tokens">
 			<?php foreach ( pcm_crm_tokens() as $pcm_token ) : ?>
@@ -399,22 +399,22 @@ function pcm_crm_render_form_tab() {
 			?>
 		<?php endif; ?>
 		<p class="description" style="margin-top:8px">
-			<?php esc_html_e( 'The message is wrapped in the branded email layout automatically — no need to add a logo or signature styling here.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'The message is wrapped in the branded email layout automatically — no need to add a logo or signature styling here.', 'pretty-client-management' ); ?>
 		</p>
 
 		<?php submit_button(); ?>
 	</form>
 
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Send a test', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Send a test', 'pretty-client-management' ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'Sends the saved reply — attachments and all — using placeholder values, so you can see what a visitor receives. Save your changes first.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Sends the saved reply — attachments and all — using placeholder values, so you can see what a visitor receives. Save your changes first.', 'pretty-client-management' ); ?>
 		</p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="pcm_crm_test_email">
 			<?php wp_nonce_field( 'pcm_crm_test_email', 'pcm_crm_test_nonce' ); ?>
 			<input type="email" class="regular-text" name="pcm_crm_test_to" value="<?php echo esc_attr( wp_get_current_user()->user_email ); ?>" required>
-			<?php submit_button( __( 'Send test email', 'pcm-crm' ), 'secondary', 'submit', false ); ?>
+			<?php submit_button( __( 'Send test email', 'pretty-client-management' ), 'secondary', 'submit', false ); ?>
 		</form>
 	</div>
 	<?php
@@ -452,13 +452,13 @@ function pcm_crm_render_field_builder() {
 	?>
 	<div class="pcm-crm-add-field">
 		<select data-role="add-field-target">
-			<option value=""><?php esc_html_e( '— Choose a field to add —', 'pcm-crm' ); ?></option>
+			<option value=""><?php esc_html_e( '— Choose a field to add —', 'pretty-client-management' ); ?></option>
 			<?php foreach ( pcm_crm_form_field_targets() as $pcm_target => $pcm_target_label ) : ?>
 				<?php if ( '' === $pcm_target || isset( $pcm_used_targets[ $pcm_target ] ) ) { continue; } ?>
 				<option value="<?php echo esc_attr( $pcm_target ); ?>"><?php echo esc_html( $pcm_target_label ); ?></option>
 			<?php endforeach; ?>
 		</select>
-		<button type="button" class="button" data-role="add-field"><?php esc_html_e( 'Add field', 'pcm-crm' ); ?></button>
+		<button type="button" class="button" data-role="add-field"><?php esc_html_e( 'Add field', 'pretty-client-management' ); ?></button>
 	</div>
 	<script type="application/json" id="pcm-crm-field-target-defaults"><?php echo wp_json_encode( pcm_crm_form_field_target_defaults() ); ?></script>
 
@@ -478,7 +478,7 @@ function pcm_crm_render_field_row( $pcm_index, array $pcm_field ) {
 			<span class="pcm-crm-field-handle" aria-hidden="true">☰</span>
 			<input type="text" class="pcm-crm-field-label" name="<?php echo esc_attr( $pcm_name ); ?>[label]"
 				value="<?php echo esc_attr( isset( $pcm_field['label'] ) ? $pcm_field['label'] : '' ); ?>"
-				placeholder="<?php esc_attr_e( 'Field label', 'pcm-crm' ); ?>">
+				placeholder="<?php esc_attr_e( 'Field label', 'pretty-client-management' ); ?>">
 
 			<select name="<?php echo esc_attr( $pcm_name ); ?>[type]" data-role="field-type">
 				<?php foreach ( pcm_crm_form_field_types() as $pcm_value => $pcm_label ) : ?>
@@ -498,18 +498,18 @@ function pcm_crm_render_field_row( $pcm_index, array $pcm_field ) {
 
 			<label class="pcm-crm-field-toggle">
 				<input type="checkbox" name="<?php echo esc_attr( $pcm_name ); ?>[required]" value="1" <?php checked( ! empty( $pcm_field['required'] ) ); ?>>
-				<?php esc_html_e( 'Required', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'Required', 'pretty-client-management' ); ?>
 			</label>
 
 			<label class="pcm-crm-field-toggle">
 				<input type="checkbox" name="<?php echo esc_attr( $pcm_name ); ?>[half]" value="1" <?php checked( ! empty( $pcm_field['half'] ) ); ?>>
-				<?php esc_html_e( 'Half width', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'Half width', 'pretty-client-management' ); ?>
 			</label>
 
 			<span class="pcm-crm-field-move">
-				<button type="button" class="button-link" data-role="move-up" aria-label="<?php esc_attr_e( 'Move up', 'pcm-crm' ); ?>">↑</button>
-				<button type="button" class="button-link" data-role="move-down" aria-label="<?php esc_attr_e( 'Move down', 'pcm-crm' ); ?>">↓</button>
-				<button type="button" class="button-link pcm-crm-field-remove" data-role="remove-field" aria-label="<?php esc_attr_e( 'Remove field', 'pcm-crm' ); ?>">&times;</button>
+				<button type="button" class="button-link" data-role="move-up" aria-label="<?php esc_attr_e( 'Move up', 'pretty-client-management' ); ?>">↑</button>
+				<button type="button" class="button-link" data-role="move-down" aria-label="<?php esc_attr_e( 'Move down', 'pretty-client-management' ); ?>">↓</button>
+				<button type="button" class="button-link pcm-crm-field-remove" data-role="remove-field" aria-label="<?php esc_attr_e( 'Remove field', 'pretty-client-management' ); ?>">&times;</button>
 			</span>
 		</div>
 
@@ -518,13 +518,13 @@ function pcm_crm_render_field_row( $pcm_index, array $pcm_field ) {
 			<input type="hidden" name="<?php echo esc_attr( $pcm_name ); ?>[autocomplete]" value="<?php echo esc_attr( isset( $pcm_field['autocomplete'] ) ? $pcm_field['autocomplete'] : '' ); ?>">
 
 			<label class="pcm-crm-field-options" data-role="field-options"<?php echo 'select' === $pcm_type ? '' : ' hidden'; ?>>
-				<span class="description"><?php esc_html_e( 'Dropdown choices, one per line', 'pcm-crm' ); ?></span>
+				<span class="description"><?php esc_html_e( 'Dropdown choices, one per line', 'pretty-client-management' ); ?></span>
 				<textarea name="<?php echo esc_attr( $pcm_name ); ?>[options]" rows="3"><?php echo esc_textarea( $pcm_options ); ?></textarea>
 			</label>
 
 			<?php if ( ! empty( $pcm_field['key'] ) ) : ?>
 				<p class="description">
-					<?php esc_html_e( 'Merge field:', 'pcm-crm' ); ?>
+					<?php esc_html_e( 'Merge field:', 'pretty-client-management' ); ?>
 					<code><?php echo esc_html( pcm_crm_field_token( $pcm_field ) ); ?></code>
 				</p>
 			<?php endif; ?>
@@ -558,8 +558,8 @@ function pcm_crm_render_export_tab() {
 		<table class="pcm-crm-table pcm-crm-export-table">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'Object', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Records', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Object', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Records', 'pretty-client-management' ); ?></th>
 					<th></th>
 				</tr>
 			</thead>
@@ -571,7 +571,7 @@ function pcm_crm_render_export_tab() {
 						<td><?php echo esc_html( number_format_i18n( $pcm_model ? $pcm_model->count() : 0 ) ); ?></td>
 						<td>
 							<a class="button button-primary" href="<?php echo esc_url( pcm_crm_export_url( $pcm_slug ) ); ?>">
-								<?php esc_html_e( 'Download CSV', 'pcm-crm' ); ?>
+								<?php esc_html_e( 'Download CSV', 'pretty-client-management' ); ?>
 							</a>
 						</td>
 					</tr>
@@ -600,7 +600,7 @@ function pcm_crm_render_modules_tab() {
 		<?php settings_fields( 'pcm_crm_modules_settings' ); ?>
 
 		<p class="description">
-			<?php esc_html_e( 'Extra toolsets that share this CRM’s data. Switching one off hides its screens and routes; nothing is deleted, and switching it back on restores it as it was.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Extra toolsets that share this CRM’s data. Switching one off hides its screens and routes; nothing is deleted, and switching it back on restores it as it was.', 'pretty-client-management' ); ?>
 		</p>
 
 		<table class="form-table" role="presentation">
@@ -623,7 +623,7 @@ function pcm_crm_render_modules_tab() {
 								value="1"
 								<?php checked( pcm_crm_module_active( $pcm_slug ) ); ?>
 								<?php disabled( (bool) $pcm_missing ); ?> />
-							<?php esc_html_e( 'Enabled', 'pcm-crm' ); ?>
+							<?php esc_html_e( 'Enabled', 'pretty-client-management' ); ?>
 						</label>
 						<p class="description"><?php echo esc_html( $pcm_module['description'] ); ?></p>
 						<?php if ( $pcm_missing ) : ?>
@@ -634,7 +634,7 @@ function pcm_crm_render_modules_tab() {
 								<?php
 								printf(
 									/* translators: %s: comma-separated module names */
-									esc_html__( 'Needs %s switched on first.', 'pcm-crm' ),
+									esc_html__( 'Needs %s switched on first.', 'pretty-client-management' ),
 									esc_html( implode( ', ', $pcm_missing ) )
 								);
 								?>
@@ -645,7 +645,7 @@ function pcm_crm_render_modules_tab() {
 			<?php endforeach; ?>
 		</table>
 
-		<?php submit_button( __( 'Save Modules', 'pcm-crm' ) ); ?>
+		<?php submit_button( __( 'Save Modules', 'pretty-client-management' ) ); ?>
 	</form>
 	<?php
 }
@@ -676,13 +676,13 @@ function pcm_crm_render_sales_process_tab() {
 	?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_sales_process_settings' ); ?>
-		<p class="description"><?php esc_html_e( 'Every deal’s probability follows its stage automatically — a hand-tuned figure on one deal still survives until that deal’s stage changes. These are the shipped defaults; change any of them to match how you actually sell.', 'pcm-crm' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Every deal’s probability follows its stage automatically — a hand-tuned figure on one deal still survives until that deal’s stage changes. These are the shipped defaults; change any of them to match how you actually sell.', 'pretty-client-management' ); ?></p>
 		<table class="widefat striped pcm-setup-table">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'Stage', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Probability', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Forecast Category', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Stage', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Probability', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Forecast Category', 'pretty-client-management' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -691,7 +691,7 @@ function pcm_crm_render_sales_process_tab() {
 						<td>
 							<strong><?php echo esc_html( $pcm_stage['name'] ); ?></strong>
 							<?php if ( ! empty( $pcm_stage['is_closed'] ) ) : ?>
-								<span class="description">— <?php echo $pcm_stage['is_won'] ? esc_html__( 'won', 'pcm-crm' ) : esc_html__( 'lost', 'pcm-crm' ); ?></span>
+								<span class="description">— <?php echo $pcm_stage['is_won'] ? esc_html__( 'won', 'pretty-client-management' ) : esc_html__( 'lost', 'pretty-client-management' ); ?></span>
 							<?php endif; ?>
 						</td>
 						<td>
@@ -713,16 +713,16 @@ function pcm_crm_render_pipeline_tab() {
 	?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_pipeline_settings' ); ?>
-		<h2><?php esc_html_e( 'Stalled deals', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Stalled deals', 'pretty-client-management' ); ?></h2>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="pcm_crm_stall_days"><?php esc_html_e( 'Stalled after', 'pcm-crm' ); ?></label></th>
+				<th scope="row"><label for="pcm_crm_stall_days"><?php esc_html_e( 'Stalled after', 'pretty-client-management' ); ?></label></th>
 				<td>
 					<input type="number" min="1" step="1" class="small-text" id="pcm_crm_stall_days"
 						name="pcm_crm_stall_days" value="<?php echo esc_attr( pcm_crm_stall_days() ); ?>">
-					<?php esc_html_e( 'days in the same stage', 'pcm-crm' ); ?>
+					<?php esc_html_e( 'days in the same stage', 'pretty-client-management' ); ?>
 					<p class="description">
-						<?php esc_html_e( 'How long an open deal may sit in one stage before the board flags it.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'How long an open deal may sit in one stage before the board flags it.', 'pretty-client-management' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -741,7 +741,7 @@ function pcm_crm_handle_test_email() {
 		! isset( $_POST['pcm_crm_test_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_test_nonce'] ), 'pcm_crm_test_email' )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_to = isset( $_POST['pcm_crm_test_to'] ) ? sanitize_email( wp_unslash( $_POST['pcm_crm_test_to'] ) ) : '';
@@ -781,16 +781,16 @@ function pcm_crm_test_email_notice() {
 
 	if ( 'sent' === $pcm_result ) {
 		$pcm_class   = 'notice-success';
-		$pcm_message = __( 'Test email sent.', 'pcm-crm' );
+		$pcm_message = __( 'Test email sent.', 'pretty-client-management' );
 	} elseif ( 'invalid' === $pcm_result ) {
 		$pcm_class   = 'notice-error';
-		$pcm_message = __( 'That is not a valid email address.', 'pcm-crm' );
+		$pcm_message = __( 'That is not a valid email address.', 'pretty-client-management' );
 	} elseif ( ! pcm_crm_autoresponder_enabled() ) {
 		$pcm_class   = 'notice-warning';
-		$pcm_message = __( 'Nothing was sent — the autoresponder is switched off.', 'pcm-crm' );
+		$pcm_message = __( 'Nothing was sent — the autoresponder is switched off.', 'pretty-client-management' );
 	} else {
 		$pcm_class   = 'notice-error';
-		$pcm_message = __( 'The test email could not be sent. Check the site’s mail configuration.', 'pcm-crm' );
+		$pcm_message = __( 'The test email could not be sent. Check the site’s mail configuration.', 'pretty-client-management' );
 	}
 
 	printf( '<div class="notice %s is-dismissible"><p>%s</p></div>', esc_attr( $pcm_class ), esc_html( $pcm_message ) );
@@ -894,17 +894,17 @@ function pcm_crm_render_fields_tab() {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only
 	$pcm_result   = isset( $_GET['pcm_crm_field'] ) ? sanitize_key( wp_unslash( $_GET['pcm_crm_field'] ) ) : '';
 	$pcm_messages = array(
-		'saved'          => array( 'success', __( 'The field was saved.', 'pcm-crm' ) ),
-		'deleted'        => array( 'success', __( 'The field was deleted. Its column and data are kept.', 'pcm-crm' ) ),
-		'label-required' => array( 'error', __( 'Give the field a label.', 'pcm-crm' ) ),
-		'key-taken'      => array( 'error', __( 'A field with that name already exists.', 'pcm-crm' ) ),
+		'saved'          => array( 'success', __( 'The field was saved.', 'pretty-client-management' ) ),
+		'deleted'        => array( 'success', __( 'The field was deleted. Its column and data are kept.', 'pretty-client-management' ) ),
+		'label-required' => array( 'error', __( 'Give the field a label.', 'pretty-client-management' ) ),
+		'key-taken'      => array( 'error', __( 'A field with that name already exists.', 'pretty-client-management' ) ),
 	);
 	?>
 	<?php if ( $pcm_pm_active ) : ?>
 		<div class="pcm-crm-tabs pcm-crm-module-switch">
 			<a class="pcm-crm-tab<?php echo '' === $pcm_module ? ' is-active' : ''; ?>"
 				href="<?php echo esc_url( pcm_crm_setup_url( 'fields' ) ); ?>">
-				<?php esc_html_e( 'CRM', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'CRM', 'pretty-client-management' ); ?>
 			</a>
 			<a class="pcm-crm-tab<?php echo 'pm' === $pcm_module ? ' is-active' : ''; ?>"
 				href="<?php echo esc_url( add_query_arg( 'module', 'pm', pcm_crm_setup_url( 'fields' ) ) ); ?>">
@@ -932,7 +932,7 @@ function pcm_crm_render_fields_tab() {
 		<div class="pcm-crm-object-switch pcm-crm-variant-switch">
 			<a class="pcm-crm-object-pill<?php echo '' === $pcm_variant ? ' is-active' : ''; ?>"
 				href="<?php echo esc_url( add_query_arg( array( 'module' => $pcm_module, 'object' => $pcm_object ), pcm_crm_setup_url( 'fields' ) ) ); ?>">
-				<?php esc_html_e( 'Default', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'Default', 'pretty-client-management' ); ?>
 			</a>
 			<?php foreach ( $pcm_variant_keys as $pcm_key => $pcm_label ) : ?>
 				<a class="pcm-crm-object-pill<?php echo $pcm_key === $pcm_variant ? ' is-active' : ''; ?>"
@@ -942,7 +942,7 @@ function pcm_crm_render_fields_tab() {
 			<?php endforeach; ?>
 		</div>
 		<p class="description">
-			<?php esc_html_e( 'Each project type can carry its own arrangement of fields. One left on Default follows the layout below.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Each project type can carry its own arrangement of fields. One left on Default follows the layout below.', 'pretty-client-management' ); ?>
 		</p>
 	<?php endif; ?>
 
@@ -965,9 +965,9 @@ function pcm_crm_render_fields_tab() {
 		<?php settings_fields( 'pcm_crm_fields_settings' ); ?>
 
 		<div class="pcm-crm-card">
-			<h2><?php esc_html_e( 'Page layout', 'pcm-crm' ); ?></h2>
+			<h2><?php esc_html_e( 'Page layout', 'pretty-client-management' ); ?></h2>
 			<p class="description">
-				<?php esc_html_e( 'Drag a field to move it, within a section or between them. Sections become the headed blocks on the record. Anything left in Available is simply not on the form — the data is still there, and still exported.', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'Drag a field to move it, within a section or between them. Sections become the headed blocks on the record. Anything left in Available is simply not on the form — the data is still there, and still exported.', 'pretty-client-management' ); ?>
 			</p>
 
 			<div class="pcm-crm-layout-editor" data-role="layout" data-object="<?php echo esc_attr( $pcm_object ); ?>" data-option-base="<?php echo esc_attr( $pcm_option_base ); ?>">
@@ -979,13 +979,13 @@ function pcm_crm_render_fields_tab() {
 
 				<div class="pcm-crm-layout-available">
 					<div class="pcm-crm-layout-available-head">
-						<h3><?php esc_html_e( 'Available fields', 'pcm-crm' ); ?></h3>
+						<h3><?php esc_html_e( 'Available fields', 'pretty-client-management' ); ?></h3>
 						<?php if ( $pcm_customisable ) : ?>
-							<button type="button" class="button" data-role="add-custom-field"><?php esc_html_e( 'Add custom field', 'pcm-crm' ); ?></button>
+							<button type="button" class="button" data-role="add-custom-field"><?php esc_html_e( 'Add custom field', 'pretty-client-management' ); ?></button>
 						<?php endif; ?>
 					</div>
 					<p class="description">
-						<?php esc_html_e( 'Drag a field to the page layout section to display it to users.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'Drag a field to the page layout section to display it to users.', 'pretty-client-management' ); ?>
 					</p>
 					<div class="pcm-crm-layout-list" data-role="available">
 						<?php foreach ( pcm_crm_layout_available_fields( $pcm_object, $pcm_variant ) as $pcm_name ) : ?>
@@ -996,11 +996,11 @@ function pcm_crm_render_fields_tab() {
 			</div>
 
 			<p>
-				<button type="button" class="button" data-role="add-section"><?php esc_html_e( 'Add section', 'pcm-crm' ); ?></button>
+				<button type="button" class="button" data-role="add-section"><?php esc_html_e( 'Add section', 'pretty-client-management' ); ?></button>
 			</p>
 		</div>
 
-		<?php submit_button( __( 'Save fields and layout', 'pcm-crm' ) ); ?>
+		<?php submit_button( __( 'Save fields and layout', 'pretty-client-management' ) ); ?>
 	</form>
 
 	<?php if ( $pcm_has_override ) : ?>
@@ -1009,7 +1009,7 @@ function pcm_crm_render_fields_tab() {
 			<input type="hidden" name="object" value="<?php echo esc_attr( $pcm_object ); ?>">
 			<input type="hidden" name="variant" value="<?php echo esc_attr( $pcm_variant ); ?>">
 			<?php wp_nonce_field( 'pcm_crm_delete_layout_variant' ); ?>
-			<button type="submit" class="button-link"><?php esc_html_e( 'Use the default layout instead', 'pcm-crm' ); ?></button>
+			<button type="submit" class="button-link"><?php esc_html_e( 'Use the default layout instead', 'pretty-client-management' ); ?></button>
 		</form>
 	<?php endif; ?>
 
@@ -1036,18 +1036,18 @@ function pcm_crm_render_custom_field_dialog( $pcm_object ) {
 			<input type="hidden" name="existing_key" data-role="custom-field-existing-key" value="">
 			<?php wp_nonce_field( 'pcm_crm_save_custom_field' ); ?>
 
-			<h2 data-role="custom-field-dialog-title"><?php esc_html_e( 'Add custom field', 'pcm-crm' ); ?></h2>
+			<h2 data-role="custom-field-dialog-title"><?php esc_html_e( 'Add custom field', 'pretty-client-management' ); ?></h2>
 
 			<p class="pcm-crm-custom-field-dialog-row">
 				<label>
-					<span class="description"><?php esc_html_e( 'Label', 'pcm-crm' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Label', 'pretty-client-management' ); ?></span>
 					<input type="text" name="label" data-role="custom-field-label" class="regular-text" required>
 				</label>
 			</p>
 
 			<p class="pcm-crm-custom-field-dialog-row">
 				<label>
-					<span class="description"><?php esc_html_e( 'Type', 'pcm-crm' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Type', 'pretty-client-management' ); ?></span>
 					<select name="type" data-role="custom-field-type">
 						<?php foreach ( pcm_crm_custom_field_types() as $pcm_value => $pcm_meta ) : ?>
 							<option value="<?php echo esc_attr( $pcm_value ); ?>"><?php echo esc_html( $pcm_meta['label'] ); ?></option>
@@ -1059,14 +1059,14 @@ function pcm_crm_render_custom_field_dialog( $pcm_object ) {
 
 			<p class="pcm-crm-custom-field-dialog-row" data-role="custom-field-options-row" hidden>
 				<label>
-					<span class="description"><?php esc_html_e( 'Picklist values, one per line', 'pcm-crm' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Picklist values, one per line', 'pretty-client-management' ); ?></span>
 					<textarea name="options" data-role="custom-field-options" rows="4"></textarea>
 				</label>
 			</p>
 
 			<p class="pcm-crm-custom-field-dialog-row" data-role="custom-field-related-row" hidden>
 				<label>
-					<span class="description"><?php esc_html_e( 'Points at', 'pcm-crm' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Points at', 'pretty-client-management' ); ?></span>
 					<select name="related" data-role="custom-field-related">
 						<?php foreach ( pcm_crm_customisable_objects() as $pcm_slug => $pcm_label ) : ?>
 							<option value="<?php echo esc_attr( $pcm_slug ); ?>"><?php echo esc_html( $pcm_label ); ?></option>
@@ -1076,8 +1076,8 @@ function pcm_crm_render_custom_field_dialog( $pcm_object ) {
 			</p>
 
 			<p class="pcm-crm-custom-field-dialog-actions">
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Save', 'pcm-crm' ); ?></button>
-				<button type="button" class="button" data-role="custom-field-cancel"><?php esc_html_e( 'Cancel', 'pcm-crm' ); ?></button>
+				<button type="submit" class="button button-primary"><?php esc_html_e( 'Save', 'pretty-client-management' ); ?></button>
+				<button type="button" class="button" data-role="custom-field-cancel"><?php esc_html_e( 'Cancel', 'pretty-client-management' ); ?></button>
 			</p>
 		</form>
 	</dialog>
@@ -1099,9 +1099,9 @@ function pcm_crm_render_layout_section( $pcm_option_base, $pcm_object, $pcm_mode
 		<div class="pcm-crm-layout-section-head">
 			<input type="text" name="<?php echo esc_attr( $pcm_name ); ?>[title]"
 				value="<?php echo esc_attr( isset( $pcm_section['title'] ) ? $pcm_section['title'] : '' ); ?>"
-				placeholder="<?php esc_attr_e( 'Section heading (optional)', 'pcm-crm' ); ?>">
+				placeholder="<?php esc_attr_e( 'Section heading (optional)', 'pretty-client-management' ); ?>">
 			<button type="button" class="button-link pcm-crm-field-remove" data-role="remove-section"
-				aria-label="<?php esc_attr_e( 'Remove section', 'pcm-crm' ); ?>">&times;</button>
+				aria-label="<?php esc_attr_e( 'Remove section', 'pretty-client-management' ); ?>">&times;</button>
 		</div>
 
 		<div class="pcm-crm-layout-list" data-role="section-fields" data-name="<?php echo esc_attr( $pcm_name ); ?>[fields][]">
@@ -1148,10 +1148,10 @@ function pcm_crm_render_layout_chip( $pcm_object, $pcm_model, $pcm_name, $pcm_pl
 		<?php echo $pcm_is_custom ? 'data-custom="' . esc_attr( wp_json_encode( $pcm_custom_field ) ) . '"' : ''; ?>>
 		<span class="pcm-crm-layout-chip-label"><?php echo esc_html( $pcm_label ); ?></span>
 		<?php if ( $pcm_is_custom ) : ?>
-			<span class="pcm-crm-layout-chip-tag"><?php esc_html_e( 'custom', 'pcm-crm' ); ?></span>
+			<span class="pcm-crm-layout-chip-tag"><?php esc_html_e( 'custom', 'pretty-client-management' ); ?></span>
 			<span class="pcm-crm-layout-chip-actions">
-				<button type="button" class="button-link" data-role="edit-custom-field"><?php esc_html_e( 'Edit', 'pcm-crm' ); ?></button>
-				<button type="button" class="button-link pcm-crm-field-remove" data-role="delete-custom-field"><?php esc_html_e( 'Delete', 'pcm-crm' ); ?></button>
+				<button type="button" class="button-link" data-role="edit-custom-field"><?php esc_html_e( 'Edit', 'pretty-client-management' ); ?></button>
+				<button type="button" class="button-link pcm-crm-field-remove" data-role="delete-custom-field"><?php esc_html_e( 'Delete', 'pretty-client-management' ); ?></button>
 			</span>
 		<?php endif; ?>
 		<?php if ( $pcm_placed ) : ?>
@@ -1173,11 +1173,11 @@ function pcm_crm_render_samples_tab() {
 	// here; everything else — the Projects module's tables — reads its plural
 	// label straight from pcm_crm_register_object() rather than duplicating it.
 	$pcm_labels  = array(
-		'accounts'      => __( 'Accounts', 'pcm-crm' ),
-		'contacts'      => __( 'Contacts', 'pcm-crm' ),
-		'opportunities' => __( 'Opportunities', 'pcm-crm' ),
-		'activities'    => __( 'Activities', 'pcm-crm' ),
-		'history'       => __( 'Stage history', 'pcm-crm' ),
+		'accounts'      => __( 'Accounts', 'pretty-client-management' ),
+		'contacts'      => __( 'Contacts', 'pretty-client-management' ),
+		'opportunities' => __( 'Opportunities', 'pretty-client-management' ),
+		'activities'    => __( 'Activities', 'pretty-client-management' ),
+		'history'       => __( 'Stage history', 'pretty-client-management' ),
 	);
 	foreach ( array_keys( $pcm_counts ) as $pcm_key ) {
 		if ( isset( $pcm_labels[ $pcm_key ] ) ) {
@@ -1192,18 +1192,18 @@ function pcm_crm_render_samples_tab() {
 	}
 	?>
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'What is in the database', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'What is in the database', 'pretty-client-management' ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'Every sample record carries a flag of its own, so the two sets never have to be told apart by eye. You can filter on “Test Data” anywhere the filter builder appears.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Every sample record carries a flag of its own, so the two sets never have to be told apart by eye. You can filter on “Test Data” anywhere the filter builder appears.', 'pretty-client-management' ); ?>
 		</p>
 
 		<table class="pcm-crm-table pcm-crm-export-table">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'Object', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Live', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'Sample', 'pcm-crm' ); ?></th>
-					<th><?php esc_html_e( 'In the bin', 'pcm-crm' ); ?></th>
+					<th><?php esc_html_e( 'Object', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Live', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'Sample', 'pretty-client-management' ); ?></th>
+					<th><?php esc_html_e( 'In the bin', 'pretty-client-management' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -1230,8 +1230,8 @@ function pcm_crm_render_samples_tab() {
 			<?php
 			printf(
 				/* translators: %s: link to the Recycle Bin screen */
-				esc_html__( 'Deleting a record marks it deleted rather than removing the row. Those are counted separately because they are not live data — and they can be restored or removed for good in the %s.', 'pcm-crm' ),
-				'<a href="' . esc_url( admin_url( 'admin.php?page=pcm-crm-recycle-bin' ) ) . '">' . esc_html__( 'Recycle Bin', 'pcm-crm' ) . '</a>'
+				esc_html__( 'Deleting a record marks it deleted rather than removing the row. Those are counted separately because they are not live data — and they can be restored or removed for good in the %s.', 'pretty-client-management' ),
+				'<a href="' . esc_url( admin_url( 'admin.php?page=pcm-crm-recycle-bin' ) ) . '">' . esc_html__( 'Recycle Bin', 'pretty-client-management' ) . '</a>'
 			);
 			?>
 		</p>
@@ -1239,12 +1239,12 @@ function pcm_crm_render_samples_tab() {
 
 	<?php if ( ! empty( $pcm_counts['history']['orphans'] ) ) : ?>
 		<div class="pcm-crm-card pcm-crm-card-accent">
-			<h2><?php esc_html_e( 'Orphaned stage history', 'pcm-crm' ); ?></h2>
+			<h2><?php esc_html_e( 'Orphaned stage history', 'pretty-client-management' ); ?></h2>
 			<p class="description">
 				<?php
 				printf(
 					/* translators: %s: number of rows */
-					esc_html__( 'There are %s stage history rows whose opportunity no longer exists — left behind by a sample set removed before this was cleaned up automatically. They are not harmless: the conversion figures count deals per stage straight out of that table, so these inflate every rate they appear in.', 'pcm-crm' ),
+					esc_html__( 'There are %s stage history rows whose opportunity no longer exists — left behind by a sample set removed before this was cleaned up automatically. They are not harmless: the conversion figures count deals per stage straight out of that table, so these inflate every rate they appear in.', 'pretty-client-management' ),
 					esc_html( number_format_i18n( $pcm_counts['history']['orphans'] ) )
 				);
 				?>
@@ -1254,27 +1254,27 @@ function pcm_crm_render_samples_tab() {
 				<input type="hidden" name="action" value="pcm_crm_samples">
 				<input type="hidden" name="task" value="orphans">
 				<?php wp_nonce_field( 'pcm_crm_samples', 'pcm_crm_samples_nonce' ); ?>
-				<?php submit_button( __( 'Remove orphaned history', 'pcm-crm' ), 'primary', 'submit', false ); ?>
+				<?php submit_button( __( 'Remove orphaned history', 'pretty-client-management' ), 'primary', 'submit', false ); ?>
 			</form>
 		</div>
 	<?php endif; ?>
 
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Create sample data', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Create sample data', 'pretty-client-management' ); ?></h2>
 
 		<?php if ( $pcm_allowed ) : ?>
 			<p class="description">
-				<?php esc_html_e( 'Around 28 accounts, 70 contacts, 80 opportunities with real stage histories, and several hundred activities — enough for the filters, the pipeline board and the dashboard to have something to show. Dates are relative to today, so the charts fill either way.', 'pcm-crm' ); ?>
+				<?php esc_html_e( 'Around 28 accounts, 70 contacts, 80 opportunities with real stage histories, and several hundred activities — enough for the filters, the pipeline board and the dashboard to have something to show. Dates are relative to today, so the charts fill either way.', 'pretty-client-management' ); ?>
 			</p>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="pcm_crm_samples">
 				<input type="hidden" name="task" value="create">
 				<?php wp_nonce_field( 'pcm_crm_samples', 'pcm_crm_samples_nonce' ); ?>
-				<?php submit_button( __( 'Create sample data', 'pcm-crm' ), 'primary', 'submit', false ); ?>
+				<?php submit_button( __( 'Create sample data', 'pretty-client-management' ), 'primary', 'submit', false ); ?>
 				<?php if ( pcm_crm_has_sample_data() ) : ?>
 					<span class="description" style="margin-left:10px">
-						<?php esc_html_e( 'Sample data already exists — this would add a second set. Remove the first below.', 'pcm-crm' ); ?>
+						<?php esc_html_e( 'Sample data already exists — this would add a second set. Remove the first below.', 'pretty-client-management' ); ?>
 					</span>
 				<?php endif; ?>
 			</form>
@@ -1283,7 +1283,7 @@ function pcm_crm_render_samples_tab() {
 				<?php
 				printf(
 					/* translators: %s: the site's host name */
-					esc_html__( 'This looks like production (%s), so sample data cannot be created here. Removing it is always allowed. Define PCM_CRM_ALLOW_SEED in wp-config.php if this really is a test site.', 'pcm-crm' ),
+					esc_html__( 'This looks like production (%s), so sample data cannot be created here. Removing it is always allowed. Define PCM_CRM_ALLOW_SEED in wp-config.php if this really is a test site.', 'pretty-client-management' ),
 					esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) )
 				);
 				?>
@@ -1292,31 +1292,31 @@ function pcm_crm_render_samples_tab() {
 	</div>
 
 	<div class="pcm-crm-card pcm-crm-card-accent">
-		<h2><?php esc_html_e( 'Remove sample data', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Remove sample data', 'pretty-client-management' ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'Deletes every record flagged as a sample, permanently and without the recycle bin. Scoped entirely by that flag, so a real record entered alongside them is never in range however much it resembles one.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'Deletes every record flagged as a sample, permanently and without the recycle bin. Scoped entirely by that flag, so a real record entered alongside them is never in range however much it resembles one.', 'pretty-client-management' ); ?>
 		</p>
 
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
-			onsubmit="return confirm('<?php echo esc_js( __( 'Permanently delete every sample record? Real records are not touched.', 'pcm-crm' ) ); ?>');">
+			onsubmit="return confirm('<?php echo esc_js( __( 'Permanently delete every sample record? Real records are not touched.', 'pretty-client-management' ) ); ?>');">
 			<input type="hidden" name="action" value="pcm_crm_samples">
 			<input type="hidden" name="task" value="delete">
 			<?php wp_nonce_field( 'pcm_crm_samples', 'pcm_crm_samples_nonce' ); ?>
-			<?php submit_button( __( 'Delete sample data', 'pcm-crm' ), 'delete', 'submit', false ); ?>
+			<?php submit_button( __( 'Delete sample data', 'pretty-client-management' ), 'delete', 'submit', false ); ?>
 		</form>
 	</div>
 
 	<div class="pcm-crm-card">
-		<h2><?php esc_html_e( 'Shipped templates and sequence', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Shipped templates and sequence', 'pretty-client-management' ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'The plugin comes with a handful of outreach templates and a three-step sequence for a new inbound lead. They are ordinary records — edit or delete them freely. Reinstalling only creates what is missing, matched by name, so anything you have renamed or rewritten is left alone.', 'pcm-crm' ); ?>
+			<?php esc_html_e( 'The plugin comes with a handful of outreach templates and a three-step sequence for a new inbound lead. They are ordinary records — edit or delete them freely. Reinstalling only creates what is missing, matched by name, so anything you have renamed or rewritten is left alone.', 'pretty-client-management' ); ?>
 		</p>
 
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="pcm_crm_samples">
 			<input type="hidden" name="task" value="content">
 			<?php wp_nonce_field( 'pcm_crm_samples', 'pcm_crm_samples_nonce' ); ?>
-			<?php submit_button( __( 'Install anything missing', 'pcm-crm' ), 'secondary', 'submit', false ); ?>
+			<?php submit_button( __( 'Install anything missing', 'pretty-client-management' ), 'secondary', 'submit', false ); ?>
 		</form>
 	</div>
 	<?php
@@ -1331,7 +1331,7 @@ function pcm_crm_handle_samples() {
 		! isset( $_POST['pcm_crm_samples_nonce'] ) ||
 		! wp_verify_nonce( sanitize_key( $_POST['pcm_crm_samples_nonce'] ), 'pcm_crm_samples' )
 	) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	$pcm_task = isset( $_POST['task'] ) ? sanitize_key( wp_unslash( $_POST['task'] ) ) : '';
@@ -1388,11 +1388,11 @@ function pcm_crm_samples_notice() {
 	$pcm_count = isset( $_GET['count'] ) ? absint( $_GET['count'] ) : 0;
 
 	$pcm_messages = array(
-		'created' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Created %d sample records.', 'pcm-crm' ), $pcm_count ) ),
-		'deleted' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Removed %d sample records.', 'pcm-crm' ), $pcm_count ) ),
-		'content' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Installed %d templates and sequences. Anything already present was left alone.', 'pcm-crm' ), $pcm_count ) ),
-		'orphans' => array( 'notice-success', sprintf( /* translators: %d: row count */ __( 'Removed %d orphaned stage history rows. The conversion figures will read correctly now.', 'pcm-crm' ), $pcm_count ) ),
-		'refused' => array( 'notice-error', __( 'Sample data cannot be created on this site.', 'pcm-crm' ) ),
+		'created' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Created %d sample records.', 'pretty-client-management' ), $pcm_count ) ),
+		'deleted' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Removed %d sample records.', 'pretty-client-management' ), $pcm_count ) ),
+		'content' => array( 'notice-success', sprintf( /* translators: %d: record count */ __( 'Installed %d templates and sequences. Anything already present was left alone.', 'pretty-client-management' ), $pcm_count ) ),
+		'orphans' => array( 'notice-success', sprintf( /* translators: %d: row count */ __( 'Removed %d orphaned stage history rows. The conversion figures will read correctly now.', 'pretty-client-management' ), $pcm_count ) ),
+		'refused' => array( 'notice-error', __( 'Sample data cannot be created on this site.', 'pretty-client-management' ) ),
 	);
 
 	if ( ! isset( $pcm_messages[ $pcm_result ] ) ) {
@@ -1417,7 +1417,7 @@ function pcm_crm_render_theme_tab() {
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_theme_settings' ); ?>
 
-		<h2><?php esc_html_e( 'Theme', 'pcm-crm' ); ?></h2>
+		<h2><?php esc_html_e( 'Theme', 'pretty-client-management' ); ?></h2>
 
 		<div class="pcm-crm-theme-grid">
 			<?php foreach ( pcm_crm_styles() as $pcm_slug => $pcm_style ) : ?>
@@ -1433,7 +1433,7 @@ function pcm_crm_render_theme_tab() {
 			<?php endforeach; ?>
 		</div>
 
-		<?php submit_button( __( 'Save theme', 'pcm-crm' ) ); ?>
+		<?php submit_button( __( 'Save theme', 'pretty-client-management' ) ); ?>
 	</form>
 	<?php
 }

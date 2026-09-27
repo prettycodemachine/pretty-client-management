@@ -1,13 +1,14 @@
 <?php
 /**
  * Plugin Name: Pretty Client Management
- * Plugin URI:  https://prettycodemachine.com
+ * Plugin URI:  https://prettyclientmanagement.com
  * Description: Pretty Client Management (PCM) is a customizable CRM featuring a powerful Project Management module designed for your growing agency. Includes a pretty client portal your clients will love!
  * Version:     1.2.22
  * Author:      Pretty Code Machine
  * Author URI:  https://prettycodemachine.com
  * License:     GPL-2.0-or-later
- * Text Domain: pcm-crm
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: pretty-client-management
  * Requires at least: 6.0
  * Requires PHP: 7.4
  */

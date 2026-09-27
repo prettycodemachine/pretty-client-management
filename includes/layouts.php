@@ -199,7 +199,7 @@ function pcm_crm_append_unplaced( $pcm_object, array $pcm_layout ) {
 	}
 
 	if ( $pcm_missing ) {
-		$pcm_layout[] = array( 'title' => __( 'Custom fields', 'pcm-crm' ), 'fields' => $pcm_missing );
+		$pcm_layout[] = array( 'title' => __( 'Custom fields', 'pretty-client-management' ), 'fields' => $pcm_missing );
 	}
 
 	return $pcm_layout;
@@ -380,7 +380,7 @@ function pcm_crm_sanitize_layout_variants( $pcm_value ) {
  */
 function pcm_crm_handle_delete_layout_variant() {
 	if ( ! pcm_crm_can( 'settings', 'edit' ) ) {
-		wp_die( esc_html__( 'You are not allowed to do that.', 'pcm-crm' ), 403 );
+		wp_die( esc_html__( 'You are not allowed to do that.', 'pretty-client-management' ), 403 );
 	}
 
 	check_admin_referer( 'pcm_crm_delete_layout_variant' );

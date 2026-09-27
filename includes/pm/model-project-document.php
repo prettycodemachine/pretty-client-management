@@ -54,11 +54,11 @@ function pcm_crm_pm_validate_document( $pcm_error, $pcm_object, $pcm_row, $pcm_i
 	$pcm_merged   = array_merge( is_array( $pcm_existing ) ? $pcm_existing : array(), $pcm_row );
 
 	if ( empty( $pcm_merged['project_id'] ) ) {
-		return new WP_Error( 'pcm_crm_document_no_project', __( 'A document has to belong to a project.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_document_no_project', __( 'A document has to belong to a project.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	if ( empty( $pcm_merged['attachment_id'] ) || ! get_post( $pcm_merged['attachment_id'] ) ) {
-		return new WP_Error( 'pcm_crm_document_missing_file', __( 'Choose a file first.', 'pcm-crm' ), array( 'status' => 400 ) );
+		return new WP_Error( 'pcm_crm_document_missing_file', __( 'Choose a file first.', 'pretty-client-management' ), array( 'status' => 400 ) );
 	}
 
 	return $pcm_error;

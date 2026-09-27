@@ -158,7 +158,7 @@ function pcm_crm_prune_admin_bar( $pcm_bar ) {
 
 	$pcm_bar->add_node( array(
 		'id'    => 'pcm-crm-front',
-		'title' => __( 'Employee Portal', 'pcm-crm' ),
+		'title' => __( 'Employee Portal', 'pretty-client-management' ),
 		'href'  => pcm_crm_front_base_url(),
 	) );
 }

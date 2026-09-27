@@ -72,19 +72,19 @@ function pcm_crm_render_user_access_section( $pcm_user_id = 0 ) {
 	?>
 	<table class="form-table" role="presentation" id="pcm-crm-user-access-row" data-staff-role="<?php echo esc_attr( PCM_CRM_STAFF_ROLE ); ?>" <?php echo $pcm_is_staff ? '' : 'hidden'; ?>>
 		<tr>
-			<th scope="row"><?php esc_html_e( 'CRM Access', 'pcm-crm' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'CRM Access', 'pretty-client-management' ); ?></th>
 			<td>
 				<p id="pcm-crm-user-access-summary"></p>
-				<button type="button" class="button" id="pcm-crm-user-access-open"><?php esc_html_e( 'Choose CRM Access', 'pcm-crm' ); ?></button>
+				<button type="button" class="button" id="pcm-crm-user-access-open"><?php esc_html_e( 'Choose CRM Access', 'pretty-client-management' ); ?></button>
 			</td>
 		</tr>
 	</table>
 
 	<dialog id="pcm-crm-user-access-dialog">
-		<h2><?php esc_html_e( 'CRM Access', 'pcm-crm' ); ?></h2>
-		<p class="description"><?php esc_html_e( 'What this person can reach once they sign in as staff.', 'pcm-crm' ); ?></p>
+		<h2><?php esc_html_e( 'CRM Access', 'pretty-client-management' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'What this person can reach once they sign in as staff.', 'pretty-client-management' ); ?></p>
 		<?php pcm_crm_render_access_fields( $pcm_profile_key, $pcm_set_keys ); ?>
-		<button type="button" class="button button-primary" id="pcm-crm-user-access-done"><?php esc_html_e( 'Done', 'pcm-crm' ); ?></button>
+		<button type="button" class="button button-primary" id="pcm-crm-user-access-done"><?php esc_html_e( 'Done', 'pretty-client-management' ); ?></button>
 	</dialog>
 	<?php
 }

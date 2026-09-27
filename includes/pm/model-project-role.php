@@ -88,7 +88,7 @@ function pcm_crm_pm_validate_role( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) 
 	if ( ! isset( pcm_crm_pm_party_types()[ $pcm_party ] ) ) {
 		return new WP_Error(
 			'pcm_crm_pm_unknown_party',
-			__( 'Say whether this person is internal, a partner, or on the client side.', 'pcm-crm' ),
+			__( 'Say whether this person is internal, a partner, or on the client side.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -96,7 +96,7 @@ function pcm_crm_pm_validate_role( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) 
 	if ( 'internal' === $pcm_party && empty( $pcm_merged['user_id'] ) ) {
 		return new WP_Error(
 			'pcm_crm_pm_no_user',
-			__( 'An internal role needs a team member: they log time against the project and appear on the resourcing board.', 'pcm-crm' ),
+			__( 'An internal role needs a team member: they log time against the project and appear on the resourcing board.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -104,7 +104,7 @@ function pcm_crm_pm_validate_role( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) 
 	if ( 'client' === $pcm_party && empty( $pcm_merged['contact_id'] ) ) {
 		return new WP_Error(
 			'pcm_crm_pm_no_contact',
-			__( 'A client role needs a contact — that is who a status report goes to.', 'pcm-crm' ),
+			__( 'A client role needs a contact — that is who a status report goes to.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -114,7 +114,7 @@ function pcm_crm_pm_validate_role( $pcm_error, $pcm_object, $pcm_row, $pcm_id ) 
 	if ( 'partner' === $pcm_party && empty( $pcm_merged['contact_id'] ) && empty( $pcm_merged['partner_account_id'] ) ) {
 		return new WP_Error(
 			'pcm_crm_pm_no_partner',
-			__( 'A partner role needs either a contact or the partner firm.', 'pcm-crm' ),
+			__( 'A partner role needs either a contact or the partner firm.', 'pretty-client-management' ),
 			array( 'status' => 400 )
 		);
 	}
