@@ -625,7 +625,9 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 		</div>
 	<?php endif; ?>
 
-	<script>
+	<?php
+	wp_print_inline_script_tag(
+		<<<'JS'
 	( function () {
 		var table = document.querySelector( '[data-role="stages"] tbody' );
 		var template = document.querySelector( '[data-role="stage-template"]' );
@@ -663,8 +665,8 @@ function pcm_crm_pm_render_type_form( $pcm_key, $pcm_post = null ) {
 			button.focus();
 		} );
 	} )();
-	</script>
-	<?php
+JS
+	);
 }
 
 function pcm_crm_pm_render_stage_row( $pcm_i, array $pcm_stage, $pcm_count ) {

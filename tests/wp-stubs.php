@@ -388,6 +388,8 @@ function wp_get_attachment_image_src() { return false; }
 function get_current_screen() { return null; }
 function wp_enqueue_style() {}
 function wp_dequeue_style() {} function wp_dequeue_script() {}
+function wp_register_style() {} function wp_add_inline_style() {}
+function wp_print_inline_script_tag( $pcm_js ) { echo "<script>$pcm_js</script>\n"; }
 
 /**
  * Script handles, recorded in order, so a test can assert which screens load

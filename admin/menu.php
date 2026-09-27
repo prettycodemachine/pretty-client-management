@@ -117,15 +117,19 @@ add_action( 'admin_menu', 'pcm_crm_menu' );
  */
 function pcm_crm_hide_setup_submenu_items() {
 	$pcm_slugs = array( 'pcm-crm-templates', 'pcm-crm-sequences', 'pcm-crm-schedules', 'pcm-crm-recycle-bin' );
-	?>
-	<style>
-		<?php foreach ( $pcm_slugs as $pcm_slug ) : ?>
-		#adminmenu li:has(> a[href*="page=<?php echo esc_attr( $pcm_slug ); ?>"]) { display: none; }
-		<?php endforeach; ?>
-	</style>
-	<?php
+	$pcm_css   = '';
+
+	foreach ( $pcm_slugs as $pcm_slug ) {
+		$pcm_css .= '#adminmenu li:has(> a[href*="page=' . $pcm_slug . '"]) { display: none; }' . "\n";
+	}
+
+	// A handle with no file of its own, so the rules ride WordPress's own
+	// inline-style output on every admin page rather than a raw <style> tag.
+	wp_register_style( 'pcm-crm-admin-menu', false, array(), PCM_CRM_VERSION );
+	wp_enqueue_style( 'pcm-crm-admin-menu' );
+	wp_add_inline_style( 'pcm-crm-admin-menu', $pcm_css );
 }
-add_action( 'admin_head', 'pcm_crm_hide_setup_submenu_items' );
+add_action( 'admin_enqueue_scripts', 'pcm_crm_hide_setup_submenu_items' );
 
 /**
  * Is the current screen one of ours?

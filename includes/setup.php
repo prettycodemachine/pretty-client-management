@@ -379,7 +379,9 @@ function pcm_crm_setup_close() {
 			</div>
 		</div>
 	</div>
-	<script>
+	<?php
+	wp_print_inline_script_tag(
+		<<<'JS'
 	( function () {
 		// Quick find: hide nav links that do not match, and groups left empty.
 		var nav = document.querySelector( '.pcm-setup-nav' );
@@ -398,8 +400,8 @@ function pcm_crm_setup_close() {
 			} );
 		} );
 	} )();
-	</script>
-	<?php
+JS
+	);
 }
 
 /**

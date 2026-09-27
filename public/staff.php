@@ -248,7 +248,7 @@ function pcm_crm_front_ajaxurl() {
 		return;
 	}
 
-	printf( "<script>window.ajaxurl = %s;</script>\n", wp_json_encode( admin_url( 'admin-ajax.php' ) ) );
+	wp_print_inline_script_tag( 'window.ajaxurl = ' . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ';' );
 }
 add_action( 'wp_head', 'pcm_crm_front_ajaxurl' );
 
