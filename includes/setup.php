@@ -311,7 +311,7 @@ function pcm_crm_setup_open( $pcm_key ) {
 	$pcm_title  = $pcm_page ? $pcm_page['label'] : __( 'PCM Settings', 'pcm-crm' );
 	$pcm_host   = pcm_crm_is_front_request() ? 'front' : 'admin';
 	?>
-	<div class="<?php echo esc_attr( ( pcm_crm_wants_wrap( $pcm_host ) ? 'wrap ' : '' ) . 'pcm-crm pcm-setup' ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
+	<div class="<?php echo esc_attr( ( pcm_crm_wants_wrap( $pcm_host ) ? 'wrap ' : '' ) . 'pcm-crm pcm-setup' ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>" data-style="<?php echo esc_attr( pcm_crm_style() ); ?>">
 		<header class="pcm-setup-band">
 			<div class="pcm-setup-brand">
 				<span class="pcm-setup-mark">
@@ -579,7 +579,7 @@ pcm_crm_register_setup_page( 'recycle', array(
 pcm_crm_register_setup_page( 'theme', array(
 	'group'       => 'platform',
 	'label'       => __( 'Theme', 'pcm-crm' ),
-	'description' => __( 'The palette every screen and chart is drawn in.', 'pcm-crm' ),
+	'description' => __( 'The style every screen is drawn in, for everyone using the site.', 'pcm-crm' ),
 	'render'      => 'pcm_crm_render_theme_tab',
 	'order'       => 10,
 ) );

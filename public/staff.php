@@ -379,6 +379,7 @@ function pcm_crm_front_nav() {
 				<?php endif; ?>
 			</span>
 			<div class="pcm-crm-front-account">
+				<?php pcm_crm_color_mode_toggle(); ?>
 				<a class="pcm-crm-front-account-name" href="<?php echo esc_url( pcm_crm_front_base_url() . 'profile/' ); ?>">
 					<?php echo esc_html( pcm_crm_user_label( $pcm_user ) ); ?>
 				</a>

@@ -74,10 +74,13 @@ function pcm_crm_register_settings() {
 		'default'           => array(),
 	) );
 
-	pcm_crm_register_setting( 'pcm_crm_theme_settings', 'pcm_crm_theme', array(
+	// The style is the Theme tab's only setting. Light or dark is each
+	// person's own choice (pcm_crm_color_mode(), includes/themes.php), so the
+	// old site-wide pcm_crm_theme option is no longer read or offered.
+	pcm_crm_register_setting( 'pcm_crm_theme_settings', 'pcm_crm_style', array(
 		'type'              => 'string',
-		'sanitize_callback' => 'pcm_crm_sanitize_theme',
-		'default'           => 'pcm',
+		'sanitize_callback' => 'pcm_crm_sanitize_style',
+		'default'           => 'modern',
 	) );
 
 	pcm_crm_register_setting( 'pcm_crm_modules_settings', PCM_CRM_MODULES_OPTION, array(
@@ -1409,32 +1412,23 @@ add_action( 'admin_notices', 'pcm_crm_samples_notice' );
    --------------------------------------------------------------------------- */
 
 function pcm_crm_render_theme_tab() {
-	$pcm_current = pcm_crm_theme();
+	$pcm_current_style = pcm_crm_style();
 	?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>" class="pcm-crm-card">
 		<?php settings_fields( 'pcm_crm_theme_settings' ); ?>
 
 		<h2><?php esc_html_e( 'Theme', 'pcm-crm' ); ?></h2>
-		<p class="description">
-			<?php esc_html_e( 'Applies to every CRM screen, for everyone using the site. Each one is a palette rather than a different layout, so nothing moves — the charts follow along, and a printed page is always on white paper whichever you pick.', 'pcm-crm' ); ?>
-		</p>
 
 		<div class="pcm-crm-theme-grid">
-			<?php foreach ( pcm_crm_themes() as $pcm_slug => $pcm_theme ) : ?>
-				<label class="pcm-crm-theme<?php echo $pcm_slug === $pcm_current ? ' is-chosen' : ''; ?>">
+			<?php foreach ( pcm_crm_styles() as $pcm_slug => $pcm_style ) : ?>
+				<label class="pcm-crm-theme<?php echo $pcm_slug === $pcm_current_style ? ' is-chosen' : ''; ?>">
 					<div class="pcm-crm-theme-head">
-						<input type="radio" name="pcm_crm_theme" value="<?php echo esc_attr( $pcm_slug ); ?>"
-							<?php checked( $pcm_slug, $pcm_current ); ?>>
-						<span class="pcm-crm-theme-name"><?php echo esc_html( $pcm_theme['label'] ); ?></span>
+						<input type="radio" name="pcm_crm_style" value="<?php echo esc_attr( $pcm_slug ); ?>"
+							<?php checked( $pcm_slug, $pcm_current_style ); ?>>
+						<span class="pcm-crm-theme-name"><?php echo esc_html( $pcm_style['label'] ); ?></span>
 					</div>
 
-					<div class="pcm-crm-theme-swatch">
-						<?php foreach ( $pcm_theme['swatch'] as $pcm_color ) : ?>
-							<span style="background: <?php echo esc_attr( $pcm_color ); ?>"></span>
-						<?php endforeach; ?>
-					</div>
-
-					<div class="pcm-crm-theme-note"><?php echo esc_html( $pcm_theme['description'] ); ?></div>
+					<div class="pcm-crm-theme-note"><?php echo esc_html( $pcm_style['description'] ); ?></div>
 				</label>
 			<?php endforeach; ?>
 		</div>

@@ -158,11 +158,12 @@ function pcm_crm_is_crm_screen( $pcm_hook = '' ) {
  * the server, so only the front end ever has one to pass).
  */
 function pcm_crm_enqueue_app( $pcm_host, array $pcm_args = array() ) {
-	// Same two faces as the site, so the CRM reads as the same product. The
-	// display face is only used for headings, hence the two weights.
+	// Baloo 2 and Nunito Sans are the site's own faces, which the Classic style
+	// wears so the CRM reads as the same product; Inter is the Modern style's
+	// one face (pcm_crm_style(), assets/crm.css).
 	wp_enqueue_style(
 		'pcm-crm-fonts',
-		'https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&display=swap',
+		'https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Nunito+Sans:wght@400;600;700&display=swap',
 		array(),
 		null
 	);
@@ -180,6 +181,12 @@ function pcm_crm_enqueue_app( $pcm_host, array $pcm_args = array() ) {
 	if ( 'front' === $pcm_host ) {
 		wp_enqueue_style( 'dashicons' );
 	}
+
+	// The light/dark switch (pcm_crm_color_mode_toggle()) is on every screen,
+	// PCM Settings included, so its script loads ahead of the no_app return.
+	// Standalone and data-free — it reads everything off the form it drives —
+	// so it has nothing for Speed Optimizer's combining to break.
+	wp_enqueue_script( 'pcm-crm-color-mode', pcm_crm_asset( 'color-mode.js' ), array(), null, true );
 
 	if ( ! empty( $pcm_args['no_app'] ) ) {
 		return;
@@ -319,7 +326,7 @@ function pcm_crm_screen( $pcm_view, $pcm_title, $pcm_subtitle = '', array $pcm_a
 		pcm_crm_setup_open( $pcm_setup );
 	}
 	?>
-	<div class="<?php echo esc_attr( pcm_crm_shell_class( $pcm_host, $pcm_setup ) ); ?>" data-view="<?php echo esc_attr( $pcm_view ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>" data-host="<?php echo esc_attr( $pcm_host ); ?>">
+	<div class="<?php echo esc_attr( pcm_crm_shell_class( $pcm_host, $pcm_setup ) ); ?>" data-view="<?php echo esc_attr( $pcm_view ); ?>" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>" data-style="<?php echo esc_attr( pcm_crm_style() ); ?>" data-host="<?php echo esc_attr( $pcm_host ); ?>">
 		<?php if ( ! $pcm_setup ) : ?>
 			<?php pcm_crm_app_bar( $pcm_view, isset( $pcm_args['app'] ) ? $pcm_args['app'] : 'crm', $pcm_host ); ?>
 		<?php endif; ?>
@@ -442,6 +449,13 @@ function pcm_crm_app_bar( $pcm_view, $pcm_app, $pcm_host = '' ) {
 				<?php esc_html_e( 'PCM Settings', 'pcm-crm' ); ?>
 			</a>
 		<?php endif; ?>
+		<?php
+		// On the front end the switch lives in the brand bar above, which is on
+		// every screen there; wp-admin has no bar of ours but this one.
+		if ( 'admin' === $pcm_host ) {
+			pcm_crm_color_mode_toggle();
+		}
+		?>
 	</nav>
 	<?php
 }

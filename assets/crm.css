@@ -26,6 +26,10 @@
   --pcm-gray-light: #e4e4e4;
   --pcm-line: rgba(42, 42, 46, 0.12);
   --pcm-green: #2f7d5d;
+  /* Text on an accent fill — a primary button, the test-data badge. White on
+     the light palette's deep raspberry; the dark palette's accent is a light
+     salmon, where white is under 2:1, so dark sets this to its near-black. */
+  --pcm-on-accent: #ffffff;
 
   /* The categorical chart ramp. Tokens rather than constants in charts.js,
      so a theme moves the charts with the rest of the interface. */
@@ -83,15 +87,44 @@
    bar into an ordinary one that scrolls away. */
 .pcm-crm-front { --pcm-sticky-top: 0px; }
 
-/* background: ink / color: paper, never a literal white — ink and paper are
-   an inverting pair (setup.css's identical .pcm-setup-band does the same):
-   in the dark and neon themes --pcm-ink is itself a near-white "high
-   contrast" colour and --pcm-paper is the dark one, so a literal #fff text
-   colour here would print white-on-white the moment either of those themes
-   is active. */
+/* The page around the app, and the brand bar across its top.
+
+   Both sit outside .pcm-crm, where the palette tokens are declared, so they
+   carry their own small set — the bar once read var(--pcm-ink) and, with no
+   token in reach, rendered transparent with black text. The values track the
+   two palettes: paper and ink in light, and in dark a ground a step below
+   the dark palette's own tint, so cards still sit above the page. The body's
+   pcm-crm-mode-* class (pcm_crm_color_mode_class()) picks the set, and the
+   light/dark switch flips it in place. */
+body.pcm-crm-front {
+  /* The shell sets its own face; this is the brand bar's, which is outside
+     it and otherwise fell back to the browser's serif. */
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pcm-front-ground: #ffffff;
+  --pcm-front-bar: #ffffff;
+  --pcm-front-ink: #101828;
+  --pcm-front-line: rgba(16, 24, 40, 0.09);
+  background: var(--pcm-front-ground);
+}
+body.pcm-crm-front.pcm-crm-style-modern {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body.pcm-crm-front.pcm-crm-mode-dark {
+  --pcm-front-ground: #161a21;
+  --pcm-front-bar: #1b1f27;
+  --pcm-front-ink: #eef2f7;
+  --pcm-front-line: rgba(238, 242, 247, 0.12);
+  color-scheme: dark;
+}
+/* wp-admin's own grey would otherwise frame a dark app in light. crm.css only
+   loads on CRM screens, so this never reaches the rest of wp-admin. */
+html:has(> body.wp-admin.pcm-crm-mode-dark),
+body.wp-admin.pcm-crm-mode-dark { background: #161a21; }
+
 .pcm-crm-front-nav {
-  background: var(--pcm-ink);
-  color: var(--pcm-paper);
+  background: var(--pcm-front-bar);
+  color: var(--pcm-front-ink);
+  border-bottom: 1px solid var(--pcm-front-line);
 }
 .pcm-crm-front-nav-inner {
   max-width: 1400px;
@@ -117,24 +150,53 @@
   align-items: center;
   gap: 14px;
   font-size: 0.86rem;
-  color: var(--pcm-paper);
+  color: var(--pcm-front-ink);
 }
-/* Now a link to My Profile, not plain text — an anchor does not inherit
-   color from .pcm-crm-front-account the way a <span> did, so both have to be
-   restated here rather than assumed. */
-.pcm-crm-front-account-name { font-weight: 700; color: var(--pcm-paper); text-decoration: none; }
+/* A link to My Profile, not plain text — an anchor does not inherit color
+   from .pcm-crm-front-account the way a <span> did, so it is restated. */
+.pcm-crm-front-account-name { font-weight: 600; color: var(--pcm-front-ink); text-decoration: none; }
 .pcm-crm-front-account-name:hover { text-decoration: underline; }
 .pcm-crm-front-logout {
-  /* Full paper, not a reduced opacity — opacity blends toward the ink
-     background behind it, and there is no per-theme guarantee that a
-     partway blend still clears 4.5:1 the way the full ink/paper pair does.
-     The underline alone is what sets it apart from the name beside it. */
-  color: var(--pcm-paper);
+  /* Full ink, not a reduced opacity — the underline alone is what sets it
+     apart from the name beside it, and a partway blend has no guarantee of
+     clearing 4.5:1 in both modes. */
+  color: var(--pcm-front-ink);
   font-size: 0.8rem;
   text-decoration: none;
   border-bottom: 1px solid currentColor;
 }
 .pcm-crm-front-logout:hover { border-bottom-width: 2px; }
+
+/* The light/dark switch (pcm_crm_color_mode_toggle()) — in the brand bar on
+   the front end, at the end of the app bar in wp-admin. It takes its colour
+   from wherever it sits, so the one rule serves both. Both labels are in the
+   markup; the body's mode class shows the one that switches away from it. */
+.pcm-crm-mode-toggle { display: inline-flex; margin: 0; }
+.pcm-crm-mode-button {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pcm-crm-mode-button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.pcm-crm-mode-button:focus-visible { outline: 2px solid var(--pcm-blue-deep, #3f6b96); outline-offset: 2px; }
+.pcm-crm-mode-to-dark,
+.pcm-crm-mode-to-light { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.pcm-crm-mode-to-light,
+body.pcm-crm-mode-dark .pcm-crm-mode-to-dark { display: none; }
+body.pcm-crm-mode-dark .pcm-crm-mode-to-light { display: inline-flex; }
+.pcm-crm-appbar .pcm-crm-mode-toggle { color: var(--pcm-body); }
+@media print {
+  .pcm-crm-mode-toggle { display: none !important; }
+}
 
 .pcm-crm-front-main {
   max-width: 1400px;
@@ -235,14 +297,14 @@
 .pcm-crm .button-primary {
   background: var(--pcm-accent-deep);
   border-color: var(--pcm-accent-deep);
-  color: #fff;
+  color: var(--pcm-on-accent);
 }
 .pcm-crm .pcm-btn-primary:hover,
-.pcm-crm .button-primary:hover { background: var(--pcm-accent-deeper); border-color: var(--pcm-accent-deeper); color: #fff; }
+.pcm-crm .button-primary:hover { background: var(--pcm-accent-deeper); border-color: var(--pcm-accent-deeper); color: var(--pcm-on-accent); }
 .pcm-crm .pcm-btn-quiet { border-color: var(--pcm-gray-light); font-weight: 600; }
 .pcm-crm .pcm-btn-sm { padding: 6px 12px; font-size: 0.82rem; }
 .pcm-crm .pcm-btn-danger { color: var(--pcm-accent-deep); border-color: var(--pcm-accent-deep); }
-.pcm-crm .pcm-btn-danger:hover { background: var(--pcm-accent-deep); color: #fff; }
+.pcm-crm .pcm-btn-danger:hover { background: var(--pcm-accent-deep); color: var(--pcm-on-accent); }
 .pcm-crm .pcm-btn:focus-visible,
 .pcm-crm .button:focus-visible,
 .pcm-crm .button-primary:focus-visible,
@@ -681,7 +743,7 @@
   padding: 2px 9px;
   border-radius: 999px;
   background: var(--pcm-accent-deep);
-  color: #fff;
+  color: var(--pcm-on-accent);
   font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -794,7 +856,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-tab.is-active .pcm-crm-tab-count {
   background: var(--pcm-accent-deep);
   border-color: var(--pcm-accent-deep);
-  color: #fff;
+  color: var(--pcm-on-accent);
 }
 
 /* Field groups -------------------------------------------------------------- */
@@ -1424,7 +1486,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   font-size: 0.88rem;
 }
 .pcm-crm-object-pill:hover { background: var(--pcm-paper-tint); color: var(--pcm-ink); }
-.pcm-crm-object-pill.is-active { background: var(--pcm-ink); color: #fff; }
+.pcm-crm-object-pill.is-active { background: var(--pcm-ink); color: var(--pcm-paper); }
 
 /* The module row (CRM / Project Management) picks which app the object pills
    below it belong to — a level above that choice, not another instance of
@@ -1653,37 +1715,14 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
    stylesheet already reads from a custom property, and the charts read the
    same ones at runtime, so a palette here moves the whole interface.
 
+   Two palettes: Light, which is the base .pcm-crm block itself (data-theme
+   "pcm"), and Dark below. Which one draws is each person's own colour mode,
+   switched from the nav (pcm_crm_color_mode(), includes/themes.php).
+
    Contrast is checked for each: body text against its ground clears 4.5:1 and
    headings clear more, because a theme that cannot be read is a theme nobody
    keeps.
    ========================================================================== */
-
-/* Paper — neutral greys, for when the data should be the loudest thing. */
-.pcm-crm[data-theme="paper"] {
-  --pcm-accent: #7b8794;
-  --pcm-accent-deep: #3d4450;
-  --pcm-accent-deeper: #23282f;
-  --pcm-blue: #cbd2d9;
-  --pcm-blue-deep: #3d4450;
-  --pcm-ink: #1f2933;
-  --pcm-ink-deep: #12181f;
-  --pcm-body: #4a5568;
-  --pcm-paper: #ffffff;
-  --pcm-paper-tint: #f5f7fa;
-  --pcm-gray: #69737d;
-  --pcm-gray-light: #e4e7eb;
-  --pcm-line: rgba(31, 41, 51, 0.14);
-  --pcm-green: #2f7d5d;
-
-  --pcm-chart-1: #3d4450;
-  --pcm-chart-2: #7b8794;
-  --pcm-chart-3: #9aa5b1;
-  --pcm-chart-4: #52606d;
-  --pcm-chart-5: #2f7d5d;
-  --pcm-chart-6: #616e7c;
-  --pcm-chart-7: #8c6d3f;
-  --pcm-chart-8: #34495e;
-}
 
 /* Dark — the grounds get darker as they get closer to the page, so a card
    still reads as sitting above the background rather than cut into it. */
@@ -1695,6 +1734,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   --pcm-blue-deep: #7fb3d5;
   --pcm-ink: #eef2f7;
   --pcm-ink-deep: #0e1116;
+  --pcm-on-accent: #0e1116;
   --pcm-body: #b7c2d0;
   --pcm-paper: #232935;
   --pcm-paper-tint: #1b1f27;
@@ -1713,92 +1753,22 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   --pcm-chart-8: #86b8c9;
 }
 
-/* Forest — deep green and warm sand. */
-.pcm-crm[data-theme="forest"] {
-  --pcm-accent: #b98a3e;
-  --pcm-accent-deep: #8a6420;
-  --pcm-accent-deeper: #5f4414;
-  --pcm-blue: #bcd8c5;
-  --pcm-blue-deep: #2f6f4e;
-  --pcm-ink: #1d2b22;
-  --pcm-ink-deep: #121b15;
-  --pcm-body: #44554a;
-  --pcm-paper: #fbfaf6;
-  --pcm-paper-tint: #f1f4ee;
-  --pcm-gray: #66766b;
-  --pcm-gray-light: #dfe5da;
-  --pcm-line: rgba(29, 43, 34, 0.14);
-  --pcm-green: #2f6f4e;
-
-  --pcm-chart-1: #2f6f4e;
-  --pcm-chart-2: #8a6420;
-  --pcm-chart-3: #6b9c7c;
-  --pcm-chart-4: #b98a3e;
-  --pcm-chart-5: #3d6b7a;
-  --pcm-chart-6: #7a5c86;
-  --pcm-chart-7: #a8563c;
-  --pcm-chart-8: #4f7a58;
-}
-
-/* Neon — magenta and cyan on deep violet. The glow is on borders and shadows
-   only: putting it behind text is what makes this kind of palette unreadable,
-   so the text colours here are the calmest thing in it. */
-.pcm-crm[data-theme="neon"] {
-  --pcm-accent: #ff4dd2;
-  --pcm-accent-deep: #ff6fdb;
-  --pcm-accent-deeper: #ff9ae7;
-  --pcm-blue: #4b2f7a;
-  --pcm-blue-deep: #22e0ff;
-  --pcm-ink: #f4ecff;
-  --pcm-ink-deep: #0c0718;
-  --pcm-body: #c3b4e0;
-  --pcm-paper: #221440;
-  --pcm-paper-tint: #160d2b;
-  --pcm-gray: #a795c9;
-  --pcm-gray-light: #3a2664;
-  --pcm-line: rgba(244, 236, 255, 0.18);
-  --pcm-green: #4dffb8;
-
-  --pcm-chart-1: #22e0ff;
-  --pcm-chart-2: #ff4dd2;
-  --pcm-chart-3: #b06bff;
-  --pcm-chart-4: #ffd93d;
-  --pcm-chart-5: #4dffb8;
-  --pcm-chart-6: #ff8a3d;
-  --pcm-chart-7: #6d8bff;
-  --pcm-chart-8: #ff5f7e;
-}
-
-/* The one flourish: cards and the record modal get a glow instead of the flat
-   offset shadow. Kept to containers, never to anything carrying text. */
-.pcm-crm[data-theme="neon"] .pcm-crm-card,
-.pcm-crm[data-theme="neon"] .pcm-crm-tile {
-  box-shadow: 0 0 0 1px rgba(34, 224, 255, 0.35), 0 0 18px rgba(255, 77, 210, 0.28);
-}
-.pcm-crm[data-theme="neon"] .pcm-crm-drawer {
-  box-shadow: 0 0 28px rgba(255, 77, 210, 0.4);
-}
-.pcm-crm[data-theme="neon"] .pcm-crm-head { border-bottom-color: var(--pcm-accent); }
-
 /* Dark grounds need their form controls dragging with them — the base rules
-   set a white background on inputs, which would be a white box in a dark UI. */
-.pcm-crm[data-theme="dark"] input,
+   set a white background on inputs, which would be a white box in a dark UI.
+   Text fields only: submit_button() draws an <input type="submit">, and a bare
+   input selector outranked .button-primary and painted Save as a text box. */
+.pcm-crm[data-theme="dark"] input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]),
 .pcm-crm[data-theme="dark"] select,
-.pcm-crm[data-theme="dark"] textarea,
-.pcm-crm[data-theme="neon"] input,
-.pcm-crm[data-theme="neon"] select,
-.pcm-crm[data-theme="neon"] textarea {
+.pcm-crm[data-theme="dark"] textarea {
   background-color: var(--pcm-paper-tint);
   color: var(--pcm-ink);
 }
-.pcm-crm[data-theme="dark"] .pcm-crm-table-wrap,
-.pcm-crm[data-theme="neon"] .pcm-crm-table-wrap { background: var(--pcm-paper); }
+.pcm-crm[data-theme="dark"] .pcm-crm-table-wrap { background: var(--pcm-paper); }
 
 /* The select chevron is drawn in ink as a data URI, which a dark theme cannot
    recolour — so it is redrawn light rather than left as a dark mark on a dark
    control. */
-.pcm-crm[data-theme="dark"] select,
-.pcm-crm[data-theme="neon"] select {
+.pcm-crm[data-theme="dark"] select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23eef2f7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
@@ -1833,14 +1803,6 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-theme-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
 .pcm-crm-theme-name { font-weight: 700; color: var(--pcm-ink); }
 .pcm-crm-theme-note { font-size: 0.82rem; color: var(--pcm-body); }
-.pcm-crm-theme-swatch { display: flex; gap: 4px; margin-bottom: 8px; }
-.pcm-crm-theme-swatch span {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: 1px solid var(--pcm-line);
-}
-
 /* App bar -------------------------------------------------------------------
    Which app you are in and its screens, with Setup at the far end. Drawn in
    the accent so a work screen is never mistaken for Setup's dark band.
@@ -2005,7 +1967,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   color: var(--pcm-paper);
   cursor: default;
 }
-.pcm-crm .pcm-crm-path-step.is-current.is-lost button { background: var(--pcm-accent-deep); color: #fff; }
+.pcm-crm .pcm-crm-path-step.is-current.is-lost button { background: var(--pcm-accent-deep); color: var(--pcm-on-accent); }
 
 /* Read view ------------------------------------------------------------------ */
 .pcm-crm-details.is-reading .pcm-crm-fields { align-items: start; gap: 4px 28px; }
@@ -2192,8 +2154,7 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
 .pcm-crm-lookup-option.is-all,
 .pcm-crm-lookup-option.is-new { font-weight: 700; color: var(--pcm-blue-deep); border-top: 1px solid var(--pcm-line); border-radius: 0 0 7px 7px; }
 
-.pcm-crm[data-theme="dark"] .pcm-crm-lookup,
-.pcm-crm[data-theme="neon"] .pcm-crm-lookup { background-color: var(--pcm-paper-tint); }
+.pcm-crm[data-theme="dark"] .pcm-crm-lookup { background-color: var(--pcm-paper-tint); }
 
 /* Quick create sits over the record modal, which may be the form it serves. */
 .pcm-crm-scrim-quick { z-index: 100002; }
@@ -2249,4 +2210,609 @@ a.pcm-crm-highlight-value:hover { color: var(--pcm-accent-deep); }
   .pcm-crm-hovercard,
   .pcm-crm-form-footer { display: none !important; }
   .pcm-crm-record-page { border-width: 1px; box-shadow: none; }
+}
+
+/* ==========================================================================
+   Modern style
+
+   A style is the other half of a theme: the palette blocks above decide the
+   colours, this decides the shape. Hairlines instead of ink outlines, soft
+   elevation instead of offset shadows, one face (Inter) at a tighter density.
+   Every colour still comes from the palette tokens, so any theme wears it.
+
+   Classic is simply the absence of this block — every rule here is scoped to
+   [data-style="modern"] and sits last in the file, so the rules above are
+   Classic, unchanged. Chosen under PCM Settings › Theme (pcm_crm_style()).
+   ========================================================================== */
+.pcm-crm[data-style="modern"] {
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --radius: 10px;
+  --pcm-control: 34px;
+  --pcm-control-lg: 38px;
+  --pcm-m-edge: 1px solid var(--pcm-line);
+  --pcm-m-edge-strong: 1px solid var(--pcm-line-strong, var(--pcm-line));
+  --pcm-m-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --pcm-m-shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --pcm-m-shadow-md: 0 4px 12px -2px rgba(16, 24, 40, 0.10), 0 2px 4px -2px rgba(16, 24, 40, 0.05);
+  --pcm-m-shadow-lg: 0 24px 48px -12px rgba(16, 24, 40, 0.28);
+  --pcm-m-ring: 0 0 0 3px color-mix(in srgb, var(--pcm-blue-deep) 22%, transparent);
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The house palette, retuned for Modern: slate neutrals so the raspberry is
+   saved for the things that should be clicked. */
+.pcm-crm[data-style="modern"][data-theme="pcm"] {
+  --pcm-ink: #101828;
+  --pcm-body: #475467;
+  --pcm-gray: #667085;
+  --pcm-gray-light: #eaecf0;
+  --pcm-paper-tint: #f8fafc;
+  --pcm-line: rgba(16, 24, 40, 0.09);
+  --pcm-line-strong: rgba(16, 24, 40, 0.16);
+}
+
+/* Type -------------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] h1,
+.pcm-crm[data-style="modern"] h2,
+.pcm-crm[data-style="modern"] h3,
+.pcm-crm[data-style="modern"] h4 { font-weight: 600; letter-spacing: -0.015em; }
+.pcm-crm[data-style="modern"] h1 { font-size: 1.5rem; }
+.pcm-crm[data-style="modern"] h2 { font-size: 1.1rem; }
+.pcm-crm[data-style="modern"] h3 { font-size: 0.95rem; }
+.pcm-crm[data-style="modern"] a { text-decoration: none; }
+.pcm-crm[data-style="modern"] a:hover { text-decoration: underline; }
+
+/* App bar ------------------------------------------------------------------ */
+.pcm-crm[data-style="modern"] .pcm-crm-appbar {
+  border: 0;
+  border-bottom: var(--pcm-m-edge-strong);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0 4px;
+  gap: 4px 20px;
+  background: var(--pcm-paper);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-appbar-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--pcm-ink);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-appbar-name::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--pcm-accent-deep);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-appbar-items a,
+.pcm-crm[data-style="modern"] .pcm-crm-appbar-setup {
+  padding: 14px 10px 13px;
+  border-radius: 0;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--pcm-body);
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-appbar-items a:hover,
+.pcm-crm[data-style="modern"] .pcm-crm-appbar-setup:hover {
+  background: none;
+  color: var(--pcm-ink);
+  text-decoration: none;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-appbar-items a.is-active {
+  background: none;
+  color: var(--pcm-ink);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--pcm-accent-deep);
+}
+
+/* Page head ---------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-head {
+  align-items: center;
+  border-bottom: 0;
+  padding: 24px 0 16px;
+  margin-bottom: 8px;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-head h1 { margin-bottom: 2px; }
+.pcm-crm[data-style="modern"] .pcm-crm-sub { color: var(--pcm-gray); font-size: 0.875rem; }
+
+/* Buttons ------------------------------------------------------------------ */
+.pcm-crm[data-style="modern"] .pcm-btn,
+.pcm-crm[data-style="modern"] .button,
+.pcm-crm[data-style="modern"] .button-secondary {
+  height: var(--pcm-control);
+  padding: 0 12px;
+  border: var(--pcm-m-edge-strong);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  box-shadow: var(--pcm-m-shadow-xs);
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.pcm-crm[data-style="modern"] .pcm-btn:hover,
+.pcm-crm[data-style="modern"] .button:hover,
+.pcm-crm[data-style="modern"] .button-secondary:hover { background: var(--pcm-paper-tint); text-decoration: none; }
+.pcm-crm[data-style="modern"] .pcm-btn-primary,
+.pcm-crm[data-style="modern"] .button-primary {
+  border-color: var(--pcm-accent-deep);
+  box-shadow: var(--pcm-m-shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.pcm-crm[data-style="modern"] .pcm-btn-primary:hover,
+.pcm-crm[data-style="modern"] .button-primary:hover { background: var(--pcm-accent-deeper); }
+.pcm-crm[data-style="modern"] .pcm-btn-quiet { border-color: transparent; box-shadow: none; background: none; }
+.pcm-crm[data-style="modern"] .pcm-btn-quiet:hover { background: var(--pcm-paper-tint); }
+.pcm-crm[data-style="modern"] .pcm-btn-sm { height: 28px; padding: 0 10px; font-size: 0.8rem; }
+.pcm-crm[data-style="modern"] .pcm-btn-danger { border-color: var(--pcm-line-strong, var(--pcm-line)); }
+.pcm-crm[data-style="modern"] .pcm-btn:focus-visible,
+.pcm-crm[data-style="modern"] .button:focus-visible,
+.pcm-crm[data-style="modern"] input:focus-visible,
+.pcm-crm[data-style="modern"] select:focus-visible,
+.pcm-crm[data-style="modern"] textarea:focus-visible {
+  outline: none;
+  border-color: var(--pcm-blue-deep);
+  box-shadow: var(--pcm-m-ring);
+}
+
+/* Surfaces ----------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-card,
+.pcm-crm[data-style="modern"] .pcm-crm-card-accent,
+.pcm-crm[data-style="modern"] .pcm-crm-tile,
+.pcm-crm[data-style="modern"] .pcm-crm-tile:nth-child(even),
+.pcm-crm[data-style="modern"] .pcm-crm-table-wrap,
+.pcm-crm[data-style="modern"] .pcm-crm-builder-panel {
+  border: var(--pcm-m-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--pcm-m-shadow-sm);
+}
+
+/* Filter bar --------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-filters {
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--pcm-paper);
+  border: var(--pcm-m-edge);
+  box-shadow: var(--pcm-m-shadow-xs);
+  margin-bottom: 16px;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-filter label,
+.pcm-crm[data-style="modern"] .pcm-crm-field label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pcm-body);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-filter input,
+.pcm-crm[data-style="modern"] .pcm-crm-filter select,
+.pcm-crm[data-style="modern"] .pcm-crm-builder-panel input,
+.pcm-crm[data-style="modern"] .pcm-crm-builder-panel select,
+.pcm-crm[data-style="modern"] .pcm-crm-field input,
+.pcm-crm[data-style="modern"] .pcm-crm-field select,
+.pcm-crm[data-style="modern"] .pcm-crm-field textarea {
+  border: var(--pcm-m-edge-strong);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  box-shadow: var(--pcm-m-shadow-xs);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-filter-count { font-size: 0.8rem; color: var(--pcm-gray); }
+
+.pcm-crm[data-style="modern"] .pcm-crm-builder { border-top: var(--pcm-m-edge); }
+.pcm-crm[data-style="modern"] .pcm-crm-chip {
+  border: var(--pcm-m-edge-strong);
+  background: var(--pcm-paper-tint);
+  font-size: 0.8rem;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-chip-object {
+  background: color-mix(in srgb, var(--pcm-blue) 45%, var(--pcm-paper));
+  color: var(--pcm-ink);
+  font-weight: 600;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-chip.is-related .pcm-crm-chip-object {
+  background: color-mix(in srgb, var(--pcm-accent) 25%, var(--pcm-paper));
+}
+.pcm-crm[data-style="modern"] .pcm-crm-chip-field { font-weight: 600; }
+.pcm-crm[data-style="modern"] .pcm-crm-chip-remove { color: var(--pcm-gray); }
+
+/* Tables ------------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-table { font-size: 0.875rem; }
+.pcm-crm[data-style="modern"] .pcm-crm-table th {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pcm-gray);
+  background: var(--pcm-paper-tint);
+  padding: 10px 14px;
+  border-bottom: var(--pcm-m-edge);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-table th.is-sortable:hover,
+.pcm-crm[data-style="modern"] .pcm-crm-table th.is-sorted { color: var(--pcm-ink); }
+.pcm-crm[data-style="modern"] .pcm-crm-table th.is-sorted .pcm-sort { color: var(--pcm-ink); }
+.pcm-crm[data-style="modern"] .pcm-crm-table td { padding: 12px 14px; }
+.pcm-crm[data-style="modern"] .pcm-crm-table tbody tr { transition: background 0.08s ease; }
+.pcm-crm[data-style="modern"] .pcm-crm-strong { font-weight: 600; }
+
+/* Badges: a soft tint and a leading dot, so status reads before the word. -- */
+.pcm-crm[data-style="modern"] .pcm-crm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.74rem;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+/* Tiles -------------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-tiles { gap: 12px; margin-bottom: 20px; }
+.pcm-crm[data-style="modern"] .pcm-crm-tile { padding: 16px 18px; }
+.pcm-crm[data-style="modern"] .pcm-crm-tile-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pcm-gray);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-tile-value { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; }
+.pcm-crm[data-style="modern"] .pcm-crm-tile-note { color: var(--pcm-gray); }
+
+/* Charts ------------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-charts { gap: 16px; }
+.pcm-crm[data-style="modern"] .pcm-crm-legend { color: var(--pcm-body); }
+.pcm-crm[data-style="modern"] .pcm-crm-legend i { border-radius: 50%; width: 8px; height: 8px; }
+
+/* Pipeline: tinted lanes, cards that lift. -------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-pipeline { gap: 12px; }
+.pcm-crm[data-style="modern"] .pcm-crm-column {
+  flex-basis: 272px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--pcm-ink) 4%, var(--pcm-paper));
+  padding: 10px;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-column.is-over {
+  background: color-mix(in srgb, var(--pcm-blue) 30%, var(--pcm-paper));
+  box-shadow: inset 0 0 0 2px var(--pcm-blue-deep);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-column-head { border-bottom: 0; padding: 4px 4px 10px; margin-bottom: 0; }
+.pcm-crm[data-style="modern"] .pcm-crm-column-name { font-size: 0.85rem; font-weight: 600; }
+.pcm-crm[data-style="modern"] .pcm-crm-column-total { color: var(--pcm-gray); }
+.pcm-crm[data-style="modern"] .pcm-crm-card-deal {
+  border: var(--pcm-m-edge);
+  border-radius: 8px;
+  box-shadow: var(--pcm-m-shadow-sm);
+  margin-bottom: 8px;
+  transition: box-shadow 0.12s ease, transform 0.12s ease;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-card-deal:hover { box-shadow: var(--pcm-m-shadow-md); transform: translateY(-1px); }
+.pcm-crm[data-style="modern"] .pcm-crm-card-deal .name { font-weight: 600; }
+.pcm-crm[data-style="modern"] .pcm-crm-card-deal .meta { color: var(--pcm-gray); }
+.pcm-crm[data-style="modern"] .pcm-crm-card-deal.is-stalled {
+  border-color: var(--pcm-line);
+  border-left-width: 1px;
+  box-shadow: var(--pcm-m-shadow-sm), inset 3px 0 0 var(--pcm-accent-deep);
+}
+
+/* Record modal ------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-scrim {
+  background: rgba(16, 24, 40, 0.45);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-drawer {
+  border: var(--pcm-m-edge);
+  border-radius: 14px;
+  box-shadow: var(--pcm-m-shadow-lg);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-modal-head {
+  border-bottom: 0;
+  background: var(--pcm-paper);
+  padding: 22px 26px 10px;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-modal-head h2 { font-size: 1.35rem; }
+.pcm-crm[data-style="modern"] .pcm-crm-drawer-kicker {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pcm-gray);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-drawer-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1.35rem;
+  color: var(--pcm-gray);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-drawer-close:hover { background: var(--pcm-paper-tint); color: var(--pcm-ink); }
+.pcm-crm[data-style="modern"] .pcm-crm-modal-top { padding-top: 8px; }
+.pcm-crm[data-style="modern"] .pcm-crm-highlights {
+  border: var(--pcm-m-edge);
+  border-radius: var(--radius);
+  background: var(--pcm-paper-tint);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-highlight-label,
+.pcm-crm[data-style="modern"] .pcm-crm-related-head {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pcm-gray);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-highlight-value { font-weight: 500; font-size: 0.875rem; }
+.pcm-crm[data-style="modern"] .pcm-crm-alert {
+  border: 1px solid color-mix(in srgb, var(--pcm-accent-deep) 30%, transparent);
+  border-left: 3px solid var(--pcm-accent-deep);
+  border-radius: 8px;
+}
+
+/* Tabs: underline, not boxes. --------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-tabs {
+  gap: 18px;
+  border-bottom: var(--pcm-m-edge);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-tab {
+  padding: 10px 2px;
+  border: 0;
+  border-radius: 0;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pcm-gray);
+  margin-bottom: -1px;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-tab:hover { color: var(--pcm-ink); }
+.pcm-crm[data-style="modern"] .pcm-crm-tab.is-active {
+  background: none;
+  color: var(--pcm-ink);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--pcm-accent-deep);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-tab-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 0;
+  background: var(--pcm-gray-light);
+  color: var(--pcm-body);
+  padding: 1px 7px;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-tab.is-active .pcm-crm-tab-count {
+  background: var(--pcm-ink);
+  color: var(--pcm-paper);
+}
+
+/* Field groups: a quiet heading with a hairline, not a filled band. ------ */
+.pcm-crm[data-style="modern"] .pcm-crm-group-head {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pcm-ink);
+  background: none;
+  border-radius: 0;
+  padding: 0 0 8px;
+  margin: 32px 0 16px;
+  border-bottom: var(--pcm-m-edge);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-fields { gap: 14px 18px; }
+
+/* Related rows -------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-related-row { border-radius: 6px; }
+.pcm-crm[data-style="modern"] .pcm-crm-related-row:hover,
+.pcm-crm[data-style="modern"] .pcm-crm-related-row:focus-visible { box-shadow: none; }
+.pcm-crm[data-style="modern"] .pcm-crm-cell-primary { font-weight: 600; }
+
+/* Record page -------------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-crm-record-page {
+  border: var(--pcm-m-edge);
+  border-radius: 14px;
+  box-shadow: var(--pcm-m-shadow-sm);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-record-page .pcm-crm-modal-head { border-radius: 14px 14px 0 0; }
+.pcm-crm[data-style="modern"] .pcm-crm-record-title { font-size: 1.4rem; }
+.pcm-crm[data-style="modern"] .pcm-crm-crumb { color: var(--pcm-gray); }
+.pcm-crm[data-style="modern"] .pcm-crm-crumb:hover { color: var(--pcm-ink); }
+
+/* The object's mark: a tinted square rather than an outlined one. */
+.pcm-crm[data-style="modern"] .pcm-crm-obj-icon {
+  border: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--pcm-obj, var(--pcm-ink)) 14%, var(--pcm-paper));
+  line-height: 40px;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-lookup-link .pcm-crm-obj-icon { border-radius: 5px; line-height: 20px; }
+.pcm-crm[data-style="modern"] .pcm-crm-lookup-option .pcm-crm-obj-icon { border-radius: 6px; line-height: 22px; }
+.pcm-crm[data-style="modern"] .pcm-crm-hovercard-head .pcm-crm-obj-icon { line-height: 32px; }
+
+/* Stage path: same chevrons, lighter hand. */
+.pcm-crm[data-style="modern"] .pcm-crm-path-step button { font-weight: 600; color: var(--pcm-body); }
+.pcm-crm[data-style="modern"] .pcm-crm-path-step button:hover,
+.pcm-crm[data-style="modern"] .pcm-crm-path-step.is-done button {
+  background: color-mix(in srgb, var(--pcm-blue) 55%, var(--pcm-paper));
+  color: var(--pcm-ink);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-path-step.is-current button { background: var(--pcm-ink); color: var(--pcm-paper); }
+.pcm-crm[data-style="modern"] .pcm-crm-path-step.is-current.is-lost button { background: var(--pcm-accent-deep); color: var(--pcm-on-accent); }
+
+/* Read view */
+.pcm-crm[data-style="modern"] .pcm-crm-read-label,
+.pcm-crm[data-style="modern"] .pcm-crm-lookup-heading,
+.pcm-crm[data-style="modern"] .pcm-crm-hovercard-kind {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pcm-gray);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-read-value { font-size: 0.875rem; }
+.pcm-crm[data-style="modern"] .pcm-crm-lookup-link { font-weight: 600; text-decoration: none; }
+.pcm-crm[data-style="modern"] .pcm-crm-lookup-link:hover { text-decoration: underline; }
+
+/* Lookups ------------------------------------------------------------------ */
+.pcm-crm[data-style="modern"] .pcm-crm-lookup {
+  min-height: var(--pcm-control-lg);
+  border: var(--pcm-m-edge-strong);
+  border-radius: 8px;
+  box-shadow: var(--pcm-m-shadow-xs);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-lookup:focus-within {
+  outline: none;
+  border-color: var(--pcm-blue-deep);
+  box-shadow: var(--pcm-m-ring);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-field .pcm-crm-lookup input.pcm-crm-lookup-input,
+.pcm-crm[data-style="modern"] .pcm-crm-field .pcm-crm-lookup select.pcm-crm-lookup-kind {
+  height: 34px;
+  border: 0;
+  box-shadow: none;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-lookup-list,
+.pcm-crm[data-style="modern"] .pcm-crm-hovercard {
+  border: var(--pcm-m-edge);
+  border-radius: 10px;
+  box-shadow: var(--pcm-m-shadow-md);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-lookup-option:hover,
+.pcm-crm[data-style="modern"] .pcm-crm-lookup-option.is-active { box-shadow: none; }
+.pcm-crm[data-style="modern"] .pcm-crm-hovercard-list dt { font-weight: 500; color: var(--pcm-gray); }
+
+/* Checkboxes sit in a quiet box with a sentence-case label. */
+.pcm-crm[data-style="modern"] .pcm-crm-check {
+  border: var(--pcm-m-edge-strong);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: var(--pcm-m-shadow-xs);
+}
+
+/* Everything else that was an ink outline: one hairline, no offset shadow. */
+.pcm-crm[data-style="modern"] .pcm-crm-recipients,
+.pcm-crm[data-style="modern"] .pcm-crm-history-summary,
+.pcm-crm[data-style="modern"] .pcm-crm-embed,
+.pcm-crm[data-style="modern"] .pcm-crm-field-row,
+.pcm-crm[data-style="modern"] .pcm-crm-export-table,
+.pcm-crm[data-style="modern"] .pcm-crm-attachment,
+.pcm-crm[data-style="modern"] .pcm-crm-layout-section,
+.pcm-crm[data-style="modern"] .pcm-crm-custom-field-dialog,
+.pcm-crm[data-style="modern"] .pcm-crm-step,
+.pcm-crm[data-style="modern"] .pcm-crm-theme,
+.pcm-crm[data-style="modern"] .pcm-crm-front-deny {
+  border: var(--pcm-m-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--pcm-m-shadow-xs);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-custom-field-dialog { box-shadow: var(--pcm-m-shadow-lg); }
+.pcm-crm[data-style="modern"] .pcm-crm-token,
+.pcm-crm[data-style="modern"] .pcm-crm-drill,
+.pcm-crm[data-style="modern"] .pcm-crm-object-pill,
+.pcm-crm[data-style="modern"] .pcm-crm-layout-chip,
+.pcm-crm[data-style="modern"] .pcm-crm-section-block select,
+.pcm-crm[data-style="modern"] .pcm-crm-step input {
+  border: var(--pcm-m-edge-strong);
+  font-weight: 500;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-layout-chip { border-radius: 8px; box-shadow: var(--pcm-m-shadow-xs); }
+.pcm-crm[data-style="modern"] .pcm-crm-object-pill.is-active {
+  background: var(--pcm-ink);
+  border-color: var(--pcm-ink);
+  color: var(--pcm-paper);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-theme.is-chosen {
+  border-color: var(--pcm-accent-deep);
+  box-shadow: 0 0 0 1px var(--pcm-accent-deep), var(--pcm-m-shadow-sm);
+}
+.pcm-crm[data-style="modern"] .form-table th { font-family: var(--font-body); font-weight: 600; }
+
+/* Projects (pm.css) -------------------------------------------------------- */
+.pcm-crm[data-style="modern"] .pcm-pm-meter-track,
+.pcm-crm[data-style="modern"] .pcm-crm-meter-track {
+  height: 8px;
+  border: 0;
+  background: var(--pcm-gray-light);
+}
+.pcm-crm[data-style="modern"] .pcm-pm-meter-label { font-weight: 600; }
+.pcm-crm[data-style="modern"] .pcm-pm-health {
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.pcm-crm[data-style="modern"] .pcm-crm-type-choice {
+  border: var(--pcm-m-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--pcm-m-shadow-xs);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-type-choice:hover,
+.pcm-crm[data-style="modern"] .pcm-crm-type-choice:focus-visible {
+  border-color: var(--pcm-blue-deep);
+  box-shadow: var(--pcm-m-ring);
+}
+.pcm-crm[data-style="modern"] .pcm-crm-sheet tfoot th { border-top: var(--pcm-m-edge-strong); }
+
+/* PCM Settings (setup.css) ------------------------------------------------
+   Lighter weights throughout: Settings is a reference screen, read slowly,
+   and Inter at 700 is heavy on a page of labels. The nav's group labels need
+   restating in any case — the heading sizes at the top of this section
+   outrank setup.css's own .pcm-setup-nav h2 and would draw them as headings. */
+.pcm-crm[data-style="modern"] .pcm-setup-nav h2 {
+  margin: 16px 0 4px;
+  padding: 0 8px;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pcm-gray);
+}
+.pcm-crm[data-style="modern"] .pcm-setup-nav a { font-weight: 500; color: var(--pcm-body); }
+.pcm-crm[data-style="modern"] .pcm-setup-nav a:hover { color: var(--pcm-ink); text-decoration: none; }
+.pcm-crm[data-style="modern"] .pcm-setup-nav a.is-active { font-weight: 600; color: var(--pcm-ink); }
+.pcm-crm[data-style="modern"] .pcm-setup-band h1 { font-size: 1.5rem; font-weight: 600; }
+.pcm-crm[data-style="modern"] .pcm-setup-crumbs { font-size: 0.72rem; font-weight: 500; opacity: 0.8; }
+.pcm-crm[data-style="modern"] .pcm-setup-exits { font-weight: 500; }
+.pcm-crm[data-style="modern"] .pcm-setup-desc { font-size: 0.875rem; color: var(--pcm-gray); }
+.pcm-crm[data-style="modern"] .pcm-setup-tile h2 { font-size: 1.05rem; font-weight: 600; }
+.pcm-crm[data-style="modern"] .pcm-setup-tile > p { font-size: 0.875rem; color: var(--pcm-body); }
+.pcm-crm[data-style="modern"] .pcm-setup-tile li a { font-weight: 500; }
+.pcm-crm[data-style="modern"] .pcm-setup-tile li span { font-size: 0.8rem; }
+.pcm-crm[data-style="modern"] .pcm-setup-main .pcm-crm-card h2 { font-size: 1.05rem; }
+.pcm-crm[data-style="modern"] .pcm-setup-archetype h3 { font-size: 0.95rem; font-weight: 600; }
+.pcm-crm[data-style="modern"] .form-table th { font-weight: 500; color: var(--pcm-ink); }
+.pcm-crm[data-style="modern"] .pcm-crm-theme-name { font-weight: 600; }
+
+@media (max-width: 782px) {
+  .pcm-crm[data-style="modern"] .pcm-crm-record-page { box-shadow: none; }
+}
+
+@media print {
+  .pcm-crm[data-style="modern"] .pcm-crm-card,
+  .pcm-crm[data-style="modern"] .pcm-crm-tile,
+  .pcm-crm[data-style="modern"] .pcm-crm-table-wrap,
+  .pcm-crm[data-style="modern"] .pcm-crm-record-page { box-shadow: none; }
 }

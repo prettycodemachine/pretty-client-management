@@ -50,7 +50,19 @@ const base = tokensIn(blockFor('.pcm-crm {'));
 
 // Discovered rather than listed, so a theme added to the stylesheet is checked
 // without anyone remembering to add it here.
-const themes = [...new Set([...css.matchAll(/\[data-theme="([a-z]+)"\] \{/g)].map((m) => m[1]))];
+// The lookbehind skips a style's own palette retune
+// ([data-style="…"][data-theme="…"]), which is checked below as its own pair.
+const themes = [...new Set([...css.matchAll(/(?<!\])\[data-theme="([a-z]+)"\] \{/g)].map((m) => m[1]))];
+
+// A style can be worn with any palette, and may retune one (Modern moves the
+// house palette to slate). Each style is checked against every palette, its
+// retune merged over the palette where it has one — discovered, like the
+// themes, so a style or retune added later is covered too.
+const styles = [...new Set([...css.matchAll(/\[data-style="([a-z]+)"\]/g)].map((m) => m[1]))];
+const retune = (style, name) => {
+	const selector = `[data-style="${style}"][data-theme="${name}"] {`;
+	return css.includes(selector) ? tokensIn(blockFor(selector)) : {};
+};
 
 let failed = 0;
 
@@ -63,14 +75,20 @@ function check(theme, label, foreground, background, minimum) {
 	if (!ok) { failed++; }
 
 	console.log(
-		`${ok ? 'PASS' : 'FAIL'}  ${theme.padEnd(8)}${label.padEnd(26)}${measured.toFixed(2)}:1 (needs ${minimum})`
+		`${ok ? 'PASS' : 'FAIL'}  ${theme.padEnd(15)}${label.padEnd(26)}${measured.toFixed(2)}:1 (needs ${minimum})`
 	);
 }
 
-console.log(`Checking ${themes.length + 1} themes\n`);
+console.log(`Checking ${themes.length + 1} themes, each alone and in ${styles.length} style(s)\n`);
+
+const palette = (name) => (name === 'pcm' ? {} : tokensIn(blockFor(`.pcm-crm[data-theme="${name}"] {`)));
 
 [['pcm (default)', base]].concat(
-	themes.map((name) => [name, Object.assign({}, base, tokensIn(blockFor(`[data-theme="${name}"] {`)))])
+	themes.map((name) => [name, Object.assign({}, base, palette(name))]),
+	...styles.map((style) => ['pcm', ...themes].map((name) => [
+		`${name}+${style}`,
+		Object.assign({}, base, palette(name), retune(style, name)),
+	]))
 ).forEach(([name, t]) => {
 	// Body text is the one that has to clear AA; headings are larger and the
 	// accent is only ever used on a ground, never as a ground behind text.
@@ -78,13 +96,26 @@ console.log(`Checking ${themes.length + 1} themes\n`);
 	check(name, 'body on tint', t.body, t['paper-tint'], 4.5);
 	check(name, 'ink on paper', t.ink, t.paper, 4.5);
 	check(name, 'accent text on paper', t['accent-deep'], t.paper, 4.5);
+	// A primary button, the test-data badge: text on an accent fill.
+	check(name, 'text on accent fill', t['on-accent'], t['accent-deep'], 4.5);
 	// The muted grey carries text too — empty states, chart labels, the quiet
 	// half of a timestamp — so it gets the text threshold, not the 3:1 a
 	// border would be held to.
 	check(name, 'muted on paper', t.gray, t.paper, 4.5);
+	// Modern sets its table headers and field labels in the muted grey on the
+	// tint, so under a style that pairing carries text as well. Classic never
+	// sets grey text on the tint, and is held only to what it actually draws.
+	if (name.includes('+')) {
+		check(name, 'muted on tint', t.gray, t['paper-tint'], 4.5);
+	}
 	// Setup's band is the page ink turned into a ground, with paper on it, and
 	// its nav headings are body text on the tint.
-	check(name, 'setup band text', t.paper, t.ink, 4.5);
+	// Dark mode puts the ink on the deep ink instead (setup.css).
+	if (name.startsWith('dark')) {
+		check(name, 'setup band text', t.ink, t['ink-deep'], 4.5);
+	} else {
+		check(name, 'setup band text', t.paper, t.ink, 4.5);
+	}
 	check(name, 'setup nav heading on tint', t.body, t['paper-tint'], 4.5);
 	console.log('');
 });

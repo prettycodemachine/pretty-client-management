@@ -36,7 +36,7 @@ function pcm_crm_render_my_profile() {
 		'password-short'     => array( 'error', __( 'Choose a password at least 12 characters long.', 'pcm-crm' ) ),
 	);
 	?>
-	<div class="pcm-crm pcm-crm-front pcm-crm-my-profile" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>">
+	<div class="pcm-crm pcm-crm-front pcm-crm-my-profile" data-theme="<?php echo esc_attr( pcm_crm_theme() ); ?>" data-style="<?php echo esc_attr( pcm_crm_style() ); ?>">
 		<div class="pcm-crm-head">
 			<div><h1><?php esc_html_e( 'My Profile', 'pcm-crm' ); ?></h1></div>
 		</div>

@@ -99,7 +99,7 @@ endif;
 <title><?php echo esc_html( sprintf( __( '%s — Employee Portal', 'pcm-crm' ), get_bloginfo( 'name' ) ) ); ?></title>
 <?php wp_head(); ?>
 </head>
-<body <?php body_class( 'pcm-crm-front' ); ?>>
+<body <?php body_class( array( 'pcm-crm-front', pcm_crm_color_mode_class(), 'pcm-crm-style-' . pcm_crm_style() ) ); ?>>
 <?php wp_body_open(); ?>
 <?php pcm_crm_front_nav(); ?>
 <main class="pcm-crm-front-main">

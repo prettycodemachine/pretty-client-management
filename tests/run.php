@@ -703,19 +703,36 @@ $GLOBALS['wpdb'] = $real_wpdb;
 check( 'the won stage is found by its flag', pcm_crm_won_stage_name(), 'Closed Won' );
 
 echo "\n--- themes ---\n";
-check( 'five themes ship', count( pcm_crm_themes() ), 5 );
-check( 'including a neon one', isset( pcm_crm_themes()['neon'] ), true );
-check( 'the house palette is the default', pcm_crm_theme(), 'pcm' );
+check( 'two palettes ship, light and dark', array_keys( pcm_crm_themes() ), array( 'pcm', 'dark' ) );
+check( 'light is the default mode', pcm_crm_color_mode(), 'light' );
+check( 'and draws the house palette', pcm_crm_theme(), 'pcm' );
 
-update_option( 'pcm_crm_theme', 'neon' );
-check( 'a chosen theme sticks', pcm_crm_theme(), 'neon' );
+// The mode is each person's own, not a site option — one person switching to
+// dark must leave everyone else's screen as it was.
+update_user_meta( get_current_user_id(), 'pcm_crm_color_mode', 'dark' );
+check( 'a chosen dark mode sticks', pcm_crm_color_mode(), 'dark' );
+check( 'and draws the dark palette', pcm_crm_theme(), 'dark' );
+check( 'the body carries the mode for the page around the app', pcm_crm_color_mode_class(), 'pcm-crm-mode-dark' );
+check( 'another person is unaffected', pcm_crm_color_mode( get_current_user_id() + 1 ), 'light' );
 // An unknown value would put data-theme on the wrap with no rules behind it,
 // which is an unstyled screen rather than a fallback.
-update_option( 'pcm_crm_theme', 'nonsense' );
-check( 'an unknown theme falls back rather than rendering unstyled', pcm_crm_theme(), 'pcm' );
-check( 'and is refused on the way in', pcm_crm_sanitize_theme( 'nonsense' ), 'pcm' );
-check( 'a real one is accepted', pcm_crm_sanitize_theme( 'dark' ), 'dark' );
+update_user_meta( get_current_user_id(), 'pcm_crm_color_mode', 'neon' );
+check( 'an unknown mode falls back to light rather than rendering unstyled', pcm_crm_theme(), 'pcm' );
+check( 'and is refused on the way in', pcm_crm_sanitize_color_mode( 'neon' ), 'light' );
+delete_user_meta( get_current_user_id(), 'pcm_crm_color_mode' );
+
+// The old site-wide palette option is no longer read at all.
+update_option( 'pcm_crm_theme', 'dark' );
+check( 'the retired site-wide palette option is ignored', pcm_crm_theme(), 'pcm' );
 delete_option( 'pcm_crm_theme' );
+
+check( 'Modern is the default style', pcm_crm_style(), 'modern' );
+update_option( 'pcm_crm_style', 'classic' );
+check( 'a chosen style sticks', pcm_crm_style(), 'classic' );
+update_option( 'pcm_crm_style', 'nonsense' );
+check( 'an unknown style falls back to Modern', pcm_crm_style(), 'modern' );
+check( 'and is refused on the way in', pcm_crm_sanitize_style( 'nonsense' ), 'modern' );
+delete_option( 'pcm_crm_style' );
 
 echo "\n--- recycle bin ---\n";
 check( 'the four record objects have a bin',

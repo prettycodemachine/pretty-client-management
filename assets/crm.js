@@ -5293,6 +5293,19 @@
 		// Before anything draws, so the first chart is already on-theme.
 		if (charts && charts.setTheme) { charts.setTheme(themeColors()); }
 
+		// The light/dark switch (color-mode.js) repaints the tokens but not a
+		// chart already drawn from the old ones, so a screen with charts is
+		// drawn again. Not while someone is mid-edit — a redraw would take
+		// their unsaved form with it, and the charts can wait for the next load.
+		if (document.addEventListener) {
+			document.addEventListener('pcm-crm-mode', function () {
+				if (charts && charts.setTheme) { charts.setTheme(themeColors()); }
+				if (!current.editing && dom.root && dom.root.querySelector && dom.root.querySelector('.pcm-crm-chart')) {
+					refreshView();
+				}
+			});
+		}
+
 		Promise.all([api('/bootstrap'), api('/schema')]).then(function (results) {
 			state.boot = results[0];
 			state.schema = results[1];

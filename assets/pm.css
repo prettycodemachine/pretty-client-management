@@ -245,8 +245,7 @@
 .pcm-crm .pcm-crm-sheet-taskpick { display: block; margin-top: 4px; max-width: 260px; height: 32px; }
 .pcm-crm-sheet tfoot th { border-top: 2px solid var(--pcm-ink); }
 .pcm-crm-sheet-add { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
-.pcm-crm[data-theme="dark"] .pcm-crm-sheet-cell,
-.pcm-crm[data-theme="neon"] .pcm-crm-sheet-cell { background-color: var(--pcm-paper-tint); }
+.pcm-crm[data-theme="dark"] .pcm-crm-sheet-cell { background-color: var(--pcm-paper-tint); }
 
 /* Help Ticket comment thread -------------------------------------------------- */
 .pcm-crm-comment-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
