@@ -603,10 +603,10 @@ function pcm_crm_sample_data_counts() {
 		$pcm_has_deleted = 'history' !== $pcm_key;
 		$pcm_live        = $pcm_has_deleted ? ' AND is_deleted = 0' : '';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+		// Table names are internal (pcm_crm_sample_tables()), and nothing else varies.
 		$pcm_counts[ $pcm_key ] = array(
-			'real'    => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_test = 0{$pcm_live}" ),
-			'test'    => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_test = 1{$pcm_live}" ),
+			'real'    => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_test = 0{$pcm_live}" ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			'test'    => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_test = 1{$pcm_live}" ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			'deleted' => $pcm_has_deleted
 				// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
 				? (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$pcm_table} WHERE is_deleted = 1" )

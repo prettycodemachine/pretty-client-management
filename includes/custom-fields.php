@@ -169,6 +169,12 @@ function pcm_crm_ensure_custom_column( $pcm_object, array $pcm_field ) {
 
 	$pcm_column = pcm_crm_custom_column( $pcm_field['key'] );
 
+	// The column name goes into DDL unquoted, so hold it to plain identifier
+	// characters here as well as at save time: sanitize_key() still allows "-".
+	if ( ! preg_match( '/^[a-z0-9_]+$/', $pcm_column ) ) {
+		return false;
+	}
+
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
 	$pcm_exists = $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM {$pcm_table} LIKE %s", $pcm_column ) );
 
