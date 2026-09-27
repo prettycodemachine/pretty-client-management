@@ -1,0 +1,5 @@
+# Left out of `git archive` builds (the WordPress.org and GitHub release zips).
+/tests export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/README.md export-ignore
