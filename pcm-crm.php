@@ -82,6 +82,8 @@ require_once PCM_CRM_DIR . 'includes/access-settings.php';
 require_once PCM_CRM_DIR . 'includes/user-access.php';
 // Where a screen lives in each host, and the Employee Portal address setting.
 require_once PCM_CRM_DIR . 'includes/urls.php';
+// The delete-on-uninstall switch uninstall.php reads.
+require_once PCM_CRM_DIR . 'includes/data-settings.php';
 // The staff role's wp-admin lockout. After urls.php, which it redirects through.
 require_once PCM_CRM_DIR . 'includes/roles.php';
 require_once PCM_CRM_DIR . 'includes/class-pcm-crm-model.php';
