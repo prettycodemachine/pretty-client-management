@@ -4,7 +4,7 @@ Tags: crm, project management, client portal, agency, time tracking
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.2.22
+Stable tag: 1.2.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,10 +87,18 @@ Yes. Every object exports to CSV, with column headers that use Salesforce field 
 
 == Changelog ==
 
+= 1.2.23 =
+* Added: PCM Settings › Platform › Data & Uninstall. Tick it to delete all CRM data when the plugin is deleted; off by default, so data is kept.
+* Changed: Fonts are bundled with the plugin instead of loaded from Google Fonts.
+* Fixed: Tighter input sanitising and escaping throughout.
+
 = 1.2.22 =
 * Added: A Modern interface style, and per-person light and dark mode.
 
 == Upgrade Notice ==
+
+= 1.2.23 =
+Adds an opt-in setting to delete all CRM data when the plugin is deleted, and bundles the fonts locally.
 
 = 1.2.22 =
 Adds the Modern interface style and per-person light/dark mode.
