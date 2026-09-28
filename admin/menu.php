@@ -165,12 +165,9 @@ function pcm_crm_enqueue_app( $pcm_host, array $pcm_args = array() ) {
 	// Baloo 2 and Nunito Sans are the site's own faces, which the Classic style
 	// wears so the CRM reads as the same product; Inter is the Modern style's
 	// one face (pcm_crm_style(), assets/crm.css).
-	wp_enqueue_style(
-		'pcm-crm-fonts',
-		'https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Nunito+Sans:wght@400;600;700&display=swap',
-		array(),
-		null
-	);
+	// Bundled (assets/fonts.css) rather than loaded from Google Fonts, so no
+	// CRM screen asks a third-party host for anything.
+	wp_enqueue_style( 'pcm-crm-fonts', pcm_crm_asset( 'fonts.css' ), array(), null );
 
 	wp_enqueue_style( 'pcm-crm', pcm_crm_asset( 'crm.css' ), array( 'pcm-crm-fonts' ), null );
 
