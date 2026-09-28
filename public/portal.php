@@ -11,8 +11,8 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 function pcm_crm_portal_assets() {
-	wp_enqueue_style( 'pcm-crm-portal', pcm_crm_asset( 'portal.css' ), array(), null );
-	wp_enqueue_script( 'pcm-crm-portal', pcm_crm_asset( 'portal.js' ), array(), null, true );
+	wp_enqueue_style( 'pcm-crm-portal', pcm_crm_asset_url( 'portal.css' ), array(), pcm_crm_asset_version( 'portal.css' ) );
+	wp_enqueue_script( 'pcm-crm-portal', pcm_crm_asset_url( 'portal.js' ), array(), pcm_crm_asset_version( 'portal.js' ), true );
 
 	wp_localize_script( 'pcm-crm-portal', 'PCM_CRM_PORTAL', array(
 		'root'         => esc_url_raw( rest_url( PCM_CRM_REST::NS ) ),

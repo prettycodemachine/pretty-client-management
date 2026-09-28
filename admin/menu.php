@@ -167,12 +167,12 @@ function pcm_crm_enqueue_app( $pcm_host, array $pcm_args = array() ) {
 	// one face (pcm_crm_style(), assets/crm.css).
 	// Bundled (assets/fonts.css) rather than loaded from Google Fonts, so no
 	// CRM screen asks a third-party host for anything.
-	wp_enqueue_style( 'pcm-crm-fonts', pcm_crm_asset( 'fonts.css' ), array(), null );
+	wp_enqueue_style( 'pcm-crm-fonts', pcm_crm_asset_url( 'fonts.css' ), array(), pcm_crm_asset_version( 'fonts.css' ) );
 
-	wp_enqueue_style( 'pcm-crm', pcm_crm_asset( 'crm.css' ), array( 'pcm-crm-fonts' ), null );
+	wp_enqueue_style( 'pcm-crm', pcm_crm_asset_url( 'crm.css' ), array( 'pcm-crm-fonts' ), pcm_crm_asset_version( 'crm.css' ) );
 
 	if ( ! empty( $pcm_args['setup_frame'] ) ) {
-		wp_enqueue_style( 'pcm-crm-setup', pcm_crm_asset( 'setup.css' ), array( 'pcm-crm' ), null );
+		wp_enqueue_style( 'pcm-crm-setup', pcm_crm_asset_url( 'setup.css' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'setup.css' ) );
 	}
 
 	// wp-admin's own admin bar is what has always pulled dashicons in for
@@ -187,14 +187,14 @@ function pcm_crm_enqueue_app( $pcm_host, array $pcm_args = array() ) {
 	// PCM Settings included, so its script loads ahead of the no_app return.
 	// Standalone and data-free — it reads everything off the form it drives —
 	// so it has nothing for Speed Optimizer's combining to break.
-	wp_enqueue_script( 'pcm-crm-color-mode', pcm_crm_asset( 'color-mode.js' ), array(), null, true );
+	wp_enqueue_script( 'pcm-crm-color-mode', pcm_crm_asset_url( 'color-mode.js' ), array(), pcm_crm_asset_version( 'color-mode.js' ), true );
 
 	if ( ! empty( $pcm_args['no_app'] ) ) {
 		return;
 	}
 
-	wp_enqueue_script( 'pcm-crm-charts', pcm_crm_asset( 'charts.js' ), array(), null, true );
-	wp_enqueue_script( 'pcm-crm', pcm_crm_asset( 'crm.js' ), array( 'pcm-crm-charts' ), null, true );
+	wp_enqueue_script( 'pcm-crm-charts', pcm_crm_asset_url( 'charts.js' ), array(), pcm_crm_asset_version( 'charts.js' ), true );
+	wp_enqueue_script( 'pcm-crm', pcm_crm_asset_url( 'crm.js' ), array( 'pcm-crm-charts' ), pcm_crm_asset_version( 'crm.js' ), true );
 
 	wp_localize_script( 'pcm-crm', 'PCM_CRM', array(
 		'root'        => esc_url_raw( rest_url( PCM_CRM_REST::NS ) ),

@@ -206,7 +206,7 @@ function pcm_crm_settings_assets( $pcm_hook ) {
 	}
 
 	wp_enqueue_media();
-	wp_enqueue_script( 'pcm-crm-settings', pcm_crm_asset( 'settings.js' ), array( 'jquery' ), null, true );
+	wp_enqueue_script( 'pcm-crm-settings', pcm_crm_asset_url( 'settings.js' ), array( 'jquery' ), pcm_crm_asset_version( 'settings.js' ), true );
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_settings_assets' );
 
@@ -223,7 +223,7 @@ function pcm_crm_settings_front_assets() {
 
 	wp_enqueue_style( 'buttons' );
 	wp_enqueue_media();
-	wp_enqueue_script( 'pcm-crm-settings', pcm_crm_asset( 'settings.js' ), array( 'jquery' ), null, true );
+	wp_enqueue_script( 'pcm-crm-settings', pcm_crm_asset_url( 'settings.js' ), array( 'jquery' ), pcm_crm_asset_version( 'settings.js' ), true );
 }
 add_action( 'wp_enqueue_scripts', 'pcm_crm_settings_front_assets' );
 

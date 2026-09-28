@@ -136,7 +136,7 @@ function pcm_crm_pm_assets( $pcm_hook ) {
 		return;
 	}
 
-	wp_enqueue_style( 'pcm-crm-pm', pcm_crm_asset( 'pm.css' ), array( 'pcm-crm' ), null );
+	wp_enqueue_style( 'pcm-crm-pm', pcm_crm_asset_url( 'pm.css' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'pm.css' ) );
 
 	// The settings screen is a plain WordPress form with no app mounted, so it
 	// takes the skin and not the script — same reasoning as the core enqueue.
@@ -150,12 +150,12 @@ function pcm_crm_pm_assets( $pcm_hook ) {
 	// since a project can be reached from an Account or Opportunity page too.
 	wp_enqueue_media();
 
-	wp_enqueue_script( 'pcm-crm-pm', pcm_crm_asset( 'pm.js' ), array( 'pcm-crm' ), null, true );
+	wp_enqueue_script( 'pcm-crm-pm', pcm_crm_asset_url( 'pm.js' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'pm.js' ), true );
 
 	// A separate file, not folded into pm.js: Help Tickets has nothing to do
 	// with project-type archetypes, which is what pm.js is mostly organised
 	// around. Depends on pcm-crm only — it needs none of pm.js's own helpers.
-	wp_enqueue_script( 'pcm-crm-help-tickets', pcm_crm_asset( 'help-tickets.js' ), array( 'pcm-crm' ), null, true );
+	wp_enqueue_script( 'pcm-crm-help-tickets', pcm_crm_asset_url( 'help-tickets.js' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'help-tickets.js' ), true );
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_pm_assets' );
 
@@ -174,7 +174,7 @@ function pcm_crm_pm_front_assets() {
 		return;
 	}
 
-	wp_enqueue_style( 'pcm-crm-pm', pcm_crm_asset( 'pm.css' ), array( 'pcm-crm' ), null );
+	wp_enqueue_style( 'pcm-crm-pm', pcm_crm_asset_url( 'pm.css' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'pm.css' ) );
 
 	if ( 'settings' === $pcm_screen ) {
 		return;
@@ -189,7 +189,7 @@ function pcm_crm_pm_front_assets() {
 	wp_enqueue_style( 'buttons' );
 	wp_enqueue_media();
 
-	wp_enqueue_script( 'pcm-crm-pm', pcm_crm_asset( 'pm.js' ), array( 'pcm-crm' ), null, true );
-	wp_enqueue_script( 'pcm-crm-help-tickets', pcm_crm_asset( 'help-tickets.js' ), array( 'pcm-crm' ), null, true );
+	wp_enqueue_script( 'pcm-crm-pm', pcm_crm_asset_url( 'pm.js' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'pm.js' ), true );
+	wp_enqueue_script( 'pcm-crm-help-tickets', pcm_crm_asset_url( 'help-tickets.js' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'help-tickets.js' ), true );
 }
 add_action( 'wp_enqueue_scripts', 'pcm_crm_pm_front_assets' );

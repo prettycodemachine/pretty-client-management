@@ -309,7 +309,7 @@ function pcm_crm_portal_admin_assets( $pcm_hook ) {
 		return;
 	}
 
-	wp_enqueue_script( 'pcm-crm-portal-admin', pcm_crm_asset( 'portal-admin.js' ), array( 'pcm-crm' ), null, true );
+	wp_enqueue_script( 'pcm-crm-portal-admin', pcm_crm_asset_url( 'portal-admin.js' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'portal-admin.js' ), true );
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_portal_admin_assets' );
 
@@ -326,7 +326,7 @@ function pcm_crm_portal_front_assets() {
 		return;
 	}
 
-	wp_enqueue_script( 'pcm-crm-portal-admin', pcm_crm_asset( 'portal-admin.js' ), array( 'pcm-crm' ), null, true );
+	wp_enqueue_script( 'pcm-crm-portal-admin', pcm_crm_asset_url( 'portal-admin.js' ), array( 'pcm-crm' ), pcm_crm_asset_version( 'portal-admin.js' ), true );
 }
 add_action( 'wp_enqueue_scripts', 'pcm_crm_portal_front_assets' );
 

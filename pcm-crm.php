@@ -130,10 +130,24 @@ require_once PCM_CRM_DIR . 'includes/cli-seed.php';
  * only when the bytes do. Nothing needs bumping by hand to ship a change.
  */
 function pcm_crm_asset( $pcm_path ) {
-	$pcm_file = PCM_CRM_DIR . 'assets/' . ltrim( $pcm_path, '/' );
-	$pcm_ver  = file_exists( $pcm_file ) ? filemtime( $pcm_file ) : PCM_CRM_VERSION;
+	return add_query_arg( 'ver', pcm_crm_asset_version( $pcm_path ), pcm_crm_asset_url( $pcm_path ) );
+}
 
-	return add_query_arg( 'ver', $pcm_ver, PCM_CRM_URL . 'assets/' . ltrim( $pcm_path, '/' ) );
+/**
+ * The bare URL, for wp_enqueue_*(), which takes the version separately and
+ * would otherwise replace the stamp above with its own ?ver=.
+ */
+function pcm_crm_asset_url( $pcm_path ) {
+	return PCM_CRM_URL . 'assets/' . ltrim( $pcm_path, '/' );
+}
+
+/**
+ * The file's mtime as its version, for the same reason as pcm_crm_asset().
+ */
+function pcm_crm_asset_version( $pcm_path ) {
+	$pcm_file = PCM_CRM_DIR . 'assets/' . ltrim( $pcm_path, '/' );
+
+	return file_exists( $pcm_file ) ? (string) filemtime( $pcm_file ) : PCM_CRM_VERSION;
 }
 
 /**

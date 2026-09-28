@@ -10,7 +10,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 function pcm_crm_form_assets() {
-	wp_enqueue_style( 'pcm-crm-form', pcm_crm_asset( 'form.css' ), array(), null );
+	wp_enqueue_style( 'pcm-crm-form', pcm_crm_asset_url( 'form.css' ), array(), pcm_crm_asset_version( 'form.css' ) );
 }
 
 /**

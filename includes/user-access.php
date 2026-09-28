@@ -158,7 +158,7 @@ function pcm_crm_user_access_assets( $pcm_hook ) {
 		return;
 	}
 
-	wp_enqueue_style( 'pcm-crm-user-access', pcm_crm_asset( 'user-access.css' ), array(), null );
-	wp_enqueue_script( 'pcm-crm-user-access', pcm_crm_asset( 'user-access.js' ), array(), null, true );
+	wp_enqueue_style( 'pcm-crm-user-access', pcm_crm_asset_url( 'user-access.css' ), array(), pcm_crm_asset_version( 'user-access.css' ) );
+	wp_enqueue_script( 'pcm-crm-user-access', pcm_crm_asset_url( 'user-access.js' ), array(), pcm_crm_asset_version( 'user-access.js' ), true );
 }
 add_action( 'admin_enqueue_scripts', 'pcm_crm_user_access_assets' );
