@@ -278,11 +278,14 @@ function pcm_crm_send_schedule( array $pcm_schedule ) {
 		// the field is empty or holds something that no longer resolves.
 		$pcm_stored = trim( (string) $pcm_schedule['recipients'] );
 
+		// Logged against the schedule, not printed; the screen escapes it.
+		// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		throw new Exception(
 			'' === $pcm_stored
 				? 'No recipients are saved on this schedule.'
 				: sprintf( 'None of the saved recipients resolve to an email address (%s).', $pcm_stored )
 		);
+		// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 	}
 
 	$pcm_args = array( 'filters' => pcm_crm_schedule_filters( $pcm_schedule ) );
@@ -490,14 +493,14 @@ function pcm_crm_schedule_csv( array $pcm_schedule, array $pcm_args ) {
 	$pcm_rows = $pcm_model->find( array_merge( $pcm_args, array( 'per_page' => 0, 'orderby' => 'id', 'order' => 'ASC' ) ) );
 	$pcm_path = trailingslashit( get_temp_dir() ) . 'pcm-' . $pcm_object . '-' . gmdate( 'Y-m-d-His' ) . '.csv';
 
-	$pcm_handle = fopen( $pcm_path, 'w' );
+	$pcm_handle = fopen( $pcm_path, 'w' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- a scratch file in get_temp_dir() for the email attachment, streamed row by row (fputcsv), which WP_Filesystem cannot do
 
 	if ( ! $pcm_handle ) {
 		return '';
 	}
 
 	// The BOM is what stops Excel reading an accented name as Latin-1.
-	fwrite( $pcm_handle, "ï»¿" );
+	fwrite( $pcm_handle, "ï»¿" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- the same scratch file
 
 	$pcm_map = $pcm_model->salesforce_map();
 	fputcsv( $pcm_handle, array_merge( array( 'PCM_Id__c' ), array_values( $pcm_map ) ) );
@@ -512,7 +515,7 @@ function pcm_crm_schedule_csv( array $pcm_schedule, array $pcm_args ) {
 		fputcsv( $pcm_handle, $pcm_line );
 	}
 
-	fclose( $pcm_handle );
+	fclose( $pcm_handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- the same scratch file
 
 	return $pcm_path;
 }

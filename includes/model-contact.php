@@ -89,10 +89,12 @@ function pcm_crm_find_contact_by_email( $pcm_email ) {
 	$pcm_table = PCM_CRM_Schema::contacts();
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	return (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT id FROM {$pcm_table} WHERE email = %s AND is_deleted = 0 ORDER BY id ASC LIMIT 1",
 		$pcm_email
 	) );
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 }
 
 /**

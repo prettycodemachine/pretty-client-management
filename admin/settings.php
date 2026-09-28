@@ -818,7 +818,7 @@ function pcm_crm_current_fields_module() {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
 	$pcm_module = isset( $_GET['module'] ) ? sanitize_key( wp_unslash( $_GET['module'] ) ) : '';
 
-	if ( '' === $pcm_module && isset( $_GET['object'] ) ) {
+	if ( '' === $pcm_module && isset( $_GET['object'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigation only
 		$pcm_requested = pcm_crm_object( sanitize_key( wp_unslash( $_GET['object'] ) ) );
 

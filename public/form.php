@@ -114,7 +114,7 @@ function pcm_crm_render_form_field( array $pcm_field ) {
 			'<textarea id="%s" name="%s" rows="5"%s></textarea>',
 			esc_attr( $pcm_name ),
 			esc_attr( $pcm_name ),
-			$pcm_required
+			$pcm_required // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- literal ' required' or ''
 		);
 	} else {
 		printf(
@@ -122,8 +122,8 @@ function pcm_crm_render_form_field( array $pcm_field ) {
 			esc_attr( $pcm_field['type'] ),
 			esc_attr( $pcm_name ),
 			esc_attr( $pcm_name ),
-			$pcm_auto,
-			$pcm_required
+			$pcm_auto, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built, above
+			$pcm_required // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- literal ' required' or ''
 		);
 	}
 
@@ -157,7 +157,8 @@ function pcm_crm_handle_contact_form() {
 
 	foreach ( $pcm_fields as $pcm_field ) {
 		$pcm_name = pcm_crm_field_input_name( $pcm_field );
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified above
+		// Sanitised just below, by the field's own type.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- verified above
 		$pcm_raw  = isset( $_POST[ $pcm_name ] ) ? wp_unslash( $_POST[ $pcm_name ] ) : '';
 
 		$pcm_value = ( 'textarea' === $pcm_field['type'] )

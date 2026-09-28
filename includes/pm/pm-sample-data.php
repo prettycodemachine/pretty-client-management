@@ -1,4 +1,6 @@
 <?php
+// Sample data is seeded (mt_srand) so a run can be reproduced; wp_rand() cannot be.
+// phpcs:disable WordPress.WP.AlternativeFunctions.rand_mt_rand, WordPress.WP.AlternativeFunctions.rand_seeding_mt_srand
 /**
  * Sample projects, and everything hanging off them.
  *
@@ -52,6 +54,10 @@ class PCM_CRM_PM_Sample_Data {
 
 		$out['retainer_periods'] = $this->seed_periods( $projects );
 		$out['allocations']      = $this->seed_allocations( $projects );
+
+		// Hand the generator back unseeded, so nothing else in this request
+		// draws from a predictable sequence.
+		mt_srand();
 
 		return $out;
 	}
@@ -539,6 +545,7 @@ class PCM_CRM_PM_Sample_Data {
 			// Backdated like every other sample row, so the Burn-down reads as
 			// history rather than as twelve periods all opened this morning.
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 			$wpdb->query( $wpdb->prepare(
 				"UPDATE {$table}
 				 SET created_date = CONCAT(period_start, ' 09:00:00'),
@@ -548,9 +555,11 @@ class PCM_CRM_PM_Sample_Data {
 				 WHERE project_id = %d",
 				$project['id']
 			) );
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
 			$count += (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE project_id = %d", $project['id'] ) );
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
 
 		return $count;

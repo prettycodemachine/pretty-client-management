@@ -233,6 +233,6 @@ function pcm_crm_stream_document( $pcm_attachment_id, $pcm_inline = false ) {
 	header( 'Content-Length: ' . filesize( $pcm_path ) );
 	header( 'X-Content-Type-Options: nosniff' );
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_readfile -- streaming a file, not reading it into memory
-	readfile( $pcm_path );
+	readfile( $pcm_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile -- readfile() streams a permission-checked download; WP_Filesystem has no streaming read
 	exit;
 }

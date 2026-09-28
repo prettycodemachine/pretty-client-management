@@ -137,8 +137,10 @@ function pcm_crm_handle_save_my_profile() {
 	$pcm_user_id = get_current_user_id();
 	$pcm_back    = pcm_crm_front_base_url() . 'profile/';
 
-	$pcm_pass1 = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
-	$pcm_pass2 = isset( $_POST['password_confirm'] ) ? (string) wp_unslash( $_POST['password_confirm'] ) : '';
+	// Passwords are never sanitised: that would silently change the password
+	// someone chose. wp_set_password() hashes whatever it is given.
+	$pcm_pass1 = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	$pcm_pass2 = isset( $_POST['password_confirm'] ) ? (string) wp_unslash( $_POST['password_confirm'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 	$pcm_error = pcm_crm_my_profile_validation_error( $pcm_pass1, $pcm_pass2 );
 

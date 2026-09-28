@@ -363,7 +363,7 @@ function pcm_crm_remember_login_destination() {
 		return;
 	}
 
-	$pcm_kind = pcm_crm_login_destination_for( esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) );
+	$pcm_kind = pcm_crm_login_destination_for( esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- as above
 
 	if ( $pcm_kind ) {
 		setcookie( PCM_CRM_LOGIN_DEST_COOKIE, $pcm_kind, 0, SITECOOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );

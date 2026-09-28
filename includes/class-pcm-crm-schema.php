@@ -90,6 +90,7 @@ class PCM_CRM_Schema {
 		$pcm_history = self::history();
 
 		// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 		$wpdb->query(
 			"INSERT INTO {$pcm_history}
 				(opportunity_id, stage_name, previous_stage, amount, entered_date, exited_date, is_closed, is_won, created_by_id, created_date)
@@ -97,6 +98,7 @@ class PCM_CRM_Schema {
 			 FROM {$pcm_opps} o
 			 WHERE NOT EXISTS (SELECT 1 FROM {$pcm_history} h WHERE h.opportunity_id = o.id)"
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		// The deal entered its current stage when it was created, as far as
 		// anything now knowable goes.

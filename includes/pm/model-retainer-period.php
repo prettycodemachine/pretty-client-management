@@ -359,10 +359,12 @@ function pcm_crm_retainer_ensure( $pcm_project_id, $pcm_force = false ) {
 	if ( $pcm_created && $pcm_files ) {
 		foreach ( $pcm_live as $pcm_period ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 			$wpdb->query( $wpdb->prepare(
 				"UPDATE {$pcm_time} SET retainer_period_id = %d WHERE project_id = %d AND retainer_period_id = 0 AND is_deleted = 0 AND entry_date BETWEEN %s AND %s",
 				(int) $pcm_period['id'], $pcm_project_id, $pcm_period['period_start'], $pcm_period['period_end']
 			) );
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
 	}
 
@@ -382,10 +384,12 @@ function pcm_crm_retainer_ensure( $pcm_project_id, $pcm_force = false ) {
 		// Guarded on is_closed = 0, so only the pass that closes a period
 		// writes what it carries — a second, concurrent pass changes nothing.
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 		$pcm_closed = $wpdb->query( $wpdb->prepare(
 			"UPDATE {$pcm_table} SET is_closed = 1, closed_date = %s, last_modified_date = %s WHERE id = %d AND is_closed = 0",
 			$pcm_now, $pcm_now, $pcm_op['close']
 		) );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		if ( 1 === (int) $pcm_closed && $pcm_op['carry_to'] ) {
 			$wpdb->update( $pcm_table, array( 'carried_in_hours' => $pcm_op['carry'] ), array( 'id' => $pcm_op['carry_to'] ), array( '%f' ), array( '%d' ) );

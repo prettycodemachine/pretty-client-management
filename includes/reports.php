@@ -128,20 +128,24 @@ function pcm_crm_opportunities_by_month( array $pcm_args, $pcm_months = 12 ) {
 	$pcm_since = gmdate( 'Y-m-01 00:00:00', strtotime( '-' . ( (int) $pcm_months - 1 ) . ' months', current_time( 'timestamp' ) ) );
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	$pcm_created = $wpdb->get_results( $wpdb->prepare(
 		"SELECT DATE_FORMAT(created_date, '%%Y-%%m') AS month, COUNT(*) AS count, COALESCE(SUM(amount),0) AS total
 		 FROM {$pcm_table} WHERE is_deleted = 0 AND created_date >= %s
 		 GROUP BY month ORDER BY month ASC",
 		$pcm_since
 	), ARRAY_A );
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	$pcm_won = $wpdb->get_results( $wpdb->prepare(
 		"SELECT DATE_FORMAT(close_date, '%%Y-%%m') AS month, COUNT(*) AS count, COALESCE(SUM(amount),0) AS total
 		 FROM {$pcm_table} WHERE is_deleted = 0 AND is_won = 1 AND close_date >= %s
 		 GROUP BY month ORDER BY month ASC",
 		substr( $pcm_since, 0, 10 )
 	), ARRAY_A );
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	$pcm_index = array();
 	foreach ( (array) $pcm_created as $pcm_row ) {
@@ -310,6 +314,7 @@ function pcm_crm_avg_days_by_stage() {
 	// one whose deal never existed at all — an orphan from a removed sample
 	// set — is not evidence about anything.
 	// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	$pcm_rows = $wpdb->get_results(
 		"SELECT h.stage_name, AVG(h.days_in_stage) AS avg_days, COUNT(*) AS count
 		 FROM {$pcm_table} h
@@ -318,6 +323,7 @@ function pcm_crm_avg_days_by_stage() {
 		 GROUP BY h.stage_name",
 		ARRAY_A
 	);
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	$pcm_index = array();
 	foreach ( (array) $pcm_rows as $pcm_row ) {
@@ -363,6 +369,7 @@ function pcm_crm_stage_conversion() {
 	// stage, so a row pointing at a deal that no longer exists inflates every
 	// rate it appears in.
 	// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	$pcm_rows = $wpdb->get_results(
 		"SELECT h.stage_name, COUNT(DISTINCT h.opportunity_id) AS deals
 		 FROM {$pcm_table} h
@@ -370,6 +377,7 @@ function pcm_crm_stage_conversion() {
 		 GROUP BY h.stage_name",
 		ARRAY_A
 	);
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	$pcm_entered = array();
 	foreach ( (array) $pcm_rows as $pcm_row ) {

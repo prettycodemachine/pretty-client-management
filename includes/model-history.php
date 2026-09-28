@@ -58,10 +58,12 @@ function pcm_crm_current_stage_row( $pcm_opportunity_id ) {
 	$pcm_table = PCM_CRM_Schema::history();
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	$pcm_row = $wpdb->get_row( $wpdb->prepare(
 		"SELECT * FROM {$pcm_table} WHERE opportunity_id = %d AND exited_date IS NULL ORDER BY id DESC LIMIT 1",
 		absint( $pcm_opportunity_id )
 	), ARRAY_A );
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	return $pcm_row ? $pcm_row : null;
 }

@@ -48,7 +48,7 @@ function pcm_crm_handle_export() {
 	}
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- verified above
-	$pcm_filters = isset( $_GET['filters'] ) && is_array( $_GET['filters'] ) ? wp_unslash( $_GET['filters'] ) : array();
+	$pcm_filters = isset( $_GET['filters'] ) && is_array( $_GET['filters'] ) ? map_deep( wp_unslash( $_GET['filters'] ), 'sanitize_text_field' ) : array();
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- verified above
 	$pcm_search  = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
 
@@ -71,7 +71,7 @@ function pcm_crm_handle_export() {
 
 	// Excel reads a bare UTF-8 CSV as Latin-1 and mangles anything accented;
 	// the BOM is what makes an exported name survive the round trip.
-	fwrite( $pcm_out, "\xEF\xBB\xBF" );
+	fwrite( $pcm_out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- the php://output stream the download is written to, not a file on disk
 
 	// The local id leads, under a name Salesforce will not claim, so a loaded
 	// record can still be traced back to the row it came from here.
@@ -101,7 +101,7 @@ function pcm_crm_handle_export() {
 		fputcsv( $pcm_out, $pcm_line );
 	}
 
-	fclose( $pcm_out );
+	fclose( $pcm_out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- the php://output stream the download is written to, not a file on disk
 	exit;
 }
 add_action( 'admin_post_pcm_crm_export', 'pcm_crm_handle_export' );

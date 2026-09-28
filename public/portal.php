@@ -109,7 +109,7 @@ function pcm_crm_portal_template( $pcm_template ) {
 add_filter( 'template_include', 'pcm_crm_portal_template', 99 );
 
 function pcm_crm_portal_document_title( $pcm_title = '' ) {
-	return sprintf( __( '%s — Client Portal', 'pretty-client-management' ), get_bloginfo( 'name' ) );
+	return sprintf( /* translators: %s: site name */ __( '%s — Client Portal', 'pretty-client-management' ), get_bloginfo( 'name' ) );
 }
 
 function pcm_crm_portal_title_filter( $pcm_title ) {

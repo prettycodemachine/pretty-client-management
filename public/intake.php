@@ -170,5 +170,8 @@ function pcm_crm_record_intake_error( $pcm_submission_id, $pcm_message ) {
 		pcm_crm_submissions()->update( $pcm_submission_id, array( 'intake_error' => $pcm_message ) );
 	}
 
-	error_log( 'Pretty Client Management intake failed: ' . $pcm_message );
+	// The submission row above is the record; the log line is for debugging.
+	if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+		error_log( 'Pretty Client Management intake failed: ' . $pcm_message ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+	}
 }

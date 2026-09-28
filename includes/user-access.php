@@ -30,13 +30,13 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * fake, so a radio's checked state was never going to be provable that way.
  */
 function pcm_crm_new_user_access_from_post() {
-	$pcm_posted_role = isset( $_POST['role'] ) ? sanitize_key( wp_unslash( $_POST['role'] ) ) : '';
+	$pcm_posted_role = isset( $_POST['role'] ) ? sanitize_key( wp_unslash( $_POST['role'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- core checked this screen's own nonce (create-user / update-user_{id}) before the hook fired
 
 	if ( PCM_CRM_STAFF_ROLE !== $pcm_posted_role ) {
 		return array( 'is_staff' => false, 'profile' => '', 'sets' => array() );
 	}
 
-	$pcm_clean = pcm_crm_clean_user_access( wp_unslash( $_POST ) );
+	$pcm_clean = pcm_crm_clean_user_access( wp_unslash( $_POST ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- core checked this screen's own nonce (create-user / update-user_{id}) before the hook fired
 
 	return array( 'is_staff' => true, 'profile' => $pcm_clean['profile'], 'sets' => $pcm_clean['sets'] );
 }
@@ -130,13 +130,13 @@ function pcm_crm_save_user_access_from_native_screen( $pcm_user_id ) {
 		return;
 	}
 
-	$pcm_role = isset( $_POST['role'] ) ? sanitize_key( wp_unslash( $_POST['role'] ) ) : '';
+	$pcm_role = isset( $_POST['role'] ) ? sanitize_key( wp_unslash( $_POST['role'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- core checked this screen's own nonce (create-user / update-user_{id}) before the hook fired
 
 	if ( PCM_CRM_STAFF_ROLE !== $pcm_role ) {
 		return;
 	}
 
-	$pcm_clean = pcm_crm_clean_user_access( wp_unslash( $_POST ) );
+	$pcm_clean = pcm_crm_clean_user_access( wp_unslash( $_POST ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- core checked this screen's own nonce (create-user / update-user_{id}) before the hook fired
 
 	pcm_crm_assign_permissions( $pcm_user_id, $pcm_clean['profile'], $pcm_clean['sets'] );
 }

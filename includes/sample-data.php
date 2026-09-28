@@ -1,4 +1,6 @@
 <?php
+// Sample data is seeded (mt_srand) so a run can be reproduced; wp_rand() cannot be.
+// phpcs:disable WordPress.WP.AlternativeFunctions.rand_mt_rand, WordPress.WP.AlternativeFunctions.rand_seeding_mt_srand
 /**
  * Sample data: generating it, counting it, and removing it again.
  *
@@ -41,12 +43,18 @@ class PCM_CRM_Sample_Data {
 		// makes the sample set coherent rather than two unrelated piles: a
 		// project belongs to an account that exists and came from a deal that
 		// was actually won.
-		return apply_filters( 'pcm_crm_sample_data_created', $counts, array(
+		$counts = apply_filters( 'pcm_crm_sample_data_created', $counts, array(
 			'accounts'      => $accounts,
 			'contacts'      => $contacts,
 			'opportunities' => $opportunities,
 			'owners'        => $owners,
 		) );
+
+		// Hand the generator back unseeded, so nothing else in this request
+		// draws from a predictable sequence.
+		mt_srand();
+
+		return $counts;
 	}
 
 	/* -------------------------------------------------------------------
@@ -633,11 +641,13 @@ function pcm_crm_orphaned_history_count() {
 	$pcm_opps    = PCM_CRM_Schema::opportunities();
 
 	// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	return (int) $wpdb->get_var(
 		"SELECT COUNT(*) FROM {$pcm_history} h
 		 LEFT JOIN {$pcm_opps} o ON o.id = h.opportunity_id
 		 WHERE o.id IS NULL"
 	);
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 }
 
 function pcm_crm_delete_orphaned_history() {
@@ -647,11 +657,13 @@ function pcm_crm_delete_orphaned_history() {
 	$pcm_opps    = PCM_CRM_Schema::opportunities();
 
 	// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	return (int) $wpdb->query(
 		"DELETE h FROM {$pcm_history} h
 		 LEFT JOIN {$pcm_opps} o ON o.id = h.opportunity_id
 		 WHERE o.id IS NULL"
 	);
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 }
 
 function pcm_crm_has_sample_data() {
@@ -683,8 +695,9 @@ function pcm_crm_delete_sample_data() {
 	$pcm_removed = 0;
 
 	foreach ( pcm_crm_sample_tables() as $pcm_table ) {
-		// phpcs:ignore WordPress.DB.PreparedSQL -- table names are internal
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are internal
 		$pcm_removed += (int) $wpdb->query( "DELETE FROM {$pcm_table} WHERE is_test = 1" );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	// Anything left pointing at a deal that no longer exists goes too — an

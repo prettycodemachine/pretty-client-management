@@ -289,7 +289,7 @@ class PCM_CRM_Model {
 
 			foreach ( $this->searchable as $pcm_col ) {
 				if ( $this->has_field( $pcm_col ) ) {
-					$pcm_parts[] = $wpdb->prepare( "{$pcm_col} LIKE %s", $pcm_like );
+					$pcm_parts[] = $wpdb->prepare( "{$pcm_col} LIKE %s", $pcm_like ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- column checked against the field map
 				}
 			}
 
@@ -370,10 +370,10 @@ class PCM_CRM_Model {
 			$pcm_parts = array();
 
 			if ( isset( $pcm_value['min'] ) && '' !== $pcm_value['min'] ) {
-				$pcm_parts[] = $wpdb->prepare( "{$pcm_col} >= %s", $this->sanitize_value( $pcm_value['min'], $pcm_type ) );
+				$pcm_parts[] = $wpdb->prepare( "{$pcm_col} >= %s", $this->sanitize_value( $pcm_value['min'], $pcm_type ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- column checked against the field map
 			}
 			if ( isset( $pcm_value['max'] ) && '' !== $pcm_value['max'] ) {
-				$pcm_parts[] = $wpdb->prepare( "{$pcm_col} <= %s", $this->sanitize_value( $pcm_value['max'], $pcm_type ) );
+				$pcm_parts[] = $wpdb->prepare( "{$pcm_col} <= %s", $this->sanitize_value( $pcm_value['max'], $pcm_type ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- column checked against the field map
 			}
 
 			return $pcm_parts ? '(' . implode( ' AND ', $pcm_parts ) . ')' : '';
@@ -395,7 +395,7 @@ class PCM_CRM_Model {
 			return '';
 		}
 
-		return $wpdb->prepare( "{$pcm_col} = %s", $this->sanitize_value( $pcm_value, $pcm_type ) );
+		return $wpdb->prepare( "{$pcm_col} = %s", $this->sanitize_value( $pcm_value, $pcm_type ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- column checked against the field map
 	}
 
 	/**
@@ -445,7 +445,7 @@ class PCM_CRM_Model {
 
 			$pcm_not = 'notcontains' === $pcm_op ? 'NOT ' : '';
 
-			return $wpdb->prepare( "{$pcm_col} {$pcm_not}LIKE %s", $pcm_patterns[ $pcm_op ] );
+			return $wpdb->prepare( "{$pcm_col} {$pcm_not}LIKE %s", $pcm_patterns[ $pcm_op ] ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- column checked against the field map
 		}
 
 		$pcm_operators = array(
@@ -461,10 +461,12 @@ class PCM_CRM_Model {
 			return '';
 		}
 
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 		return $wpdb->prepare(
 			"{$pcm_col} {$pcm_operators[ $pcm_op ]} %s",
 			$this->sanitize_value( $pcm_raw, $pcm_type )
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**
@@ -572,12 +574,14 @@ class PCM_CRM_Model {
 			: '0';
 
 		// phpcs:ignore WordPress.DB.PreparedSQL -- column names checked against the field map
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 		$pcm_rows = $wpdb->get_results(
 			"SELECT {$pcm_column} AS value, COUNT(*) AS count, {$pcm_sum} AS total
 			 FROM {$this->table} {$pcm_where}
 			 GROUP BY {$pcm_column} ORDER BY count DESC",
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$pcm_out = array();
 		foreach ( (array) $pcm_rows as $pcm_row ) {

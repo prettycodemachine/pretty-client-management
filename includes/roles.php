@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * on screen to say why.
  */
 function pcm_crm_admin_endpoint_allowed() {
-	$pcm_file = basename( (string) ( isset( $_SERVER['SCRIPT_FILENAME'] ) ? $_SERVER['SCRIPT_FILENAME'] : '' ) );
+	$pcm_file = isset( $_SERVER['SCRIPT_FILENAME'] ) ? basename( sanitize_text_field( wp_unslash( $_SERVER['SCRIPT_FILENAME'] ) ) ) : '';
 
 	return in_array( $pcm_file, array( 'admin-post.php', 'options.php', 'async-upload.php', 'media-upload.php' ), true );
 }

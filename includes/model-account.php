@@ -81,10 +81,12 @@ function pcm_crm_upsert_account( $pcm_name, array $pcm_extra = array() ) {
 	$pcm_table = PCM_CRM_Schema::accounts();
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is internal
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names are $wpdb->prefix plus a fixed name, and columns come from the model's field map; every value is a placeholder
 	$pcm_existing = (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT id FROM {$pcm_table} WHERE name_key = %s AND is_deleted = 0 ORDER BY id ASC LIMIT 1",
 		$pcm_key
 	) );
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	if ( $pcm_existing ) {
 		return $pcm_existing;

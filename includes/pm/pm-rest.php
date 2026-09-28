@@ -453,7 +453,7 @@ function pcm_crm_pm_time_sum( $pcm_expression, $pcm_where, array $pcm_args ) {
 
 	$pcm_table = pcm_crm_pm_time_table();
 
-	// phpcs:ignore WordPress.DB.PreparedSQL -- expression and clause are literals from this file
+	// phpcs:ignore WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders -- expression and clause are literals from this file; $pcm_args fills the clause's placeholders
 	return (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM({$pcm_expression}), 0) FROM {$pcm_table} WHERE is_deleted = 0 AND {$pcm_where}", $pcm_args ) );
 }
 

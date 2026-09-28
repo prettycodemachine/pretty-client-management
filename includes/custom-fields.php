@@ -392,11 +392,13 @@ function pcm_crm_handle_save_custom_field() {
 	}
 
 	$pcm_raw = array(
-		'label'   => isset( $_POST['label'] ) ? wp_unslash( $_POST['label'] ) : '',
+		'label'   => isset( $_POST['label'] ) ? sanitize_text_field( wp_unslash( $_POST['label'] ) ) : '',
 		// Fixed once created — see the docblock above.
-		'type'    => $pcm_current ? $pcm_current['type'] : ( isset( $_POST['type'] ) ? wp_unslash( $_POST['type'] ) : 'text' ),
-		'options' => isset( $_POST['options'] ) ? wp_unslash( $_POST['options'] ) : '',
-		'related' => $pcm_current && isset( $pcm_current['related'] ) ? $pcm_current['related'] : ( isset( $_POST['related'] ) ? wp_unslash( $_POST['related'] ) : '' ),
+		'type'    => $pcm_current ? $pcm_current['type'] : ( isset( $_POST['type'] ) ? sanitize_key( wp_unslash( $_POST['type'] ) ) : 'text' ),
+		// Anything but a plain string is dropped by pcm_crm_clean_custom_field(),
+		// so only a string is worth sanitising here.
+		'options' => isset( $_POST['options'] ) && is_string( $_POST['options'] ) ? sanitize_textarea_field( wp_unslash( $_POST['options'] ) ) : '',
+		'related' => $pcm_current && isset( $pcm_current['related'] ) ? $pcm_current['related'] : ( isset( $_POST['related'] ) ? sanitize_key( wp_unslash( $_POST['related'] ) ) : '' ),
 	);
 
 	$pcm_clean = pcm_crm_clean_custom_field( $pcm_raw, $pcm_existing_key );
