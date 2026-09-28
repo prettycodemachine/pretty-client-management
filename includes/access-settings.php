@@ -246,7 +246,7 @@ function pcm_crm_render_access_definitions_page( $pcm_kind ) {
 			esc_html( sprintf( __( '%s saved.', 'pretty-client-management' ), $pcm_config['singular'] ) ) );
 	} elseif ( 'deleted' === $pcm_result ) {
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
-			esc_html( sprintf( /* translators: %s: Profile or Permission Set */ __( '%s deleted.', 'pretty-client-management' ), $pcm_config['singular'] ) ) );
+			esc_html( sprintf( /* translators: %s: Profile or Permission Extension */ __( '%s deleted.', 'pretty-client-management' ), $pcm_config['singular'] ) ) );
 	} elseif ( 'in-use' === $pcm_result ) {
 		printf( '<div class="notice notice-error"><p>%s</p></div>',
 			esc_html__( 'That profile is still somebody’s baseline. Move them to a different profile first, under Staff Access.', 'pretty-client-management' ) );
@@ -317,7 +317,7 @@ function pcm_crm_render_access_definition_form( $pcm_kind, $pcm_key, $pcm_post =
 
 	if ( ! $pcm_is_new && ! $pcm_item ) {
 		printf( '<div class="notice notice-error"><p>%s</p></div>',
-			esc_html( sprintf( /* translators: %s: profile or permission set */ __( 'That %s does not exist.', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ) );
+			esc_html( sprintf( /* translators: %s: profile or permission extension */ __( 'That %s does not exist.', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ) );
 		return;
 	}
 
@@ -396,11 +396,11 @@ function pcm_crm_render_access_definition_form( $pcm_kind, $pcm_key, $pcm_post =
 	</form>
 
 	<?php if ( ! $pcm_is_new ) : ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.confirm('<?php echo esc_js( sprintf( /* translators: %s: profile or permission set */ __( 'Delete this %s?', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ); ?>');">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.confirm('<?php echo esc_js( sprintf( /* translators: %s: profile or permission extension */ __( 'Delete this %s?', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ); ?>');">
 			<input type="hidden" name="action" value="<?php echo esc_attr( $pcm_config['del_action'] ); ?>">
 			<input type="hidden" name="key" value="<?php echo esc_attr( $pcm_key ); ?>">
 			<?php wp_nonce_field( $pcm_config['nonce'], $pcm_config['nonce'] . '_nonce' ); ?>
-			<button type="submit" class="button button-link-delete"><?php echo esc_html( sprintf( /* translators: %s: profile or permission set */ __( 'Delete this %s', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ); ?></button>
+			<button type="submit" class="button button-link-delete"><?php echo esc_html( sprintf( /* translators: %s: profile or permission extension */ __( 'Delete this %s', 'pretty-client-management' ), strtolower( $pcm_config['singular'] ) ) ); ?></button>
 		</form>
 	<?php endif; ?>
 	<?php

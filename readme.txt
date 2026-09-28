@@ -37,7 +37,7 @@ Everything runs inside your own WordPress site. There's no SaaS account, no per-
 
 = Built for small teams =
 
-* **An employee portal, not wp-admin.** Staff work from a clean front-end portal. Profiles and permission sets decide who can view, edit, delete or export in each area.
+* **An employee portal, not wp-admin.** Staff work from a clean front-end portal. A profile plus optional permission extensions decide who can view, edit, delete or export in each area.
 * **Email templates and sequences.** Merge-field templates and multi-step follow-ups that stop as soon as a reply is logged. Do Not Contact is always respected.
 * **Custom fields and layouts.** Every custom field is a real database column, so you can filter, sort, report on and export it. Drag fields into place on each record's layout.
 * **Portable data.** Export any object to CSV with Salesforce-ready column names.
@@ -62,7 +62,7 @@ In your own WordPress database, in custom tables prefixed `pcm_crm_`. Nothing is
 
 = Do my staff need wp-admin access? =
 
-No. Staff get a front-end employee portal (at `/staff/` by default, which you can change). What each person can see and do is set by their profile and permission sets.
+No. Staff get a front-end employee portal (at `/staff/` by default, which you can change). What each person can see and do is set by their profile and permission extensions.
 
 = Can clients see rates or internal notes? =
 
@@ -79,11 +79,11 @@ Yes. Every object exports to CSV, with column headers that use Salesforce field 
 == Screenshots ==
 
 1. The pipeline board, with deals grouped by stage.
-2. An account record with its related contacts, opportunities and activity.
+2. An account record, with tabs for its related contacts, opportunities and activities.
 3. The weekly timesheet, with one row per project.
 4. The client portal's project summary.
 5. Milestones on the client portal's timeline.
-6. Profiles and permission sets in PCM Settings.
+6. Editing a staff profile's access in PCM Settings.
 
 == Changelog ==
 
